@@ -852,7 +852,7 @@ function initLogin() {
   if (savedNome) {
     const todos = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
     const found = todos.find(c => c.nome === savedNome);
-    if (found) { captador = found; afterLogin(); return; }
+    if (found) { captador = found; document.getElementById('screenLogin').classList.add('hidden'); afterLogin(); return; }
   }
   renderLoginList(null);
   document.getElementById('screenLogin').classList.remove('hidden');
