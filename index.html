@@ -549,6 +549,10 @@
       <input class="input-field" id="fieldNome" type="text" placeholder="Ex: João"
         autocomplete="off" autocorrect="off" spellcheck="false" oninput="onNomeInput()" />
     </div>
+    <div id="wrapCidade" class="hidden">
+      <input class="input-field" id="fieldCidade" type="text" placeholder="Ex: São Paulo"
+        autocomplete="off" autocorrect="off" spellcheck="false" style="font-size:16px" oninput="onCidadeInput()" />
+    </div>
     <div id="wrapTel" class="hidden">
       <input class="input-field" id="fieldTelQuiz" type="tel" placeholder="(00) 0 0000-0000"
         autocomplete="off" style="font-size:16px;font-weight:600" oninput="onTelInput()" />
@@ -958,11 +962,11 @@ function doChangePw() {
 // PERGUNTAS
 const QS = [
   {
-    id:'nome', meta:'Identificação · 1/8', type:'text',
+    id:'nome', meta:'Identificação · 1/9', type:'text',
     text:'Qual o primeiro nome do cliente?',
   },
   {
-    id:'tipo', meta:'Perfil · 2/8', type:'chips',
+    id:'tipo', meta:'Perfil · 2/9', type:'chips',
     text:'Qual o perfil do cliente?',
     opts:[
       { icon:'💍', label:'Casal casado',           sub:'Registro civil ou cartório', value:'casados'   },
@@ -973,7 +977,11 @@ const QS = [
     ]
   },
   {
-    id:'idade', meta:'Idade · 3/8', type:'chips',
+    id:'cidade', meta:'Cidade · 3/9', type:'cidade',
+    text:'Qual a cidade vocês moram?',
+  },
+  {
+    id:'idade', meta:'Idade · 4/9', type:'chips',
     text:'Idade de pelo menos um do casal?',
     opts:[
       { icon:'❌', label:'Abaixo de 30 anos', sub:'',                                    value:'menor30' },
@@ -983,7 +991,7 @@ const QS = [
     ]
   },
   {
-    id:'casa', meta:'Casa própria · 4/8', type:'chips',
+    id:'casa', meta:'Casa própria · 5/9', type:'chips',
     text:'O cliente possui casa própria?',
     opts:[
       { icon:'🏠', label:'Sim, tem casa própria',           sub:'', value:'sim' },
@@ -991,7 +999,7 @@ const QS = [
     ]
   },
   {
-    id:'carro', meta:'Veículo · 5/8', type:'chips',
+    id:'carro', meta:'Veículo · 6/9', type:'chips',
     text:'Qual o ano do carro do cliente?',
     opts:[
       { icon:'❌', label:'Não tem carro',       sub:'',                            value:'sem'       },
@@ -1001,7 +1009,7 @@ const QS = [
     ]
   },
   {
-    id:'cartao', meta:'Cartão · 6/8', type:'chips',
+    id:'cartao', meta:'Cartão · 7/9', type:'chips',
     text:'O cliente usa cartão de crédito?',
     opts:[
       { icon:'✅', label:'Sim, usa cartão de crédito', sub:'',                              value:'sim' },
@@ -1009,7 +1017,7 @@ const QS = [
     ]
   },
   {
-    id:'renda', meta:'Renda · 7/8', type:'chips',
+    id:'renda', meta:'Renda · 8/9', type:'chips',
     text:'Qual a renda mensal declarada?',
     opts:[
       { icon:'❌', label:'Abaixo de R$ 10.000',   sub:'', value:'abaixo10k' },
@@ -1020,7 +1028,7 @@ const QS = [
     ]
   },
   {
-    id:'tel', meta:'Contato · 8/8', type:'tel',
+    id:'tel', meta:'Contato · 9/9', type:'tel',
     text:'Telefone com DDD do cliente?',
   },
 ];
@@ -1299,24 +1307,31 @@ function renderStep() {
   }
   document.getElementById('stepDots').innerHTML = dotHtml;
   const wN  = document.getElementById('wrapNome');
+  const wCd = document.getElementById('wrapCidade');
   const wTl = document.getElementById('wrapTel');
   const wC  = document.getElementById('wrapChips');
   const btn = document.getElementById('btnProx');
   document.getElementById('stepNote').classList.add('hidden');
   if (q.type==='text') {
-    wN.classList.remove('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden');
+    wN.classList.remove('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden');
     const f = document.getElementById('fieldNome');
     f.value = ans.nome || '';
     btn.disabled = !(ans.nome && ans.nome.trim());
     setTimeout(() => f.focus(), 80);
+  } else if (q.type==='cidade') {
+    wCd.classList.remove('hidden'); wN.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden');
+    const f = document.getElementById('fieldCidade');
+    f.value = ans.cidade || '';
+    btn.disabled = !(ans.cidade && ans.cidade.trim());
+    setTimeout(() => f.focus(), 80);
   } else if (q.type==='tel') {
-    wTl.classList.remove('hidden'); wN.classList.add('hidden'); wC.classList.add('hidden');
+    wTl.classList.remove('hidden'); wN.classList.add('hidden'); wCd.classList.add('hidden'); wC.classList.add('hidden');
     const f = document.getElementById('fieldTelQuiz');
     f.value = ans.tel || '';
     btn.disabled = !(ans.tel && ans.tel.trim().length >= 8);
     setTimeout(() => f.focus(), 80);
   } else {
-    wN.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.remove('hidden');
+    wN.classList.add('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.remove('hidden');
     wC.innerHTML = '';
     q.opts.forEach(o => {
       const chip = document.createElement('div');
@@ -1338,6 +1353,11 @@ function onNomeInput() {
   ans.nome = v;
   document.getElementById('btnProx').disabled = !v;
 }
+function onCidadeInput() {
+  const v = document.getElementById('fieldCidade').value.trim();
+  ans.cidade = v;
+  document.getElementById('btnProx').disabled = !v;
+}
 function onTelInput() {
   const v = document.getElementById('fieldTelQuiz').value.trim();
   ans.tel = v;
@@ -1352,9 +1372,10 @@ function pickChip(qid, value, el) {
 }
 function nextStep() {
   const q = QS[step];
-  if (q.type==='text' && !(ans.nome && ans.nome.trim())) return;
-  if (q.type==='tel'  && !(ans.tel  && ans.tel.trim().length >= 8)) return;
-  if (q.type==='chips' && !ans[q.id]) return;
+  if (q.type==='text'   && !(ans.nome   && ans.nome.trim())) return;
+  if (q.type==='cidade' && !(ans.cidade && ans.cidade.trim())) return;
+  if (q.type==='tel'    && !(ans.tel    && ans.tel.trim().length >= 8)) return;
+  if (q.type==='chips'  && !ans[q.id]) return;
   step++;
   if (step>=QS.length) showResult();
   else renderStep();
@@ -1406,8 +1427,9 @@ function saveAndNew() {
     nome:     ans.nome || '—',
     tel:      tel || '—',
     verdict,
-    tipo:     ans.tipo  || '—',
-    renda:    ans.renda || '—',
+    tipo:     ans.tipo   || '—',
+    renda:    ans.renda  || '—',
+    cidade:   ans.cidade || '—',
     mode:     mode==='low'?'<3k':'>3k',
     sala:     salaAtual ? salaAtual.nome : '—',
     captador: captador ? captador.nome : '—',
