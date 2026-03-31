@@ -915,8 +915,9 @@ function afterLogin() {
   const navEq = document.getElementById('navEquipe');
   if (['lider','ceo'].includes(captador.cargo)) navEq.classList.remove('hidden');
   else navEq.classList.add('hidden');
-  // Garantir que sempre haja uma tela visível após login/reload
-  if (!document.querySelector('.screen.active')) goTo('home');
+  // Restaurar a aba onde o usuário estava antes do reload
+  const savedTab = sessionStorage.getItem('yv_tab') || 'home';
+  goTo(savedTab);
 }
 
 function trocarCaptador() {
@@ -1204,6 +1205,7 @@ function setNav(tab) {
 }
 function goTo(tab) {
   setNav(tab);
+  sessionStorage.setItem('yv_tab', tab);
   hideAll();
   if      (tab==='home')   show('screenHome');
   else if (tab==='new')    startQuiz();
