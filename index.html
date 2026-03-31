@@ -915,6 +915,8 @@ function afterLogin() {
   const navEq = document.getElementById('navEquipe');
   if (['lider','ceo'].includes(captador.cargo)) navEq.classList.remove('hidden');
   else navEq.classList.add('hidden');
+  // Garantir que sempre haja uma tela visível após login/reload
+  if (!document.querySelector('.screen.active')) goTo('home');
 }
 
 function trocarCaptador() {
