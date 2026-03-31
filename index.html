@@ -773,7 +773,7 @@ const API = {
     try {
       await fetch(CONFIG.webhookUrl, {
         method: 'POST', mode: 'no-cors',
-        headers: {'Content-Type':'application/json'},
+        headers: {'Content-Type':'text/plain'},
         body: JSON.stringify(lead)
       });
     } catch(e) { /* fire and forget */ }
