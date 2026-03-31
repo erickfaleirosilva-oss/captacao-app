@@ -554,6 +554,10 @@
       <input class="input-field" id="fieldNome" type="text" placeholder="Ex: João"
         autocomplete="off" autocorrect="off" spellcheck="false" oninput="onNomeInput()" />
     </div>
+    <div id="wrapTel" class="hidden">
+      <input class="input-field" id="fieldTelQuiz" type="tel" placeholder="(00) 0 0000-0000"
+        autocomplete="off" style="font-size:16px;font-weight:600" oninput="onTelInput()" />
+    </div>
     <div class="chips-container hidden" id="wrapChips"></div>
     <div class="note-warn hidden" id="stepNote"></div>
     <button class="btn btn-gold"  id="btnProx" onclick="nextStep()" disabled>Próximo →</button>
@@ -569,12 +573,6 @@
       <div class="result-sub"     id="resSub"></div>
       <div class="result-rule"    id="resRule" style="display:none"></div>
       <div class="result-bd"      id="resBd"></div>
-    </div>
-    <div class="contact-box">
-      <div class="contact-box-title">📇 Salvar contato na base de leads</div>
-      <label class="contact-label">Telefone / WhatsApp</label>
-      <input class="input-field" id="fieldTel" type="tel" placeholder="(11) 9 0000-0000"
-        style="font-size:16px;font-weight:600" autocomplete="off" />
     </div>
     <button class="btn btn-green" onclick="saveAndNew()">✓ Salvar e próximo cliente</button>
     <button class="btn btn-ghost" onclick="skipNew()">Pular e novo cliente</button>
@@ -965,11 +963,11 @@ function doChangePw() {
 // PERGUNTAS
 const QS = [
   {
-    id:'nome', meta:'Identificação · 1/7', type:'text',
+    id:'nome', meta:'Identificação · 1/8', type:'text',
     text:'Qual o primeiro nome do cliente?',
   },
   {
-    id:'tipo', meta:'Perfil · 2/7', type:'chips',
+    id:'tipo', meta:'Perfil · 2/8', type:'chips',
     text:'Qual o perfil do cliente?',
     opts:[
       { icon:'💍', label:'Casal casado',           sub:'Registro civil ou cartório', value:'casados'   },
@@ -980,7 +978,7 @@ const QS = [
     ]
   },
   {
-    id:'idade', meta:'Idade · 3/7', type:'chips',
+    id:'idade', meta:'Idade · 3/8', type:'chips',
     text:'Idade de pelo menos um do casal?',
     opts:[
       { icon:'❌', label:'Abaixo de 30 anos', sub:'',                                    value:'menor30' },
@@ -990,7 +988,7 @@ const QS = [
     ]
   },
   {
-    id:'casa', meta:'Casa própria · 4/7', type:'chips',
+    id:'casa', meta:'Casa própria · 4/8', type:'chips',
     text:'O cliente possui casa própria?',
     opts:[
       { icon:'🏠', label:'Sim, tem casa própria',           sub:'', value:'sim' },
@@ -998,7 +996,7 @@ const QS = [
     ]
   },
   {
-    id:'carro', meta:'Veículo · 5/7', type:'chips',
+    id:'carro', meta:'Veículo · 5/8', type:'chips',
     text:'Qual o ano do carro do cliente?',
     opts:[
       { icon:'❌', label:'Não tem carro',       sub:'',                            value:'sem'       },
@@ -1008,7 +1006,7 @@ const QS = [
     ]
   },
   {
-    id:'cartao', meta:'Cartão · 6/7', type:'chips',
+    id:'cartao', meta:'Cartão · 6/8', type:'chips',
     text:'O cliente usa cartão de crédito?',
     opts:[
       { icon:'✅', label:'Sim, usa cartão de crédito', sub:'',                              value:'sim' },
@@ -1016,7 +1014,7 @@ const QS = [
     ]
   },
   {
-    id:'renda', meta:'Renda · 7/7', type:'chips',
+    id:'renda', meta:'Renda · 7/8', type:'chips',
     text:'Qual a renda mensal declarada?',
     opts:[
       { icon:'❌', label:'Abaixo de R$ 10.000',   sub:'', value:'abaixo10k' },
@@ -1025,6 +1023,10 @@ const QS = [
       { icon:'✅', label:'R$ 15.000 – R$ 19.999', sub:'', value:'15k' },
       { icon:'✅', label:'R$ 20.000 ou mais',     sub:'', value:'20k'       },
     ]
+  },
+  {
+    id:'tel', meta:'Contato · 8/8', type:'tel',
+    text:'Telefone com DDD do cliente?',
   },
 ];
 
@@ -1301,18 +1303,25 @@ function renderStep() {
     else           dotHtml += '<div class="sd"></div>';
   }
   document.getElementById('stepDots').innerHTML = dotHtml;
-  const wN = document.getElementById('wrapNome');
-  const wC = document.getElementById('wrapChips');
+  const wN  = document.getElementById('wrapNome');
+  const wTl = document.getElementById('wrapTel');
+  const wC  = document.getElementById('wrapChips');
   const btn = document.getElementById('btnProx');
   document.getElementById('stepNote').classList.add('hidden');
   if (q.type==='text') {
-    wN.classList.remove('hidden'); wC.classList.add('hidden');
+    wN.classList.remove('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden');
     const f = document.getElementById('fieldNome');
     f.value = ans.nome || '';
     btn.disabled = !(ans.nome && ans.nome.trim());
     setTimeout(() => f.focus(), 80);
+  } else if (q.type==='tel') {
+    wTl.classList.remove('hidden'); wN.classList.add('hidden'); wC.classList.add('hidden');
+    const f = document.getElementById('fieldTelQuiz');
+    f.value = ans.tel || '';
+    btn.disabled = !(ans.tel && ans.tel.trim().length >= 8);
+    setTimeout(() => f.focus(), 80);
   } else {
-    wN.classList.add('hidden'); wC.classList.remove('hidden');
+    wN.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.remove('hidden');
     wC.innerHTML = '';
     q.opts.forEach(o => {
       const chip = document.createElement('div');
@@ -1334,6 +1343,11 @@ function onNomeInput() {
   ans.nome = v;
   document.getElementById('btnProx').disabled = !v;
 }
+function onTelInput() {
+  const v = document.getElementById('fieldTelQuiz').value.trim();
+  ans.tel = v;
+  document.getElementById('btnProx').disabled = v.length < 8;
+}
 function pickChip(qid, value, el) {
   ans[qid] = value;
   document.querySelectorAll('#wrapChips .chip').forEach(c => c.classList.remove('selected'));
@@ -1344,7 +1358,8 @@ function pickChip(qid, value, el) {
 function nextStep() {
   const q = QS[step];
   if (q.type==='text' && !(ans.nome && ans.nome.trim())) return;
-  if (q.type!=='text' && !ans[q.id]) return;
+  if (q.type==='tel'  && !(ans.tel  && ans.tel.trim().length >= 8)) return;
+  if (q.type==='chips' && !ans[q.id]) return;
   step++;
   if (step>=QS.length) showResult();
   else renderStep();
@@ -1384,21 +1399,12 @@ function showResult() {
       <div class="rbd-label">${r.l}</div>
       <div class="rbd-val">${r.v}</div></div>`;
   });
-  document.getElementById('fieldTel').value = '';
   hideAll(); show('screenResult');
 }
 
 function saveAndNew() {
   const { verdict } = calcResult();
-  const tel = document.getElementById('fieldTel').value.trim();
-  if (!tel) {
-    const field = document.getElementById('fieldTel');
-    field.style.borderColor = 'var(--red)';
-    field.placeholder = '⚠️ Telefone obrigatório';
-    field.focus();
-    setTimeout(() => { field.style.borderColor = ''; field.placeholder = '(00) 00000-0000'; }, 3000);
-    return;
-  }
+  const tel = ans.tel || '';
   const iso = todayISO();
   const lead = {
     id:       Date.now(),
