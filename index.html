@@ -980,18 +980,7 @@ const QS = [
     ]
   },
   {
-    id:'renda', meta:'Renda · 3/7', type:'chips',
-    text:'Qual a renda mensal declarada?',
-    opts:[
-      { icon:'❌', label:'Abaixo de R$ 10.000',   sub:'', value:'abaixo10k' },
-      { icon:'✅', label:'R$ 10.000 – R$ 11.999', sub:'', value:'10k' },
-      { icon:'✅', label:'R$ 12.000 – R$ 14.999', sub:'', value:'12k' },
-      { icon:'✅', label:'R$ 15.000 – R$ 19.999', sub:'', value:'15k' },
-      { icon:'✅', label:'R$ 20.000 ou mais',     sub:'', value:'20k'       },
-    ]
-  },
-  {
-    id:'idade', meta:'Idade · 4/7', type:'chips',
+    id:'idade', meta:'Idade · 3/7', type:'chips',
     text:'Idade de pelo menos um do casal?',
     opts:[
       { icon:'❌', label:'Abaixo de 30 anos', sub:'',                                    value:'menor30' },
@@ -1001,7 +990,7 @@ const QS = [
     ]
   },
   {
-    id:'casa', meta:'Casa própria · 5/7', type:'chips',
+    id:'casa', meta:'Casa própria · 4/7', type:'chips',
     text:'O cliente possui casa própria?',
     opts:[
       { icon:'🏠', label:'Sim, tem casa própria',           sub:'', value:'sim' },
@@ -1009,7 +998,7 @@ const QS = [
     ]
   },
   {
-    id:'carro', meta:'Veículo · 6/7', type:'chips',
+    id:'carro', meta:'Veículo · 5/7', type:'chips',
     text:'Qual o ano do carro do cliente?',
     opts:[
       { icon:'❌', label:'Não tem carro',       sub:'',                            value:'sem'       },
@@ -1019,11 +1008,22 @@ const QS = [
     ]
   },
   {
-    id:'cartao', meta:'Cartão · 7/7', type:'chips',
+    id:'cartao', meta:'Cartão · 6/7', type:'chips',
     text:'O cliente usa cartão de crédito?',
     opts:[
       { icon:'✅', label:'Sim, usa cartão de crédito', sub:'',                              value:'sim' },
       { icon:'❌', label:'Não usa cartão de crédito', sub:'Dispensado apenas R$15k+', value:'nao' },
+    ]
+  },
+  {
+    id:'renda', meta:'Renda · 7/7', type:'chips',
+    text:'Qual a renda mensal declarada?',
+    opts:[
+      { icon:'❌', label:'Abaixo de R$ 10.000',   sub:'', value:'abaixo10k' },
+      { icon:'✅', label:'R$ 10.000 – R$ 11.999', sub:'', value:'10k' },
+      { icon:'✅', label:'R$ 12.000 – R$ 14.999', sub:'', value:'12k' },
+      { icon:'✅', label:'R$ 15.000 – R$ 19.999', sub:'', value:'15k' },
+      { icon:'✅', label:'R$ 20.000 ou mais',     sub:'', value:'20k'       },
     ]
   },
 ];
@@ -1056,12 +1056,12 @@ function calcResult() {
   let verdict = 'NQ', perfil = null, rows = [], rule = null;
   if (isNoivos) {
     rule = '⚠️ Noivos/namorados: requer aprovação prévia dos líderes. Lance no TSE.';
-    rows = [{i:'❌', l:'Relacionamento', v:'Noivos — NQ (consultar líderes)'}];
+    rows = [{i:'⚠️', l:'Relacionamento', v:'Noivos — NQ (consultar líderes)'}];
     return { verdict:'NQ', rows, rule };
   }
   if (isMultiprop) {
     rule = '📌 Multiproprietário não entra como casal qualificado.';
-    rows = [{i:'❌', l:'Multipropriedade', v:'Não qualificado como titular'}];
+    rows = [{i:'⚠️', l:'Multipropriedade', v:'Não qualificado como titular'}];
     return { verdict:'NQ', rows, rule };
   }
   if (isSolteiro) {
@@ -1077,9 +1077,9 @@ function calcResult() {
       ];
     } else {
       rows = [
-        {i: rNum>=10000?'✅':'❌', l:'Renda',   v: rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'},
-        {i: idadeOkLow?'✅':'❌',  l:'Idade',   v: idadeOkLow  ? (a.idade==='30a34'?'30–34 anos':'35–65 anos') : 'Exige 30–65 anos'},
-        {i: carro2010?'✅':'❌',   l:'Veículo', v: carro2010 ? (carro2014?'2014+':'2010–2013') : 'Mínimo ano 2010'},
+        {i: rNum>=10000?'✅':'⚠️', l:'Renda',   v: rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'},
+        {i: idadeOkLow?'✅':'⚠️',  l:'Idade',   v: idadeOkLow  ? (a.idade==='30a34'?'30–34 anos':'35–65 anos') : 'Exige 30–65 anos'},
+        {i: carro2010?'✅':'⚠️',   l:'Veículo', v: carro2010 ? (carro2014?'2014+':'2010–2013') : 'Mínimo ano 2010'},
       ];
     }
     return { verdict, rows, rule, perfil };
@@ -1166,22 +1166,22 @@ function calcResult() {
 
 function buildFail_low(a, rNum, c2010, c2014, idOk, relOk, cSim) {
   return [
-    {i: rNum>=10000?'✅':'❌', l:'Renda',          v: rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'},
-    {i: idOk?'✅':'❌',        l:'Idade',          v: idOk        ? (a.idade==='30a34'?'30–34':'35–65') : 'Exige 30–65 anos'},
-    {i: c2010?'✅':'❌',       l:'Veículo',   v: c2010       ? (c2014?'2014+':'2010–2013') : 'Mínimo ano 2010'},
-    {i: relOk?'✅':'❌',       l:'Relacionamento', v: relOk       ? (a.tipo==='casados'?'Casados':'União estável') : 'Casado ou União estável'},
-    {i: cSim?'✅':'❌',        l:'Cartão',    v: cSim        ? 'Sim' : 'Obrigatório'},
+    {i: rNum>=10000?'✅':'⚠️', l:'Renda',          v: rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'},
+    {i: idOk?'✅':'⚠️',        l:'Idade',          v: idOk        ? (a.idade==='30a34'?'30–34':'35–65') : 'Exige 30–65 anos'},
+    {i: c2010?'✅':'⚠️',       l:'Veículo',   v: c2010       ? (c2014?'2014+':'2010–2013') : 'Mínimo ano 2010'},
+    {i: relOk?'✅':'⚠️',       l:'Relacionamento', v: relOk       ? (a.tipo==='casados'?'Casados':'União estável') : 'Casado ou União estável'},
+    {i: cSim?'✅':'⚠️',        l:'Cartão',    v: cSim        ? 'Sim' : 'Obrigatório'},
   ];
 }
 function buildFail_high(a, rNum, c2010, c2014, idOk, relOk, cSim, casaSim) {
   const r = [
-    {i: rNum>=10000?'✅':'❌', l:'Renda',          v: rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'},
-    {i: idOk?'✅':'❌',        l:'Idade',          v: idOk        ? '35–65 anos' : 'Exige 35–65 anos'},
-    {i: relOk?'✅':'❌',       l:'Relacionamento', v: relOk       ? (a.tipo==='casados'?'Casados':'União estável') : 'Casado ou União estável'},
+    {i: rNum>=10000?'✅':'⚠️', l:'Renda',          v: rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'},
+    {i: idOk?'✅':'⚠️',        l:'Idade',          v: idOk        ? '35–65 anos' : 'Exige 35–65 anos'},
+    {i: relOk?'✅':'⚠️',       l:'Relacionamento', v: relOk       ? (a.tipo==='casados'?'Casados':'União estável') : 'Casado ou União estável'},
   ];
-  if (rNum>=15000) r.push({i: c2010?'✅':'❌', l:'Veículo (R$15k)', v: c2010?'2010+':'Mín. 2010'});
-  else if (rNum>=12000) { r.push({i: c2014?'✅':'❌', l:'Veículo (R$12k)', v: c2014?'2014+':'Mín. 2014'}); }
-  else { r.push({i: c2014?'✅':'❌', l:'Veículo (R$10k)', v: c2014?'2014+':'Mín. 2014'}); r.push({i: casaSim?'✅':'❌', l:'Casa própria', v: casaSim?'Sim':'Obrigatória'}); r.push({i: cSim?'✅':'❌', l:'Cartão', v: cSim?'Sim':'Obrigatório'}); }
+  if (rNum>=15000) r.push({i: c2010?'✅':'⚠️', l:'Veículo (R$15k)', v: c2010?'2010+':'Mín. 2010'});
+  else if (rNum>=12000) { r.push({i: c2014?'✅':'⚠️', l:'Veículo (R$12k)', v: c2014?'2014+':'Mín. 2014'}); }
+  else { r.push({i: c2014?'✅':'⚠️', l:'Veículo (R$10k)', v: c2014?'2014+':'Mín. 2014'}); r.push({i: casaSim?'✅':'⚠️', l:'Casa própria', v: casaSim?'Sim':'Obrigatória'}); r.push({i: cSim?'✅':'⚠️', l:'Cartão', v: cSim?'Sim':'Obrigatório'}); }
   return r;
 }
 
@@ -1391,6 +1391,14 @@ function showResult() {
 function saveAndNew() {
   const { verdict } = calcResult();
   const tel = document.getElementById('fieldTel').value.trim();
+  if (!tel) {
+    const field = document.getElementById('fieldTel');
+    field.style.borderColor = 'var(--red)';
+    field.placeholder = '⚠️ Telefone obrigatório';
+    field.focus();
+    setTimeout(() => { field.style.borderColor = ''; field.placeholder = '(00) 00000-0000'; }, 3000);
+    return;
+  }
   const iso = todayISO();
   const lead = {
     id:       Date.now(),
