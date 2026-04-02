@@ -501,26 +501,9 @@
         &nbsp;·&nbsp;
         <span style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;text-decoration-color:rgba(136,153,187,.4)" onclick="trocarCaptador()">↩ Trocar conta</span>
       </div>
-      <div class="splash-sub">Selecione o volume do dia e<br>inicie a qualificação do cliente.</div>
+      <div class="splash-sub">Selecione sua sala e inicie a<br>qualificação do cliente.</div>
     </div>
-    <div class="section-title">Volume de visitantes hoje</div>
-    <div class="mode-cards">
-      <div class="mode-card selected" id="cardLow" onclick="selectMode('low')">
-        <div class="mode-dot low"></div>
-        <div class="mode-card-body">
-          <div class="mode-card-title">Abaixo de 3.000 visitantes</div>
-          <div class="mode-card-sub">Critérios mais flexíveis — carro 2010+, sem exigência de casa própria para alguns perfis.</div>
-        </div>
-      </div>
-      <div class="mode-card" id="cardHigh" onclick="selectMode('high')">
-        <div class="mode-dot high"></div>
-        <div class="mode-card-body">
-          <div class="mode-card-title">Acima de 3.000 visitantes</div>
-          <div class="mode-card-sub">Critérios exigentes — casa própria obrigatória (R$10k), carro 2014+.</div>
-        </div>
-      </div>
-    </div>
-    <button class="btn btn-gold" onclick="confirmModeAndStart()">Iniciar qualificação →</button>
+    <button class="btn btn-gold" onclick="goTo('new')">Iniciar qualificação →</button>
   </div>
 
   <!-- TELA SALA -->
@@ -537,6 +520,17 @@
     </div>
     <button class="btn btn-gold" id="btnIniciarQuiz" onclick="iniciarQuizComSala()" disabled>Iniciar →</button>
     <button class="btn btn-ghost" onclick="goHome()">← Voltar</button>
+  </div>
+
+  <!-- MODO -->
+  <div class="screen" id="screenModo">
+    <div style="margin-bottom:24px">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">📅 Período</div>
+      <div style="font-size:20px;font-weight:800;line-height:1.3;color:var(--text);margin-bottom:6px" id="modoTitulo">Qual o período de hoje?</div>
+    </div>
+    <div id="modoCards" style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px"></div>
+    <button class="btn btn-gold" id="btnConfirmarModo" onclick="confirmarModo()" disabled>Confirmar →</button>
+    <button class="btn btn-ghost" onclick="renderSalaScreen(); hideAll(); show('screenSala');">← Voltar</button>
   </div>
 
   <!-- QUIZ -->
@@ -726,17 +720,19 @@ const CONFIG = {
     { nome: 'Erick Faleiro',    cargo: 'ceo',      senhaDefault: 'erickerick'     },
   ],
   salas: [
-    { id: 'sao-pedro',    nome: 'São Pedro Resort',  cidade: 'São Pedro'    },
-    { id: 'atibaia',      nome: 'Atibaia',            cidade: 'Atibaia'       },
-    { id: 'caldas-novas', nome: 'Caldas Novas',       cidade: 'Caldas Novas'  },
+    { id: 'alta-vista', nome: 'Alta Vista',       cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Alta Vista'  },
+    { id: 'sao-pedro',  nome: 'São Pedro Resort', cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'São Pedro'   },
+    { id: 'atibaia',    nome: 'Atibaia',           cidade: 'Atibaia',      modos: [],                   sheetName: 'Atibaia'     },
   ],
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
   faixasRenda: [
-    { value: 'abaixo10k', label: 'Abaixo de R$ 10.000',   num: 0     },
+    { value: 'abaixo6k',  label: 'Abaixo de R$ 6.000',    num: 0     },
+    { value: '6k',        label: 'R$ 6.000 – R$ 7.999',   num: 6000  },
+    { value: '8k',        label: 'R$ 8.000 – R$ 9.999',   num: 8000  },
     { value: '10k',       label: 'R$ 10.000 – R$ 11.999', num: 10000 },
     { value: '12k',       label: 'R$ 12.000 – R$ 14.999', num: 12000 },
     { value: '15k',       label: 'R$ 15.000 – R$ 19.999', num: 15000 },
-    { value: '20k',       label: 'R$ 20.000 ou mais',      num: 20000 },
+    { value: '20k',       label: 'R$ 20.000 ou mais',     num: 20000 },
   ],
   faixasCarro: [
     { value: 'sem',       label: 'Não tem carro',        anoMin: 0    },
@@ -744,21 +740,20 @@ const CONFIG = {
     { value: '2010a2013', label: '2010 a 2013',           anoMin: 2010 },
     { value: '2014mais',  label: '2014 ou mais recente',  anoMin: 2014 },
   ],
-  modoBaixo: {
-    casal:    { rendaMin:10000, carroAnoMin:2010, idadeMin:30, idadeMax:65, exigeCasa:false, exigeCartao:true,  label:'Casal — Modo < 3k vis.' },
-    solteiro: { rendaMin:10000, carroAnoMin:2010, idadeMin:30, idadeMax:65, exigeCasa:false,                   label:'Solteiro/Divorciado'         },
+  // Regras São Pedro (mantidas como antes)
+  spBaixo: {
+    casal:    { rendaMin:10000, carroAnoMin:2010, idadeMin:30, idadeMax:65, exigeCasa:false, exigeCartao:true  },
+    solteiro: { rendaMin:10000, carroAnoMin:2010, idadeMin:30, idadeMax:65 },
+    parcialRendaMin: 20000,
   },
-  modoAlto: {
+  spAlto: {
     casais: [
-      { id:'A1', rendaMin:10000, carroAnoMin:2014, idadeMin:35, idadeMax:65, exigeCasa:true,  exigeCartao:true,  label:'Perfil A1 — R$10k + casa' },
-      { id:'A2', rendaMin:12000, carroAnoMin:2014, idadeMin:35, idadeMax:65, exigeCasa:false, exigeCartao:true,  label:'Perfil A2 — R$12k'         },
-      { id:'A3', rendaMin:15000, carroAnoMin:2010, idadeMin:35, idadeMax:65, exigeCasa:false, exigeCartao:false, label:'Perfil A3 — R$15k'         },
+      { id:'A1', rendaMin:10000, carroAnoMin:2014, idadeMin:35, idadeMax:65, exigeCasa:true,  exigeCartao:true  },
+      { id:'A2', rendaMin:12000, carroAnoMin:2014, idadeMin:35, idadeMax:65, exigeCasa:false, exigeCartao:true  },
+      { id:'A3', rendaMin:15000, carroAnoMin:2010, idadeMin:35, idadeMax:65, exigeCasa:false, exigeCartao:false },
     ],
-    solteiro: { rendaMin:10000, carroAnoMin:2010, idadeMin:30, idadeMax:65, exigeCasa:false, label:'Solteiro/Divorciado' },
-  },
-  parcial: {
-    rendaMin: 20000,
-    mensagem: '⚠️ Carro abaixo do mínimo, mas renda R$20k+ pode compensar. Consulte o líder.',
+    solteiro: { rendaMin:10000, carroAnoMin:2010, idadeMin:30, idadeMax:65 },
+    parcialRendaMin: 20000,
   },
 };
 
@@ -959,39 +954,47 @@ function doChangePw() {
   alert('Senha alterada com sucesso!');
 }
 
-// PERGUNTAS
+// PERGUNTAS — numeração dinâmica calculada em renderStep()
 const QS = [
   {
-    id:'nome', meta:'Identificação · 1/9', type:'text',
+    id:'nome', type:'text',
     text:'Qual o primeiro nome do cliente?',
   },
   {
-    id:'tipo', meta:'Perfil · 2/9', type:'chips',
+    id:'tipo', type:'chips',
     text:'Qual o perfil do cliente?',
     opts:[
-      { icon:'💍', label:'Casal casado',           sub:'Registro civil ou cartório', value:'casados'   },
-      { icon:'🤝', label:'União estável',sub:'Morando juntos',                  value:'uniao'     },
-      { icon:'💑', label:'Noivos / Namorados',     sub:'Sem formalização',      value:'noivos'    },
-      { icon:'👤', label:'Solteiro / Divorciado',  sub:'',                                value:'solteiro'  },
-      { icon:'🏡', label:'Já tem multiprop.', sub:'',                                value:'multiprop' },
+      { icon:'💍', label:'Casal casado',          sub:'Registro civil ou cartório', value:'casados'   },
+      { icon:'🤝', label:'União estável',          sub:'Morando juntos',             value:'uniao'     },
+      { icon:'💑', label:'Noivos / Namorados',     sub:'Sem formalização',           value:'noivos'    },
+      { icon:'👤', label:'Solteiro / Divorciado',  sub:'',                           value:'solteiro'  },
+      { icon:'🏡', label:'Já tem multiprop.',      sub:'',                           value:'multiprop' },
+    ]
+  },
+  // Pergunta condicional — só exibida se tipo === 'uniao'
+  {
+    id:'tempoRel', type:'chips', condicional: (a) => a.tipo === 'uniao',
+    text:'Há quanto tempo estão em união estável?',
+    opts:[
+      { icon:'⚠️', label:'Menos de 1 ano',  sub:'Não qualifica', value:'menos1ano' },
+      { icon:'✅', label:'1 ano ou mais',    sub:'',              value:'1anoMais'  },
     ]
   },
   {
-    id:'cidade', meta:'Cidade · 3/9', type:'cidade',
+    id:'cidade', type:'cidade',
     text:'Qual a cidade vocês moram?',
   },
   {
-    id:'idade', meta:'Idade · 4/9', type:'chips',
+    id:'idade', type:'chips',
     text:'Idade de pelo menos um do casal?',
     opts:[
-      { icon:'❌', label:'Abaixo de 30 anos', sub:'',                                    value:'menor30' },
-      { icon:'✅', label:'30 a 34 anos',      sub:'Válido apenas em dias <3k vis.', value:'30a34'   },
-      { icon:'✅', label:'35 a 65 anos',      sub:'',                                    value:'35a65'   },
-      { icon:'❌', label:'Acima de 65 anos',  sub:'',                                    value:'acima65' },
+      { icon:'⚠️', label:'Abaixo de 30 anos', sub:'', value:'menor30' },
+      { icon:'✅', label:'30 a 65 anos',       sub:'', value:'30a65'   },
+      { icon:'⚠️', label:'Acima de 65 anos',  sub:'', value:'acima65' },
     ]
   },
   {
-    id:'casa', meta:'Casa própria · 5/9', type:'chips',
+    id:'casa', type:'chips',
     text:'O cliente possui casa própria?',
     opts:[
       { icon:'🏠', label:'Sim, tem casa própria',           sub:'', value:'sim' },
@@ -999,195 +1002,360 @@ const QS = [
     ]
   },
   {
-    id:'carro', meta:'Veículo · 6/9', type:'chips',
+    id:'carro', type:'chips',
     text:'Qual o ano do carro do cliente?',
     opts:[
-      { icon:'❌', label:'Não tem carro',       sub:'',                            value:'sem'       },
-      { icon:'❌', label:'Até 2009',            sub:'',                            value:'ate2009'   },
-      { icon:'✅', label:'2010 a 2013',              sub:'Válido em dias <3k vis.', value:'2010a2013' },
-      { icon:'✅', label:'2014 ou mais recente',     sub:'',                            value:'2014mais'  },
+      { icon:'⚠️', label:'Não tem carro',          sub:'', value:'sem'       },
+      { icon:'⚠️', label:'Até 2009',               sub:'', value:'ate2009'   },
+      { icon:'✅', label:'2010 a 2013',             sub:'', value:'2010a2013' },
+      { icon:'✅', label:'2014 ou mais recente',    sub:'', value:'2014mais'  },
     ]
   },
   {
-    id:'cartao', meta:'Cartão · 7/9', type:'chips',
+    id:'cartao', type:'chips',
     text:'O cliente usa cartão de crédito?',
     opts:[
-      { icon:'✅', label:'Sim, usa cartão de crédito', sub:'',                              value:'sim' },
-      { icon:'❌', label:'Não usa cartão de crédito', sub:'Dispensado apenas R$15k+', value:'nao' },
+      { icon:'✅', label:'Sim, usa cartão de crédito', sub:'', value:'sim' },
+      { icon:'⚠️', label:'Não usa cartão de crédito', sub:'', value:'nao' },
     ]
   },
   {
-    id:'renda', meta:'Renda · 8/9', type:'chips',
+    id:'renda', type:'chips',
     text:'Qual a renda mensal declarada?',
     opts:[
-      { icon:'❌', label:'Abaixo de R$ 10.000',   sub:'', value:'abaixo10k' },
-      { icon:'✅', label:'R$ 10.000 – R$ 11.999', sub:'', value:'10k' },
-      { icon:'✅', label:'R$ 12.000 – R$ 14.999', sub:'', value:'12k' },
-      { icon:'✅', label:'R$ 15.000 – R$ 19.999', sub:'', value:'15k' },
-      { icon:'✅', label:'R$ 20.000 ou mais',     sub:'', value:'20k'       },
+      { icon:'⚠️', label:'Abaixo de R$ 6.000',    sub:'', value:'abaixo6k' },
+      { icon:'✅', label:'R$ 6.000 – R$ 7.999',   sub:'', value:'6k'       },
+      { icon:'✅', label:'R$ 8.000 – R$ 9.999',   sub:'', value:'8k'       },
+      { icon:'✅', label:'R$ 10.000 – R$ 11.999', sub:'', value:'10k'      },
+      { icon:'✅', label:'R$ 12.000 – R$ 14.999', sub:'', value:'12k'      },
+      { icon:'✅', label:'R$ 15.000 – R$ 19.999', sub:'', value:'15k'      },
+      { icon:'✅', label:'R$ 20.000 ou mais',     sub:'', value:'20k'      },
     ]
   },
   {
-    id:'tel', meta:'Contato · 9/9', type:'tel',
+    id:'tel', type:'tel',
     text:'Telefone com DDD do cliente?',
   },
 ];
 
+// Retorna apenas as perguntas visíveis para as respostas atuais
+function getQSAtivas() {
+  return QS.filter(q => !q.condicional || q.condicional(ans));
+}
+
 // QUALIFICAÇÃO
 function toNum(v) {
-  const m = { abaixo10k:0, '10k':10000, '12k':12000, '15k':15000, '20k':20000 };
+  const m = { abaixo6k:0, '6k':6000, '8k':8000, '10k':10000, '12k':12000, '15k':15000, '20k':20000 };
   return m[v] ?? 0;
 }
 function rendaStr(v) {
-  const m = { abaixo10k:'< R$10k', '10k':'R$10–11k', '12k':'R$12–14k', '15k':'R$15–19k', '20k':'R$20k+' };
+  const m = { abaixo6k:'< R$6k', '6k':'R$6–7k', '8k':'R$8–9k', '10k':'R$10–11k', '12k':'R$12–14k', '15k':'R$15–19k', '20k':'R$20k+' };
   return m[v] || v;
 }
+function carroAno(v) {
+  const m = { sem:0, ate2009:2009, '2010a2013':2013, '2014mais':2016 };
+  return m[v] ?? 0;
+}
+function idadeOk(v) { return v === '30a65'; }
 
+// ─────────────────────────────────────────────
+// QUALIFICAÇÃO — roteada por sala
+// ─────────────────────────────────────────────
 function calcResult() {
-  const a    = ans;
-  const hi   = mode === 'high';
-  const rNum = toNum(a.renda);
-  const isSolteiro  = a.tipo === 'solteiro';
-  const isNoivos    = a.tipo === 'noivos';
-  const isMultiprop = a.tipo === 'multiprop';
-  const relOk       = a.tipo === 'casados' || a.tipo === 'uniao';
-  const idadeOkLow  = a.idade === '30a34' || a.idade === '35a65';
-  const idadeOkHigh = a.idade === '35a65';
-  const carro2010   = a.carro === '2010a2013' || a.carro === '2014mais';
-  const carro2014   = a.carro === '2014mais';
-  const semCarro    = a.carro === 'sem' || a.carro === 'ate2009';
-  const cartaoSim   = a.cartao === 'sim';
-  const casaSim     = a.casa === 'sim';
-  let verdict = 'NQ', perfil = null, rows = [], rule = null;
-  if (isNoivos) {
-    rule = '⚠️ Noivos/namorados: requer aprovação prévia dos líderes. Lance no TSE.';
-    rows = [{i:'⚠️', l:'Relacionamento', v:'Noivos — NQ (consultar líderes)'}];
-    return { verdict:'NQ', rows, rule };
-  }
-  if (isMultiprop) {
-    rule = '📌 Multiproprietário não entra como casal qualificado.';
-    rows = [{i:'⚠️', l:'Multipropriedade', v:'Não qualificado como titular'}];
-    return { verdict:'NQ', rows, rule };
-  }
-  if (isSolteiro) {
-    const ok = rNum>=10000 && carro2010 && idadeOkLow;
-    if (ok) {
-      verdict = 'Q'; perfil = 'Solteiro/Divorciado — perfil padrão';
-      rows = [
-        {i:'✅', l:'Perfil',      v:'Solteiro / Divorciado'},
-        {i:'✅', l:'Renda',       v: rendaStr(a.renda)},
-        {i:'✅', l:'Idade',       v: a.idade==='30a34'?'30–34 anos':'35–65 anos'},
-        {i:'✅', l:'Veículo',v: carro2014?'2014+':'2010–2013'},
-        {i:'➞',  l:'Casa própria',v:'Não exigida'},
-      ];
-    } else {
-      rows = [
-        {i: rNum>=10000?'✅':'⚠️', l:'Renda',   v: rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'},
-        {i: idadeOkLow?'✅':'⚠️',  l:'Idade',   v: idadeOkLow  ? (a.idade==='30a34'?'30–34 anos':'35–65 anos') : 'Exige 30–65 anos'},
-        {i: carro2010?'✅':'⚠️',   l:'Veículo', v: carro2010 ? (carro2014?'2014+':'2010–2013') : 'Mínimo ano 2010'},
-      ];
-    }
-    return { verdict, rows, rule, perfil };
-  }
-  if (!hi) {
-    const ok = rNum>=10000 && carro2010 && idadeOkLow && relOk && cartaoSim;
-    if (ok) {
-      verdict = 'Q'; perfil = 'Casal — Modo < 3k vis.';
-      rows = [
-        {i:'✅', l:'Renda',          v: rendaStr(a.renda)},
-        {i:'✅', l:'Idade',          v: a.idade==='30a34'?'30–34 anos':'35–65 anos'},
-        {i:'✅', l:'Veículo',   v: carro2014?'2014+':'2010–2013'},
-        {i:'✅', l:'Relacionamento', v: a.tipo==='casados'?'Casados':'União estável'},
-        {i:'✅', l:'Cartão',    v:'Sim'},
-        {i:'➞',  l:'Casa própria',v:'Não exigida neste modo'},
-      ];
-    } else {
-      const parcialOk = rNum>=20000 && idadeOkLow && relOk && cartaoSim && semCarro;
-      if (parcialOk) {
-        verdict = 'PARCIAL'; rule = CONFIG.parcial.mensagem;
-        rows = [
-          {i:'✅', l:'Renda',          v: rendaStr(a.renda)},
-          {i:'✅', l:'Idade',          v: a.idade==='30a34'?'30–34 anos':'35–65 anos'},
-          {i:'⚠️', l:'Veículo', v:'Abaixo do mínimo — PARCIAL'},
-          {i:'✅', l:'Relacionamento', v: a.tipo==='casados'?'Casados':'União estável'},
-          {i:'✅', l:'Cartão',    v:'Sim'},
-        ];
-      } else {
-        rows = buildFail_low(a, rNum, carro2010, carro2014, idadeOkLow, relOk, cartaoSim);
-      }
-    }
-  } else {
-    const A1 = rNum>=10000 && carro2014 && casaSim  && idadeOkHigh && relOk && cartaoSim;
-    const A2 = rNum>=12000 && carro2014              && idadeOkHigh && relOk && cartaoSim;
-    const A3 = rNum>=15000 && carro2010              && idadeOkHigh && relOk;
-    if (A1) {
-      verdict = 'Q'; perfil = 'Casal — Perfil A1 (R$10k + casa)';
-      rows = [
-        {i:'✅', l:'Renda',          v: rendaStr(a.renda)},
-        {i:'✅', l:'Idade',          v:'35–65 anos'},
-        {i:'✅', l:'Veículo',   v:'2014+'},
-        {i:'✅', l:'Casa própria',v:'Sim'},
-        {i:'✅', l:'Relacionamento', v: a.tipo==='casados'?'Casados':'União estável'},
-        {i:'✅', l:'Cartão',    v:'Sim'},
-      ];
-    } else if (A2) {
-      verdict = 'Q'; perfil = 'Casal — Perfil A2 (R$12k)';
-      rows = [
-        {i:'✅', l:'Renda',          v: rendaStr(a.renda)},
-        {i:'✅', l:'Idade',          v:'35–65 anos'},
-        {i:'✅', l:'Veículo',   v:'2014+'},
-        {i:'➞',  l:'Casa própria',v:'Não exigida neste perfil'},
-        {i:'✅', l:'Relacionamento', v: a.tipo==='casados'?'Casados':'União estável'},
-        {i:'✅', l:'Cartão',    v:'Sim'},
-      ];
-    } else if (A3) {
-      verdict = 'Q'; perfil = 'Casal — Perfil A3 (R$15k)';
-      rows = [
-        {i:'✅', l:'Renda',          v: rendaStr(a.renda)},
-        {i:'✅', l:'Idade',          v:'35–65 anos'},
-        {i:'✅', l:'Veículo',   v: carro2014?'2014+':'2010–2013'},
-        {i:'➞',  l:'Casa própria',v:'Não exigida neste perfil'},
-        {i:'✅', l:'Relacionamento', v: a.tipo==='casados'?'Casados':'União estável'},
-        {i:'➞',  l:'Cartão',  v:'Não exigido (R$15k+)'},
-      ];
-    } else {
-      const parcialOk = rNum>=20000 && idadeOkHigh && relOk && cartaoSim && semCarro;
-      if (parcialOk) {
-        verdict = 'PARCIAL'; rule = CONFIG.parcial.mensagem;
-        rows = [
-          {i:'✅', l:'Renda',          v: rendaStr(a.renda)},
-          {i:'✅', l:'Idade',          v:'35–65 anos'},
-          {i:'⚠️', l:'Veículo', v:'Abaixo do mínimo — PARCIAL'},
-          {i:'✅', l:'Relacionamento', v: a.tipo==='casados'?'Casados':'União estável'},
-          {i:'✅', l:'Cartão',    v:'Sim'},
-        ];
-      } else {
-        rows = buildFail_high(a, rNum, carro2010, carro2014, idadeOkHigh, relOk, cartaoSim, casaSim);
-      }
-    }
-  }
-  return { verdict, rows, rule, perfil };
+  const salaId = salaAtual ? salaAtual.id : null;
+  if (salaId === 'alta-vista') return calcAltaVista();
+  if (salaId === 'sao-pedro')  return calcSaoPedro();
+  if (salaId === 'atibaia')    return calcAtibaia();
+  return { verdict:'NQ', rows:[{i:'⚠️', l:'Sala', v:'Sala não reconhecida'}], rule:null, perfil:null };
 }
 
-function buildFail_low(a, rNum, c2010, c2014, idOk, relOk, cSim) {
-  return [
-    {i: rNum>=10000?'✅':'⚠️', l:'Renda',          v: rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'},
-    {i: idOk?'✅':'⚠️',        l:'Idade',          v: idOk        ? (a.idade==='30a34'?'30–34':'35–65') : 'Exige 30–65 anos'},
-    {i: c2010?'✅':'⚠️',       l:'Veículo',   v: c2010       ? (c2014?'2014+':'2010–2013') : 'Mínimo ano 2010'},
-    {i: relOk?'✅':'⚠️',       l:'Relacionamento', v: relOk       ? (a.tipo==='casados'?'Casados':'União estável') : 'Casado ou União estável'},
-    {i: cSim?'✅':'⚠️',        l:'Cartão',    v: cSim        ? 'Sim' : 'Obrigatório'},
-  ];
+// helpers comuns
+function _base(a) {
+  const rNum     = toNum(a.renda);
+  const cAno     = carroAno(a.carro);
+  const isSol    = a.tipo === 'solteiro';
+  const isNoivos = a.tipo === 'noivos';
+  const isMult   = a.tipo === 'multiprop';
+  const relOk    = (a.tipo === 'casados') || (a.tipo === 'uniao' && a.tempoRel === '1anoMais');
+  const idOk     = idadeOk(a.idade);
+  const cartaoS  = a.cartao === 'sim';
+  const casaS    = a.casa === 'sim';
+  return { rNum, cAno, isSol, isNoivos, isMult, relOk, idOk, cartaoS, casaS };
 }
-function buildFail_high(a, rNum, c2010, c2014, idOk, relOk, cSim, casaSim) {
-  const r = [
-    {i: rNum>=10000?'✅':'⚠️', l:'Renda',          v: rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'},
-    {i: idOk?'✅':'⚠️',        l:'Idade',          v: idOk        ? '35–65 anos' : 'Exige 35–65 anos'},
-    {i: relOk?'✅':'⚠️',       l:'Relacionamento', v: relOk       ? (a.tipo==='casados'?'Casados':'União estável') : 'Casado ou União estável'},
-  ];
-  if (rNum>=15000) r.push({i: c2010?'✅':'⚠️', l:'Veículo (R$15k)', v: c2010?'2010+':'Mín. 2010'});
-  else if (rNum>=12000) { r.push({i: c2014?'✅':'⚠️', l:'Veículo (R$12k)', v: c2014?'2014+':'Mín. 2014'}); }
-  else { r.push({i: c2014?'✅':'⚠️', l:'Veículo (R$10k)', v: c2014?'2014+':'Mín. 2014'}); r.push({i: casaSim?'✅':'⚠️', l:'Casa própria', v: casaSim?'Sim':'Obrigatória'}); r.push({i: cSim?'✅':'⚠️', l:'Cartão', v: cSim?'Sim':'Obrigatório'}); }
-  return r;
+function _relLabel(a) { return a.tipo==='casados' ? 'Casados' : 'União estável ≥1 ano'; }
+function _row(ok, l, v) { return {i: ok?'✅':'⚠️', l, v}; }
+function _nqNoivos()   { return { verdict:'NQ', rows:[{i:'⚠️', l:'Relacionamento', v:'Noivos — consultar líderes'}], rule:'⚠️ Noivos/namorados: requer aprovação prévia dos líderes.', perfil:null }; }
+function _nqMult()     { return { verdict:'NQ', rows:[{i:'⚠️', l:'Multipropriedade', v:'Não qualificado como titular'}], rule:'📌 Multiproprietário não entra como casal qualificado.', perfil:null }; }
+
+// ── ALTA VISTA ──────────────────────────────
+function calcAltaVista() {
+  const a = ans;
+  const { rNum, cAno, isSol, isNoivos, isMult, relOk, idOk, cartaoS, casaS } = _base(a);
+  const baixa = mode === 'low'; // baixa temporada = low, alta = high
+
+  if (isNoivos) return _nqNoivos();
+  if (isMult)   return _nqMult();
+
+  if (isSol) {
+    // Solteiro: R$6k+, carro 2016+, idade 30-65, cartão
+    const ok = rNum >= 6000 && cAno >= 2016 && idOk && cartaoS;
+    if (ok) return {
+      verdict:'Q', perfil:'Solteiro/Divorciado — Alta Vista',
+      rule: null,
+      rows:[
+        {i:'✅', l:'Perfil',       v:'Solteiro / Divorciado'},
+        {i:'✅', l:'Renda',        v:rendaStr(a.renda)},
+        {i:'✅', l:'Idade',        v:'30–65 anos'},
+        {i:'✅', l:'Veículo',      v:'2016+'},
+        {i:'✅', l:'Cartão',       v:'Sim'},
+      ]
+    };
+    return { verdict:'NQ', perfil:null, rule:null, rows:[
+      _row(rNum>=6000,  'Renda',   rNum>=6000  ? rendaStr(a.renda) : 'Mínimo R$6.000'),
+      _row(idOk,        'Idade',   idOk        ? '30–65 anos'      : 'Exige 30–65 anos'),
+      _row(cAno>=2016,  'Veículo', cAno>=2016  ? '2016+'           : 'Mínimo 2016'),
+      _row(cartaoS,     'Cartão',  cartaoS     ? 'Sim'             : 'Obrigatório'),
+    ]};
+  }
+
+  // Casal
+  if (!relOk) return { verdict:'NQ', perfil:null, rule:null, rows:[
+    {i:'⚠️', l:'Relacionamento', v: a.tipo==='uniao' ? 'União estável < 1 ano — NQ' : 'Exige casado ou União estável ≥1 ano'},
+  ]};
+  if (!idOk) return { verdict:'NQ', perfil:null, rule:null, rows:[
+    {i:'⚠️', l:'Idade', v:'Exige 30–65 anos'},
+  ]};
+
+  const carroMin = baixa ? 2010 : 2014;
+
+  // Perfil 1: R$8k+, carro mínimo, sem obrigação de casa, cartão
+  if (rNum >= 8000 && cAno >= carroMin && cartaoS) return {
+    verdict:'Q', perfil:`Casal — Alta Vista ${baixa?'Baixa':'Alta'} Temporada (R$8k+)`,
+    rule:null,
+    rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Veículo',        v:cAno>=2016?'2016+':'2014+'},
+      {i:'✅', l:'Cartão',         v:'Sim'},
+    ]
+  };
+
+  // Perfil 2: R$6k–7.999, carro 2016+, casa própria, cartão
+  if (rNum >= 6000 && rNum < 8000 && cAno >= 2016 && casaS && cartaoS) return {
+    verdict:'Q', perfil:`Casal — Alta Vista (R$6–7k + casa própria)`,
+    rule:null,
+    rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Veículo',        v:'2016+'},
+      {i:'✅', l:'Casa própria',   v:'Sim'},
+      {i:'✅', l:'Cartão',         v:'Sim'},
+    ]
+  };
+
+  // Perfil 3: sem cartão, R$10k+, carro 2010+
+  if (rNum >= 10000 && cAno >= 2010 && !cartaoS) return {
+    verdict:'Q', perfil:`Casal — Alta Vista sem cartão (R$10k+)`,
+    rule:null,
+    rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Veículo',        v:'2010+'},
+      {i:'➞',  l:'Cartão',        v:'Dispensado (R$10k+)'},
+    ]
+  };
+
+  // NQ — mostrar o que faltou
+  return { verdict:'NQ', perfil:null, rule:null, rows:[
+    _row(rNum>=6000,      'Renda',          rNum>=6000      ? rendaStr(a.renda)   : 'Mínimo R$6.000'),
+    _row(idOk,            'Idade',          idOk            ? '30–65 anos'        : 'Exige 30–65 anos'),
+    _row(cAno>=carroMin,  'Veículo',        cAno>=carroMin  ? `${carroMin}+`      : `Mínimo ${carroMin}`),
+    _row(relOk,           'Relacionamento', relOk           ? _relLabel(a)        : 'Casado ou UE ≥1 ano'),
+    _row(cartaoS,         'Cartão',         cartaoS         ? 'Sim'               : 'Obrigatório (salvo R$10k+ sem cartão)'),
+  ]};
+}
+
+// ── SÃO PEDRO ───────────────────────────────
+function calcSaoPedro() {
+  const a = ans;
+  const { rNum, cAno, isSol, isNoivos, isMult, relOk, idOk, cartaoS, casaS } = _base(a);
+  const hi = mode === 'high';
+
+  if (isNoivos) return _nqNoivos();
+  if (isMult)   return _nqMult();
+
+  if (isSol) {
+    const ok = rNum>=10000 && cAno>=2010 && idOk;
+    if (ok) return {
+      verdict:'Q', perfil:'Solteiro/Divorciado — São Pedro',
+      rule:null,
+      rows:[
+        {i:'✅', l:'Perfil',  v:'Solteiro / Divorciado'},
+        {i:'✅', l:'Renda',   v:rendaStr(a.renda)},
+        {i:'✅', l:'Idade',   v:'30–65 anos'},
+        {i:'✅', l:'Veículo', v:'2010+'},
+      ]
+    };
+    return { verdict:'NQ', perfil:null, rule:null, rows:[
+      _row(rNum>=10000, 'Renda',   rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'),
+      _row(idOk,        'Idade',   idOk        ? '30–65 anos'      : 'Exige 30–65 anos'),
+      _row(cAno>=2010,  'Veículo', cAno>=2010  ? '2010+'           : 'Mínimo 2010'),
+    ]};
+  }
+
+  if (!hi) {
+    // Baixo: R$10k+, carro 2010+, 30-65, rel, cartão
+    const ok = rNum>=10000 && cAno>=2010 && idOk && relOk && cartaoS;
+    if (ok) return {
+      verdict:'Q', perfil:'Casal — São Pedro <3k vis.',
+      rule:null,
+      rows:[
+        {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+        {i:'✅', l:'Idade',          v:'30–65 anos'},
+        {i:'✅', l:'Veículo',        v:'2010+'},
+        {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+        {i:'✅', l:'Cartão',         v:'Sim'},
+      ]
+    };
+    const semCarro = cAno < 2010;
+    if (rNum>=20000 && idOk && relOk && cartaoS && semCarro) return {
+      verdict:'PARCIAL', perfil:null,
+      rule:'⚠️ Carro abaixo do mínimo, mas renda R$20k+ pode compensar. Consulte o líder.',
+      rows:[
+        {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+        {i:'⚠️', l:'Veículo',        v:'Abaixo do mínimo — PARCIAL'},
+        {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+        {i:'✅', l:'Cartão',         v:'Sim'},
+      ]
+    };
+    return { verdict:'NQ', perfil:null, rule:null, rows:[
+      _row(rNum>=10000, 'Renda',          rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'),
+      _row(idOk,        'Idade',          idOk        ? '30–65 anos'      : 'Exige 30–65 anos'),
+      _row(cAno>=2010,  'Veículo',        cAno>=2010  ? '2010+'           : 'Mínimo 2010'),
+      _row(relOk,       'Relacionamento', relOk       ? _relLabel(a)      : 'Casado ou UE ≥1 ano'),
+      _row(cartaoS,     'Cartão',         cartaoS     ? 'Sim'             : 'Obrigatório'),
+    ]};
+  } else {
+    // Alto: A1 R$10k+casa+2014, A2 R$12k+2014, A3 R$15k+2010
+    const idOkH = idOk;
+    const A1 = rNum>=10000 && cAno>=2014 && casaS  && idOkH && relOk && cartaoS;
+    const A2 = rNum>=12000 && cAno>=2014           && idOkH && relOk && cartaoS;
+    const A3 = rNum>=15000 && cAno>=2010           && idOkH && relOk;
+    if (A1) return { verdict:'Q', perfil:'Casal A1 — São Pedro >3k', rule:null, rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Veículo',        v:'2014+'},
+      {i:'✅', l:'Casa própria',   v:'Sim'},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'✅', l:'Cartão',         v:'Sim'},
+    ]};
+    if (A2) return { verdict:'Q', perfil:'Casal A2 — São Pedro >3k', rule:null, rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Veículo',        v:'2014+'},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'✅', l:'Cartão',         v:'Sim'},
+    ]};
+    if (A3) return { verdict:'Q', perfil:'Casal A3 — São Pedro >3k (R$15k)', rule:null, rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Veículo',        v:'2010+'},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'➞',  l:'Cartão',        v:'Dispensado (R$15k+)'},
+    ]};
+    const semCarro = cAno < 2010;
+    if (rNum>=20000 && idOkH && relOk && cartaoS && semCarro) return {
+      verdict:'PARCIAL', perfil:null,
+      rule:'⚠️ Carro abaixo do mínimo, mas renda R$20k+ pode compensar. Consulte o líder.',
+      rows:[
+        {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+        {i:'⚠️', l:'Veículo',        v:'Abaixo do mínimo — PARCIAL'},
+        {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+        {i:'✅', l:'Cartão',         v:'Sim'},
+      ]
+    };
+    return { verdict:'NQ', perfil:null, rule:null, rows:[
+      _row(rNum>=10000, 'Renda',          rNum>=10000 ? rendaStr(a.renda) : 'Mínimo R$10.000'),
+      _row(idOkH,       'Idade',          idOkH       ? '30–65 anos'      : 'Exige 30–65 anos'),
+      _row(cAno>=2014,  'Veículo',        cAno>=2014  ? '2014+'           : 'Mínimo 2014'),
+      _row(relOk,       'Relacionamento', relOk       ? _relLabel(a)      : 'Casado ou UE ≥1 ano'),
+      _row(cartaoS,     'Cartão',         cartaoS     ? 'Sim'             : 'Obrigatório'),
+    ]};
+  }
+}
+
+// ── ATIBAIA ─────────────────────────────────
+function calcAtibaia() {
+  const a = ans;
+  const { rNum, cAno, isSol, isNoivos, isMult, relOk, idOk, cartaoS } = _base(a);
+
+  if (isNoivos) return _nqNoivos();
+  if (isMult)   return _nqMult();
+
+  if (isSol) {
+    const ok = rNum>=8000 && cAno>=2016 && idOk && cartaoS;
+    if (ok) return {
+      verdict:'Q', perfil:'Solteiro/Divorciado — Atibaia',
+      rule:null,
+      rows:[
+        {i:'✅', l:'Perfil',  v:'Solteiro / Divorciado'},
+        {i:'✅', l:'Renda',   v:rendaStr(a.renda)},
+        {i:'✅', l:'Idade',   v:'30–65 anos'},
+        {i:'✅', l:'Veículo', v:'2016+'},
+        {i:'✅', l:'Cartão',  v:'Sim'},
+      ]
+    };
+    return { verdict:'NQ', perfil:null, rule:null, rows:[
+      _row(rNum>=8000,  'Renda',   rNum>=8000  ? rendaStr(a.renda) : 'Mínimo R$8.000'),
+      _row(idOk,        'Idade',   idOk        ? '30–65 anos'      : 'Exige 30–65 anos'),
+      _row(cAno>=2016,  'Veículo', cAno>=2016  ? '2016+'           : 'Mínimo 2016'),
+      _row(cartaoS,     'Cartão',  cartaoS     ? 'Sim'             : 'Obrigatório'),
+    ]};
+  }
+
+  if (!relOk) return { verdict:'NQ', perfil:null, rule:null, rows:[
+    {i:'⚠️', l:'Relacionamento', v: a.tipo==='uniao' ? 'União estável < 1 ano — NQ' : 'Exige casado ou UE ≥1 ano'},
+  ]};
+  if (!idOk) return { verdict:'NQ', perfil:null, rule:null, rows:[
+    {i:'⚠️', l:'Idade', v:'Exige 30–65 anos'},
+  ]};
+
+  // Casal padrão: R$8k+, 2014+, cartão
+  if (rNum>=8000 && cAno>=2014 && cartaoS) return {
+    verdict:'Q', perfil:'Casal — Atibaia (R$8k+)',
+    rule:null,
+    rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Veículo',        v:'2014+'},
+      {i:'✅', l:'Cartão',         v:'Sim'},
+    ]
+  };
+
+  // Sem cartão: R$10k+, 2010+
+  if (rNum>=10000 && cAno>=2010 && !cartaoS) return {
+    verdict:'Q', perfil:'Casal — Atibaia sem cartão (R$10k+)',
+    rule:null,
+    rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Veículo',        v:'2010+'},
+      {i:'➞',  l:'Cartão',        v:'Dispensado (R$10k+)'},
+    ]
+  };
+
+  return { verdict:'NQ', perfil:null, rule:null, rows:[
+    _row(rNum>=8000,  'Renda',          rNum>=8000  ? rendaStr(a.renda) : 'Mínimo R$8.000'),
+    _row(idOk,        'Idade',          idOk        ? '30–65 anos'      : 'Exige 30–65 anos'),
+    _row(cAno>=2014,  'Veículo',        cAno>=2014  ? '2014+'           : 'Mínimo 2014'),
+    _row(relOk,       'Relacionamento', relOk       ? _relLabel(a)      : 'Casado ou UE ≥1 ano'),
+    _row(cartaoS,     'Cartão',         cartaoS     ? 'Sim'             : 'Obrigatório (salvo R$10k+ sem cartão)'),
+  ]};
 }
 
 // NAVEGAÇÃO
@@ -1246,10 +1414,10 @@ function renderSalaScreen() {
   document.getElementById('btnIniciarQuiz').disabled = true;
 }
 
-function pickSala(el, nome) {
+function pickSala(el, salaId, nome) {
   document.querySelectorAll('#salaChips .sala-chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
-  salaAtual = { nome };
+  salaAtual = { id: salaId, nome };
   document.getElementById('fieldOutraSala').value = '';
   document.getElementById('btnIniciarQuiz').disabled = false;
 }
@@ -1258,7 +1426,7 @@ function onOutraSalaInput() {
   const val = document.getElementById('fieldOutraSala').value.trim();
   document.querySelectorAll('#salaChips .sala-chip').forEach(c => c.classList.remove('selected'));
   if (val) {
-    salaAtual = { nome: val };
+    salaAtual = { id: null, nome: val };
     document.getElementById('btnIniciarQuiz').disabled = false;
   } else {
     salaAtual = null;
@@ -1268,36 +1436,121 @@ function onOutraSalaInput() {
 
 function iniciarQuizComSala() {
   if (!salaAtual) return;
-  // Atualiza pill de sala no header
   const pill = document.getElementById('salaPill');
   pill.textContent = '🏢 ' + salaAtual.nome;
   pill.classList.remove('hidden');
+  // Salas com modos mostram tela de seleção de modo
+  const salaCfg = CONFIG.salas.find(s => s.id === salaAtual.id);
+  if (salaCfg && salaCfg.modos.length > 0) {
+    renderModoScreen(salaCfg);
+    hideAll(); show('screenModo');
+  } else {
+    mode = 'low'; // salas sem modo usam 'low' como padrão
+    atualizarModoBadge();
+    step = 0; ans = {};
+    hideAll(); show('screenQuiz');
+    renderStep();
+  }
+}
+
+function renderModoScreen(salaCfg) {
+  const wrap = document.getElementById('modoCards');
+  const modos = {
+    baixa:   { label:'Baixa Temporada',         sub:'Dom a Qui — critérios mais flexíveis',            badge:'low'  },
+    alta:    { label:'Alta Temporada',           sub:'Sex e Sáb — critérios mais exigentes',            badge:'high' },
+    baixo3k: { label:'Abaixo de 3.000 visitantes', sub:'Critérios mais flexíveis — carro 2010+',        badge:'low'  },
+    alto3k:  { label:'Acima de 3.000 visitantes',  sub:'Critérios exigentes — carro 2014+, casa própria', badge:'high' },
+  };
+  wrap.innerHTML = salaCfg.modos.map(m => {
+    const cfg = modos[m] || { label: m, sub:'', badge:'low' };
+    return `<div class="mode-card" id="modoCard_${m}" onclick="pickModo('${m}','${cfg.badge}')">
+      <div class="mode-dot ${cfg.badge}"></div>
+      <div class="mode-card-body">
+        <div class="mode-card-title">${cfg.label}</div>
+        <div class="mode-card-sub">${cfg.sub}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('modoTitulo').textContent = '📍 ' + salaCfg.nome + ' — Qual o período de hoje?';
+  document.getElementById('btnConfirmarModo').disabled = true;
+  window._modoPendente = null;
+}
+
+function pickModo(modoId, badge) {
+  document.querySelectorAll('#modoCards .mode-card').forEach(c => c.classList.remove('selected'));
+  const el = document.getElementById('modoCard_' + modoId);
+  if (el) el.classList.add('selected');
+  window._modoPendente = { modoId, badge };
+  document.getElementById('btnConfirmarModo').disabled = false;
+}
+
+function confirmarModo() {
+  if (!window._modoPendente) return;
+  mode = window._modoPendente.badge;
+  atualizarModoBadge();
   step = 0; ans = {};
   hideAll(); show('screenQuiz');
   renderStep();
 }
 
+function atualizarModoBadge() {
+  const b = document.getElementById('modeBadge');
+  if (!salaAtual) { b.textContent = ''; b.className = 'mode-badge low hidden'; return; }
+  const salaCfg = CONFIG.salas.find(s => s.id === salaAtual.id);
+  if (!salaCfg || salaCfg.modos.length === 0) { b.classList.add('hidden'); return; }
+  b.classList.remove('hidden');
+  if (salaCfg.modos.includes('baixa') || salaCfg.modos.includes('alta')) {
+    b.textContent = mode === 'low' ? '▾ Baixa' : '▾ Alta';
+  } else {
+    b.textContent = mode === 'low' ? '▾ <3k' : '▾ >3k';
+  }
+  b.className = 'mode-badge ' + mode;
+}
+
 function startQuiz() {
-  // Se captador tem sala fixa cadastrada, pula a tela de seleção
+  // Se captador tem sala fixa cadastrada, pula a tela de seleção de sala
   if (captador && captador.sala) {
-    salaAtual = { nome: captador.sala };
+    const salaCfg = CONFIG.salas.find(s => s.nome === captador.sala || s.id === captador.sala);
+    salaAtual = salaCfg ? { id: salaCfg.id, nome: salaCfg.nome } : { id: null, nome: captador.sala };
     const pill = document.getElementById('salaPill');
-    pill.textContent = '🏢 ' + captador.sala;
+    pill.textContent = '🏢 ' + salaAtual.nome;
     pill.classList.remove('hidden');
-    step = 0; ans = {};
-    hideAll(); show('screenQuiz');
-    renderStep();
+    if (salaCfg && salaCfg.modos.length > 0) {
+      renderModoScreen(salaCfg);
+      hideAll(); show('screenModo');
+    } else {
+      mode = 'low';
+      atualizarModoBadge();
+      step = 0; ans = {};
+      hideAll(); show('screenQuiz');
+      renderStep();
+    }
     return;
   }
   renderSalaScreen();
   hideAll(); show('screenSala');
 }
 
+function renderSalaScreen() {
+  const salas = CONFIG.salas; // usa apenas salas fixas (Alta Vista, São Pedro, Atibaia)
+  const chips = document.getElementById('salaChips');
+  chips.innerHTML = salas.map(s => `
+    <div class="sala-chip" data-id="${s.id}" onclick="pickSala(this, '${s.id}', '${s.nome.replace(/'/g,"\\'")}')">
+      <div class="sala-chip-icon">🏢</div>
+      <div class="sala-chip-label">${s.nome}</div>
+    </div>
+  `).join('');
+  document.getElementById('fieldOutraSala').value = '';
+  document.getElementById('btnIniciarQuiz').disabled = true;
+}
+
 // QUIZ
 function renderStep() {
-  const q = QS[step], total = QS.length;
+  const qs = getQSAtivas();
+  const q = qs[step], total = qs.length;
   document.getElementById('progBar').style.width = Math.round(step/total*100) + '%';
-  document.getElementById('qMeta').textContent = q.meta;
+  const catLabel = { text:'Identificação', cidade:'Cidade', chips:'', tel:'Contato' };
+  document.getElementById('qMeta').textContent = (catLabel[q.type]||q.id) + ' · ' + (step+1) + '/' + total;
   document.getElementById('qText').textContent = q.text;
   let dotHtml = '';
   for (let i=0; i<total; i++) {
@@ -1371,13 +1624,14 @@ function pickChip(qid, value, el) {
   setTimeout(nextStep, 240);
 }
 function nextStep() {
-  const q = QS[step];
+  const qs = getQSAtivas();
+  const q = qs[step];
   if (q.type==='text'   && !(ans.nome   && ans.nome.trim())) return;
   if (q.type==='cidade' && !(ans.cidade && ans.cidade.trim())) return;
   if (q.type==='tel'    && !(ans.tel    && ans.tel.trim().length >= 8)) return;
   if (q.type==='chips'  && !ans[q.id]) return;
   step++;
-  if (step>=QS.length) showResult();
+  if (step >= qs.length) showResult();
   else renderStep();
 }
 function prevStep() {
