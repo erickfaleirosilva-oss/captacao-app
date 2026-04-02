@@ -93,19 +93,22 @@
       font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit;
     }
     .btn-login:active { transform: scale(.98); }
-    #screenPwChange {
-      position: fixed; inset: 0; z-index: 350;
-      background: var(--navy);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 32px 24px;
-    }
-    #screenPwChange.hidden { display: none !important; }
+    #pwChangePanel { width: 100%; max-width: 380px; }
+    #pwChangePanel.hidden { display: none !important; }
     .pwc-title { font-size: 19px; font-weight: 800; color: var(--gold2); margin-bottom: 6px; }
     .pwc-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; text-align: center; }
-    .pwc-form  { width: 100%; max-width: 360px; }
+    .pwc-form  { width: 100%; }
     .pwc-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: block; }
     .pwc-error { font-size: 12px; color: var(--red); min-height: 16px; margin-bottom: 8px; }
+    .login-search {
+      width: 100%; max-width: 380px; margin-bottom: 12px;
+      background: var(--navy2); border: 2px solid var(--border);
+      border-radius: 10px; padding: 12px 14px;
+      font-size: 14px; color: var(--text); outline: none; font-family: inherit;
+      transition: border-color .15s; box-sizing: border-box;
+    }
+    .login-search:focus { border-color: var(--gold); }
+    .login-list { max-height: 52vh; overflow-y: auto; }
     .header {
       background: var(--navy2); border-bottom: 1px solid var(--border);
       padding: 12px 18px; display: flex; align-items: center; gap: 8px;
@@ -433,42 +436,47 @@
 <!-- LOGIN -->
 <div id="screenLogin">
   <svg class="login-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="18" fill="#1f2b4d"/><rect x="4" y="4" width="43" height="43" rx="9" fill="#c9a84c"/><rect x="53" y="4" width="43" height="43" rx="9" fill="#c9a84c"/><rect x="4" y="53" width="43" height="43" rx="9" fill="#c9a84c"/><rect x="53" y="53" width="43" height="43" rx="9" fill="#c9a84c"/><text x="25.5" y="38" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">Y</text><text x="74.5" y="38" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">O</text><text x="25.5" y="87" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">U</text><text x="74.5" y="87" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">R</text></svg>
-  <div class="login-title">Quem está captando hoje?</div>
-  <div class="login-sub">Selecione seu nome e insira a senha<br>para iniciar a sessão.</div>
-  <div class="login-list" id="loginList"></div>
-  <div id="pwPanel" class="hidden">
-    <div class="pw-label">SENHA DE ACESSO</div>
-    <div class="pw-name" id="pwName"></div>
-    <div class="pw-wrap">
-      <input class="pw-input" id="pwInput" type="password" placeholder="········"
-        autocomplete="current-password" oninput="pwClearError()" onkeydown="pwKeydown(event)" />
-      <div class="pw-toggle" id="pwToggle" onclick="togglePw()">👁</div>
-    </div>
-    <div class="pw-error" id="pwError"></div>
-    <button class="btn-login" onclick="doLogin()">Entrar →</button>
-  </div>
-</div>
 
-<!-- TROCAR SENHA -->
-<div id="screenPwChange" class="hidden">
-  <div class="pwc-title">🔐 Alterar senha</div>
-  <div class="pwc-sub">Escolha uma senha pessoal para sua conta.</div>
-  <div class="pwc-form">
-    <label class="pwc-label">SENHA ATUAL</label>
-    <div class="pw-wrap" style="margin-bottom:14px">
-      <input class="pw-input" id="pwOld" type="password" placeholder="Senha atual" autocomplete="current-password" style="background:var(--navy2);" oninput="pwcClearError()" />
+  <!-- PAINEL: lista de captadores -->
+  <div id="loginSelectPanel">
+    <div class="login-title">Quem está captando hoje?</div>
+    <div class="login-sub">Selecione seu nome e insira a senha<br>para iniciar a sessão.</div>
+    <input class="login-search" id="loginSearch" type="text" placeholder="🔍 Buscar nome..." oninput="filtrarLoginList(this.value)" autocomplete="off" />
+    <div class="login-list" id="loginList"></div>
+    <div id="pwPanel" class="hidden">
+      <div class="pw-label">SENHA DE ACESSO</div>
+      <div class="pw-name" id="pwName"></div>
+      <div class="pw-wrap">
+        <input class="pw-input" id="pwInput" type="password" placeholder="········"
+          autocomplete="current-password" oninput="pwClearError()" onkeydown="pwKeydown(event)" />
+        <div class="pw-toggle" id="pwToggle" onclick="togglePw()">👁</div>
+      </div>
+      <div class="pw-error" id="pwError"></div>
+      <button class="btn-login" onclick="doLogin()">Entrar →</button>
     </div>
-    <label class="pwc-label">NOVA SENHA</label>
-    <div class="pw-wrap" style="margin-bottom:14px">
-      <input class="pw-input" id="pwNew" type="password" placeholder="Mínimo 4 caracteres" autocomplete="new-password" style="background:var(--navy2);" oninput="pwcClearError()" />
+  </div>
+
+  <!-- PAINEL: trocar senha (abre por cima, dentro do mesmo screenLogin) -->
+  <div id="pwChangePanel" class="hidden">
+    <div class="pwc-title">🔐 Alterar senha</div>
+    <div class="pwc-sub">Escolha uma senha pessoal para sua conta.</div>
+    <div class="pwc-form">
+      <label class="pwc-label">SENHA ATUAL</label>
+      <div class="pw-wrap" style="margin-bottom:14px">
+        <input class="pw-input" id="pwOld" type="password" placeholder="Senha atual" autocomplete="current-password" style="background:var(--navy2);" oninput="pwcClearError()" />
+      </div>
+      <label class="pwc-label">NOVA SENHA</label>
+      <div class="pw-wrap" style="margin-bottom:14px">
+        <input class="pw-input" id="pwNew" type="password" placeholder="Mínimo 4 caracteres" autocomplete="new-password" style="background:var(--navy2);" oninput="pwcClearError()" />
+      </div>
+      <label class="pwc-label">CONFIRMAR NOVA SENHA</label>
+      <div class="pw-wrap" style="margin-bottom:6px">
+        <input class="pw-input" id="pwConf" type="password" placeholder="Repita a nova senha" autocomplete="new-password" style="background:var(--navy2);" oninput="pwcClearError()" />
+      </div>
+      <div class="pwc-error" id="pwcError"></div>
+      <button class="btn-login" onclick="doChangePw()">Salvar nova senha</button>
+      <button class="btn" style="margin-top:10px;background:var(--navy2);color:var(--muted);border:1.5px solid var(--border);font-size:14px" onclick="closePwChange()">← Voltar</button>
     </div>
-    <label class="pwc-label">CONFIRMAR NOVA SENHA</label>
-    <div class="pw-wrap" style="margin-bottom:6px">
-      <input class="pw-input" id="pwConf" type="password" placeholder="Repita a nova senha" autocomplete="new-password" style="background:var(--navy2);" oninput="pwcClearError()" />
-    </div>
-    <div class="pwc-error" id="pwcError"></div>
-    <button class="btn-login" onclick="doChangePw()">Salvar nova senha</button>
-    <button class="btn" style="margin-top:10px;background:var(--navy2);color:var(--muted);border:1.5px solid var(--border);font-size:14px" onclick="closePwChange()">Cancelar</button>
   </div>
 </div>
 
@@ -847,14 +855,20 @@ function initLogin() {
     if (found) { captador = found; document.getElementById('screenLogin').classList.add('hidden'); afterLogin(); return; }
   }
   renderLoginList(null);
+  document.getElementById('loginSelectPanel').classList.remove('hidden');
+  document.getElementById('pwChangePanel').classList.add('hidden');
   document.getElementById('screenLogin').classList.remove('hidden');
 }
 
-function renderLoginList(selected) {
+function renderLoginList(selected, filtro) {
   const ul = document.getElementById('loginList');
   const ROLE_LABEL = { captador:'Captador(a)', sublider:'Sublíder', lider:'Líder', ceo:'CEO' };
   const todos = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
-  ul.innerHTML = todos.map(c => {
+  const lista = filtro
+    ? todos.filter(c => c.nome.toLowerCase().includes(filtro.toLowerCase()))
+    : todos;
+  if (!lista.length) { ul.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0;text-align:center">Nenhum resultado</div>'; return; }
+  ul.innerHTML = lista.map(c => {
     const ini = c.nome.split(' ').map(p=>p[0]).slice(0,2).join('');
     const sel = selected === c.nome ? ' selected' : '';
     return `<div class="login-item${sel}" onclick="loginPickNome('${c.nome}')">
@@ -865,6 +879,9 @@ function renderLoginList(selected) {
       </div>
     </div>`;
   }).join('');
+}
+function filtrarLoginList(val) {
+  renderLoginList(loginSelectedNome, val);
 }
 
 function loginPickNome(nome) {
@@ -928,10 +945,16 @@ function openPwChange() {
   document.getElementById('pwNew').value  = '';
   document.getElementById('pwConf').value = '';
   document.getElementById('pwcError').textContent = '';
-  document.getElementById('screenPwChange').classList.remove('hidden');
+  // Mostra tela de login por cima de tudo, com painel de troca de senha
+  document.getElementById('screenLogin').classList.remove('hidden');
+  document.getElementById('loginSelectPanel').classList.add('hidden');
+  document.getElementById('pwChangePanel').classList.remove('hidden');
 }
 function closePwChange() {
-  document.getElementById('screenPwChange').classList.add('hidden');
+  document.getElementById('pwChangePanel').classList.add('hidden');
+  document.getElementById('loginSelectPanel').classList.remove('hidden');
+  // Fecha screenLogin só se já havia captador logado
+  if (captador) document.getElementById('screenLogin').classList.add('hidden');
 }
 function pwcClearError() { document.getElementById('pwcError').textContent = ''; }
 
