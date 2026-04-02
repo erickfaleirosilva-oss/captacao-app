@@ -774,7 +774,7 @@ const API = {
   getLeads: async () => {
     if (!API.ok()) return null;
     try {
-      const r = await fetch(CONFIG.webhookUrl + '?sheet=leads&desde=' + new Date().toISOString().slice(0,10));
+      const r = await fetch(CONFIG.webhookUrl);
       if (!r.ok) return null;
       const json = await r.json();
       // Apps Script retorna { status, leads: [...] }
@@ -1894,12 +1894,28 @@ function executarExport() {
   fecharModalExport();
 }
 
+// Normaliza campo date para dd/mm/aaaa (formato pt-BR usado localmente)
+function normalizarDate(d) {
+  if (!d) return '';
+  const s = String(d);
+  // já está no formato dd/mm/aaaa
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  // ISO: 2026-04-02 ou 2026-04-02T...
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[3] + '/' + iso[2] + '/' + iso[1];
+  // Tenta via Date
+  const dt = new Date(s);
+  if (!isNaN(dt)) return dt.toLocaleDateString('pt-BR');
+  return s;
+}
+
 // Merge leads remotos no array local (sem duplicar por id)
 function mergeRemoto(remoto) {
   if (!Array.isArray(remoto) || !remoto.length) return false;
   const ids = new Set(leads.map(l => String(l.id)));
   let changed = false;
   remoto.forEach(r => {
+    r.date = normalizarDate(r.date);
     if (!ids.has(String(r.id))) { leads.push(r); ids.add(String(r.id)); changed = true; }
   });
   if (changed) {
