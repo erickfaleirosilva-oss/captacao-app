@@ -1916,6 +1916,11 @@ function mergeRemoto(remoto) {
   let changed = false;
   remoto.forEach(r => {
     r.date = normalizarDate(r.date);
+    // garante dateISO (aaaa-mm-dd) para filtros de histórico
+    if (!r.dateISO || r.dateISO === '') {
+      const p = r.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      r.dateISO = p ? p[3] + '-' + p[2] + '-' + p[1] : '';
+    }
     if (!ids.has(String(r.id))) { leads.push(r); ids.add(String(r.id)); changed = true; }
   });
   if (changed) {
