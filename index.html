@@ -620,6 +620,7 @@
       <div class="cdp-sub" id="cdpSub"></div>
       <div class="cdp-sync hidden" id="cdpSync">🔄 sincronizando...</div>
     </div>
+    <div id="cdpFiltrosWrap"></div>
     <div id="cdpTotais"></div>
     <div class="section-title">Captadores</div>
     <div id="cdpRank"></div>
@@ -826,7 +827,8 @@ let captador = null;
 let salaAtual = null;
 let leads    = JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]');
 let loginSelectedNome = null;
-let histFiltro = { periodo: 'hoje', captador: 'todos' };
+let histFiltro = { periodo: 'hoje', captador: 'todos', sala: 'todas', de: '', ate: '' };
+let cdpFiltro  = { periodo: 'hoje', sala: 'todas' };
 
 function getSenha(nome) {
   const stored = localStorage.getItem('yv_pw_' + nome);
@@ -1773,23 +1775,42 @@ function skipNew() {
   renderStep();
 }
 
+// Retorna domingo da semana atual (ISO)
+function domingoSemana() {
+  const d = new Date(); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() - d.getDay()); // recua até domingo
+  return d.toISOString().slice(0,10);
+}
+
 // FILTROS DE HI STÓRICO
-function filtrarLeads(fonte) {
+function filtrarLeads(fonte, filtro) {
+  filtro = filtro || histFiltro;
   const hoje = todayISO();
-  const agora = new Date();
   let filtered = fonte;
-  if (histFiltro.periodo === 'hoje') {
+
+  if (filtro.periodo === 'hoje') {
     filtered = filtered.filter(l => l.dateISO === hoje);
-  } else if (histFiltro.periodo === 'semana') {
-    const semanaAtras = new Date(agora); semanaAtras.setDate(semanaAtras.getDate() - 7);
-    const saISO = semanaAtras.toISOString().slice(0,10);
-    filtered = filtered.filter(l => (l.dateISO || '') >= saISO && (l.dateISO || '') <= hoje);
-  } else if (histFiltro.periodo === 'mes') {
+  } else if (filtro.periodo === 'semana') {
+    const dom = domingoSemana();
+    // sábado = domingo + 6 dias
+    const sabISO = new Date(dom + 'T00:00:00');
+    sabISO.setDate(sabISO.getDate() + 6);
+    const sabStr = sabISO.toISOString().slice(0,10);
+    filtered = filtered.filter(l => (l.dateISO||'') >= dom && (l.dateISO||'') <= sabStr);
+  } else if (filtro.periodo === 'mes') {
     const anoMes = hoje.slice(0,7);
-    filtered = filtered.filter(l => (l.dateISO || '').slice(0,7) === anoMes);
+    filtered = filtered.filter(l => (l.dateISO||'').slice(0,7) === anoMes);
+  } else if (filtro.periodo === 'livre') {
+    const de  = filtro.de  || '0000-00-00';
+    const ate = filtro.ate || '9999-99-99';
+    filtered = filtered.filter(l => (l.dateISO||'') >= de && (l.dateISO||'') <= ate);
   }
-  if (histFiltro.captador !== 'todos') {
-    filtered = filtered.filter(l => l.captador === histFiltro.captador);
+
+  if (filtro.captador && filtro.captador !== 'todos') {
+    filtered = filtered.filter(l => l.captador === filtro.captador);
+  }
+  if (filtro.sala && filtro.sala !== 'todas') {
+    filtered = filtered.filter(l => l.sala === filtro.sala);
   }
   return filtered;
 }
@@ -1812,30 +1833,55 @@ function renderHistFiltros() {
   const periodos = [
     { v:'hoje',   l:'Hoje'        },
     { v:'semana', l:'Esta semana' },
-    { v:'mes',    l:'Este mês'  },
+    { v:'mes',    l:'Este mês'    },
+    { v:'livre',  l:'Período'     },
   ];
+
   let html = '<div class="filtros-wrap">';
+
+  // Chips de período
   periodos.forEach(p => {
     html += `<div class="filtro-chip${histFiltro.periodo===p.v?' active':''}" onclick="setHistFiltro('periodo','${p.v}')">${p.l}</div>`;
   });
+
+  // Select de captador (acesso total)
   if (temAcessoTotal(captador)) {
-    // CEO vê todos; líder/sublider vê só captadores da sua sala
-    const salaFiltroLider = getSalaDoLider(captador);
-    const membrosFiltrados = salaFiltroLider
-      ? todos.filter(m => !m.sala || m.sala === salaFiltroLider || ['lider','sublider','ceo'].includes(m.cargo) === false)
-      : todos;
-    // Para o select: CEO vê todos; líder vê só quem tem leads na sua sala
     const opcoesSelect = captador.cargo === 'ceo'
       ? todos
       : todos.filter(m => !['lider','sublider','ceo'].includes(m.cargo));
     html += '<select class="filtro-select" onchange="setHistFiltro(\'captador\',this.value)">';
-    html += `<option value="todos"${histFiltro.captador==='todos'?' selected':''}>Todos</option>`;
+    html += `<option value="todos"${histFiltro.captador==='todos'?' selected':''}>Captador</option>`;
     opcoesSelect.forEach(m => {
       html += `<option value="${m.nome}"${histFiltro.captador===m.nome?' selected':''}>${m.nome}</option>`;
     });
     html += '</select>';
   }
+
+  // Select de sala (apenas CEO vê todas as salas)
+  if (captador && captador.cargo === 'ceo') {
+    const todasSalas = getTodasSalas();
+    html += '<select class="filtro-select" onchange="setHistFiltro(\'sala\',this.value)">';
+    html += `<option value="todas"${histFiltro.sala==='todas'?' selected':''}>Sala</option>`;
+    todasSalas.forEach(s => {
+      html += `<option value="${s.nome}"${histFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
+    });
+    html += '</select>';
+  }
+
   html += '</div>';
+
+  // Campos de/até (só quando período = livre)
+  if (histFiltro.periodo === 'livre') {
+    html += `<div class="filtros-wrap" style="margin-top:6px;align-items:center;gap:8px">
+      <label style="font-size:11px;color:var(--muted);font-weight:600">De</label>
+      <input type="date" class="filtro-select" style="padding:6px 10px;border-radius:10px" value="${histFiltro.de||''}"
+        onchange="setHistFiltro('de',this.value)" />
+      <label style="font-size:11px;color:var(--muted);font-weight:600">Até</label>
+      <input type="date" class="filtro-select" style="padding:6px 10px;border-radius:10px" value="${histFiltro.ate||''}"
+        onchange="setHistFiltro('ate',this.value)" />
+    </div>`;
+  }
+
   wrap.innerHTML = html;
 }
 
@@ -2031,26 +2077,64 @@ function mergeRemoto(remoto) {
 }
 
 // CDP
-function cdpSubTexto(lista, hoje) {
+function renderCdpFiltros() {
+  const wrap = document.getElementById('cdpFiltrosWrap');
+  if (!wrap) return;
+  const periodos = [
+    { v:'hoje',   l:'Hoje'        },
+    { v:'semana', l:'Esta semana' },
+    { v:'mes',    l:'Este mês'    },
+  ];
+  let html = '<div class="filtros-wrap">';
+  periodos.forEach(p => {
+    html += `<div class="filtro-chip${cdpFiltro.periodo===p.v?' active':''}" onclick="setCdpFiltro('periodo','${p.v}')">${p.l}</div>`;
+  });
+  // Select de sala — só CEO
+  if (captador && captador.cargo === 'ceo') {
+    const todasSalas = getTodasSalas();
+    html += '<select class="filtro-select" onchange="setCdpFiltro(\'sala\',this.value)">';
+    html += `<option value="todas"${cdpFiltro.sala==='todas'?' selected':''}>Sala</option>`;
+    todasSalas.forEach(s => {
+      html += `<option value="${s.nome}"${cdpFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
+    });
+    html += '</select>';
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+function setCdpFiltro(chave, valor) {
+  cdpFiltro[chave] = valor;
+  renderCdpFiltros();
+  atualizarCdp();
+}
+function cdpLeadsFiltrados() {
+  const base = filtrarPorAcesso(leads);
+  return filtrarLeads(base, { periodo: cdpFiltro.periodo, sala: cdpFiltro.sala, captador: 'todos', de:'', ate:'' });
+}
+function cdpSubTexto(lista) {
   const salaLider = getSalaDoLider(captador);
-  const sufixo = salaLider ? ' · ' + salaLider : '';
-  return hoje + sufixo + ' · ' + lista.length + ' pesquisas registradas';
+  const salaExib  = cdpFiltro.sala !== 'todas' ? cdpFiltro.sala : (salaLider || null);
+  const sufixo    = salaExib ? ' · ' + salaExib : '';
+  const periodoLabel = { hoje:'Hoje', semana:'Esta semana', mes:'Este mês' };
+  return (periodoLabel[cdpFiltro.periodo]||'') + sufixo + ' · ' + lista.length + ' pesquisas';
+}
+function atualizarCdp() {
+  const lista = cdpLeadsFiltrados();
+  document.getElementById('cdpSub').textContent = cdpSubTexto(lista);
+  renderCdp(lista);
 }
 function showCdp() {
   hideAll(); show('screenCdp');
-  const hoje      = new Date().toLocaleDateString('pt-BR');
-  const leadsHoje = filtrarPorAcesso(leads.filter(l => l.date === hoje));
-  document.getElementById('cdpSub').textContent = cdpSubTexto(leadsHoje, hoje);
-  renderCdp(leadsHoje);
+  renderCdpFiltros();
+  atualizarCdp();
 
   if (API.ok()) {
     document.getElementById('cdpSync').classList.remove('hidden');
     API.getLeads().then(remoto => {
       document.getElementById('cdpSync').classList.add('hidden');
       mergeRemoto(remoto);
-      const remotosHoje = filtrarPorAcesso(leads.filter(l => l.date === hoje));
-      document.getElementById('cdpSub').textContent = cdpSubTexto(remotosHoje, hoje);
-      renderCdp(remotosHoje);
+      renderCdpFiltros();
+      atualizarCdp();
     }).catch(() => { document.getElementById('cdpSync').classList.add('hidden'); });
   }
 }
