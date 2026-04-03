@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="YV Captação" />
+  <meta name="theme-color" content="#1a2340" />
+  <link rel="manifest" href="manifest.json" />
   <title>Your Vacation — Captação</title>
   <style>
     :root {
@@ -828,7 +834,7 @@ let salaAtual = null;
 let leads    = JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]');
 let loginSelectedNome = null;
 let histFiltro = { periodo: 'hoje', captador: 'todos', sala: 'todas', de: '', ate: '' };
-let cdpFiltro  = { periodo: 'hoje', sala: 'todas' };
+let cdpFiltro  = { periodo: 'hoje', sala: 'todas', de: '', ate: '' };
 
 function getSenha(nome) {
   const stored = localStorage.getItem('yv_pw_' + nome);
@@ -1764,7 +1770,7 @@ function saveAndNew() {
   if (leads.length > 500) leads.pop();
   sessionStorage.setItem('yv_leads', JSON.stringify(leads));
   try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-  API.post(lead);
+  if (navigator.onLine) { API.post(lead); } else { offlineEnqueue(lead); }
   step = 0; ans = {};
   hideAll(); show('screenQuiz');
   renderStep();
@@ -2084,6 +2090,7 @@ function renderCdpFiltros() {
     { v:'hoje',   l:'Hoje'        },
     { v:'semana', l:'Esta semana' },
     { v:'mes',    l:'Este mês'    },
+    { v:'livre',  l:'Período'     },
   ];
   let html = '<div class="filtros-wrap">';
   periodos.forEach(p => {
@@ -2100,22 +2107,36 @@ function renderCdpFiltros() {
     html += '</select>';
   }
   html += '</div>';
+  // Inputs de período livre
+  if (cdpFiltro.periodo === 'livre') {
+    html += `<div class="filtros-wrap" style="margin-top:6px">
+      <label style="font-size:12px;color:var(--text-muted)">De</label>
+      <input type="date" class="filtro-select" style="max-width:140px" value="${cdpFiltro.de}" oninput="setCdpFiltroDate('de',this.value)" />
+      <label style="font-size:12px;color:var(--text-muted)">Até</label>
+      <input type="date" class="filtro-select" style="max-width:140px" value="${cdpFiltro.ate}" oninput="setCdpFiltroDate('ate',this.value)" />
+    </div>`;
+  }
   wrap.innerHTML = html;
 }
 function setCdpFiltro(chave, valor) {
+  if (chave === 'periodo' && valor !== 'livre') { cdpFiltro.de = ''; cdpFiltro.ate = ''; }
   cdpFiltro[chave] = valor;
   renderCdpFiltros();
   atualizarCdp();
 }
+function setCdpFiltroDate(chave, valor) {
+  cdpFiltro[chave] = valor;
+  atualizarCdp();
+}
 function cdpLeadsFiltrados() {
   const base = filtrarPorAcesso(leads);
-  return filtrarLeads(base, { periodo: cdpFiltro.periodo, sala: cdpFiltro.sala, captador: 'todos', de:'', ate:'' });
+  return filtrarLeads(base, { periodo: cdpFiltro.periodo, sala: cdpFiltro.sala, captador: 'todos', de: cdpFiltro.de, ate: cdpFiltro.ate });
 }
 function cdpSubTexto(lista) {
   const salaLider = getSalaDoLider(captador);
   const salaExib  = cdpFiltro.sala !== 'todas' ? cdpFiltro.sala : (salaLider || null);
   const sufixo    = salaExib ? ' · ' + salaExib : '';
-  const periodoLabel = { hoje:'Hoje', semana:'Esta semana', mes:'Este mês' };
+  const periodoLabel = { hoje:'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período livre' };
   return (periodoLabel[cdpFiltro.periodo]||'') + sufixo + ' · ' + lista.length + ' pesquisas';
 }
 function atualizarCdp() {
@@ -2365,8 +2386,36 @@ function removerSala(idOuNome) {
 
 window.abrirTrocarSenha = openPwChange;
 
+// ── PWA — Service Worker ──────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ── PWA — Offline queue ───────────────────────────────────
+const OFFLINE_KEY = 'yv_offline_queue';
+
+function offlineEnqueue(lead) {
+  const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
+  q.push(lead);
+  localStorage.setItem(OFFLINE_KEY, JSON.stringify(q));
+}
+
+function offlineFlush() {
+  if (!API.ok()) return;
+  const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
+  if (!q.length) return;
+  const pendentes = [...q];
+  localStorage.removeItem(OFFLINE_KEY);
+  pendentes.forEach(lead => {
+    API.post(lead).catch(() => offlineEnqueue(lead));
+  });
+}
+
+window.addEventListener('online', offlineFlush);
+
 // INIT
 initLogin();
+offlineFlush(); // tenta reenviar ao carregar se já online
 </script>
 </body>
 </html>

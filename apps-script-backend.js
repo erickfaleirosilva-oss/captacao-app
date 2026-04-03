@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════
 // Your Vacation — Qualificador de Captação
-// Google Apps Script Backend — v2 (abas por sala)
+// Google Apps Script Backend — v3 (cabeçalho auto-migração)
 // Cole este código em: Planilha > Extensões > Apps Script
 // Depois: Implantar > Gerenciar implantações > Editar > Nova versão > Implantar
 // ═══════════════════════════════════════════════════════
@@ -16,30 +16,53 @@ const DEFAULT_SHEET = 'Leads'; // fallback para salas não mapeadas
 const COLUNAS = ['ID','Data','Hora','Captador','Sala','Nome','Telefone','Cidade','Resultado','Tipo','Renda','Modo'];
 const N_COLS  = COLUNAS.length;
 
+// Larguras das colunas (em pixels)
+const COL_WIDTHS = [180, 100, 80, 150, 150, 150, 130, 130, 90, 150, 130, 80];
+
+function aplicarCabecalho(sheet) {
+  const header = sheet.getRange(1, 1, 1, N_COLS);
+  header.setValues([COLUNAS]);
+  header.setBackground('#1a2340');
+  header.setFontColor('#c9a84c');
+  header.setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  COL_WIDTHS.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+}
+
 function getOrCreateSheetByName(sheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(sheetName);
+
   if (!sheet) {
+    // Aba não existe — cria do zero
     sheet = ss.insertSheet(sheetName);
-    sheet.appendRow(COLUNAS);
-    sheet.setFrozenRows(1);
+    aplicarCabecalho(sheet);
+    return sheet;
+  }
+
+  // Aba existe — verifica se o cabeçalho está atualizado
+  const cabecalhoAtual = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const cabecalhoCorreto = COLUNAS.every((col, i) => cabecalhoAtual[i] === col);
+
+  if (!cabecalhoCorreto) {
+    // Migra: garante que a linha 1 tem todas as colunas certas
+    // Preserva dados existentes — só reescreve o cabeçalho
+    const nColsAtual = cabecalhoAtual.length;
+    if (nColsAtual < N_COLS) {
+      // Expande cabeçalho para ter as novas colunas
+      sheet.getRange(1, 1, 1, N_COLS).setValues([COLUNAS]);
+    } else {
+      sheet.getRange(1, 1, 1, N_COLS).setValues([COLUNAS]);
+    }
+    // Reaplicar formatação
     const header = sheet.getRange(1, 1, 1, N_COLS);
     header.setBackground('#1a2340');
     header.setFontColor('#c9a84c');
     header.setFontWeight('bold');
-    sheet.setColumnWidth(1, 180);
-    sheet.setColumnWidth(2, 100);
-    sheet.setColumnWidth(3, 80);
-    sheet.setColumnWidth(4, 150);
-    sheet.setColumnWidth(5, 150);
-    sheet.setColumnWidth(6, 150);
-    sheet.setColumnWidth(7, 130);
-    sheet.setColumnWidth(8, 130);
-    sheet.setColumnWidth(9, 90);
-    sheet.setColumnWidth(10, 150);
-    sheet.setColumnWidth(11, 130);
-    sheet.setColumnWidth(12, 80);
+    sheet.setFrozenRows(1);
+    COL_WIDTHS.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
   }
+
   return sheet;
 }
 
@@ -91,7 +114,6 @@ function doPost(e) {
 }
 
 // GET — retorna leads de todas as abas consolidados (para CDP/sync)
-// Aceita ?sala=Nome para filtrar por sala específica
 function doGet(e) {
   try {
     const ss     = SpreadsheetApp.getActiveSpreadsheet();
@@ -106,22 +128,30 @@ function doGet(e) {
     sheetsAlvo.forEach(sheet => {
       const lastRow = sheet.getLastRow();
       if (lastRow < 2) return;
-      const rows = sheet.getRange(2, 1, lastRow - 1, N_COLS).getValues();
+
+      // Descobre índice de cada coluna pelo cabeçalho (tolerante a ordem diferente)
+      const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      const idx = {};
+      COLUNAS.forEach(col => { idx[col] = cabecalho.indexOf(col); });
+
+      const nCols = sheet.getLastColumn();
+      const rows  = sheet.getRange(2, 1, lastRow - 1, nCols).getValues();
       rows.forEach(r => {
-        if (!r[0]) return; // ignora linha vazia
+        if (!r[0]) return;
+        const get = (col) => idx[col] >= 0 ? r[idx[col]] : '';
         leads.push({
-          id:       String(r[0]),
-          date:     r[1],
-          time:     r[2],
-          captador: r[3],
-          sala:     r[4],
-          nome:     r[5],
-          tel:      r[6],
-          cidade:   r[7],
-          verdict:  r[8],
-          tipo:     r[9],
-          renda:    r[10],
-          mode:     r[11],
+          id:       String(get('ID')),
+          date:     String(get('Data')),
+          time:     String(get('Hora')),
+          captador: get('Captador'),
+          sala:     get('Sala'),
+          nome:     get('Nome'),
+          tel:      get('Telefone'),
+          cidade:   get('Cidade'),
+          verdict:  get('Resultado'),
+          tipo:     get('Tipo'),
+          renda:    get('Renda'),
+          mode:     get('Modo'),
         });
       });
     });
@@ -130,6 +160,12 @@ function doGet(e) {
   } catch (err) {
     return jsonResponse({ status: 'error', message: err.message });
   }
+}
+
+// Função utilitária — pode rodar manualmente para forçar migração de todas as abas
+function migrarTodasAsAbas() {
+  Object.values(SALA_SHEETS).forEach(nome => getOrCreateSheetByName(nome));
+  Logger.log('Migração concluída.');
 }
 
 function jsonResponse(obj) {

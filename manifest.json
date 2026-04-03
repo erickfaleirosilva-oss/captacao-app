@@ -1,0 +1,19 @@
+{
+  "name": "YV Captação",
+  "short_name": "YV Captação",
+  "description": "Qualificador de Captação — Your Vacation",
+  "start_url": "/captacao-app/",
+  "scope": "/captacao-app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1120",
+  "theme_color": "#1a2340",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%231f2b4d'/><rect x='4' y='4' width='43' height='43' rx='9' fill='%23c9a84c'/><rect x='53' y='4' width='43' height='43' rx='9' fill='%23c9a84c'/><rect x='4' y='53' width='43' height='43' rx='9' fill='%23c9a84c'/><rect x='53' y='53' width='43' height='43' rx='9' fill='%23c9a84c'/></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
