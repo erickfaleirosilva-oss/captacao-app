@@ -748,9 +748,9 @@ const CONFIG = {
     { nome: 'Luciano Camilo',     cargo: 'captador', senhaDefault: 'luciano123'   },
     { nome: 'Cleber Araujo',      cargo: 'captador', senhaDefault: 'cleber123'    },
     { nome: 'Walasson de Jesus Alves',           cargo: 'captador', senhaDefault: 'walasson123'  },
-    { nome: 'Lucas Marotti',    cargo: 'sublider', senhaDefault: 'lucaslucas'     },
-    { nome: 'Bruno Teixeira',   cargo: 'lider',    senhaDefault: 'brunoteixeira'  },
-    { nome: 'Rogerio Medeiros', cargo: 'lider',    senhaDefault: 'rogeriorogerio' },
+    { nome: 'Lucas Marotti',    cargo: 'sublider', sala: 'São Pedro Resort', senhaDefault: 'lucaslucas'     },
+    { nome: 'Bruno Teixeira',   cargo: 'lider',    sala: 'Alta Vista',       senhaDefault: 'brunoteixeira'  },
+    { nome: 'Rogerio Medeiros', cargo: 'lider',    sala: 'São Pedro Resort', senhaDefault: 'rogeriorogerio' },
     { nome: 'Erick Faleiro',    cargo: 'ceo',      senhaDefault: 'erickerick'     },
   ],
   salas: [
@@ -838,6 +838,22 @@ function setSenha(nome, pw) {
 }
 function temAcessoTotal(c) {
   return c && ['sublider','lider','ceo'].includes(c.cargo);
+}
+// CEO vê tudo; lider/sublider vê só a sua sala; captador vê só o próprio
+function getSalaDoLider(c) {
+  if (!c) return null;
+  if (c.cargo === 'ceo') return null; // null = sem filtro de sala
+  if (c.sala) return c.sala;
+  return null;
+}
+function filtrarPorAcesso(lista) {
+  if (!captador) return [];
+  if (captador.cargo === 'ceo') return lista;
+  if (['lider','sublider'].includes(captador.cargo)) {
+    const sala = getSalaDoLider(captador);
+    return sala ? lista.filter(l => l.sala === sala) : lista;
+  }
+  return lista.filter(l => l.captador === captador.nome);
 }
 function getTodasSalas() {
   const extras = JSON.parse(localStorage.getItem('yv_salas_extras') || '[]');
@@ -1801,9 +1817,18 @@ function renderHistFiltros() {
     html += `<div class="filtro-chip${histFiltro.periodo===p.v?' active':''}" onclick="setHistFiltro('periodo','${p.v}')">${p.l}</div>`;
   });
   if (temAcessoTotal(captador)) {
+    // CEO vê todos; líder/sublider vê só captadores da sua sala
+    const salaFiltroLider = getSalaDoLider(captador);
+    const membrosFiltrados = salaFiltroLider
+      ? todos.filter(m => !m.sala || m.sala === salaFiltroLider || ['lider','sublider','ceo'].includes(m.cargo) === false)
+      : todos;
+    // Para o select: CEO vê todos; líder vê só quem tem leads na sua sala
+    const opcoesSelect = captador.cargo === 'ceo'
+      ? todos
+      : todos.filter(m => !['lider','sublider','ceo'].includes(m.cargo));
     html += '<select class="filtro-select" onchange="setHistFiltro(\'captador\',this.value)">';
     html += `<option value="todos"${histFiltro.captador==='todos'?' selected':''}>Todos</option>`;
-    todos.forEach(m => {
+    opcoesSelect.forEach(m => {
       html += `<option value="${m.nome}"${histFiltro.captador===m.nome?' selected':''}>${m.nome}</option>`;
     });
     html += '</select>';
@@ -1820,9 +1845,7 @@ function setHistFiltro(chave, valor) {
 
 function renderHistList() {
   const list = document.getElementById('histList');
-  const fonte = temAcessoTotal(captador)
-    ? leads
-    : leads.filter(l => l.captador === (captador ? captador.nome : ''));
+  const fonte = filtrarPorAcesso(leads);
   const visíveis = filtrarLeads(fonte);
   if (!visíveis.length) {
     list.innerHTML = '<div class="hist-empty">Nenhuma qualificação neste período.</div>';
@@ -2006,11 +2029,16 @@ function mergeRemoto(remoto) {
 }
 
 // CDP
+function cdpSubTexto(lista, hoje) {
+  const salaLider = getSalaDoLider(captador);
+  const sufixo = salaLider ? ' · ' + salaLider : '';
+  return hoje + sufixo + ' · ' + lista.length + ' pesquisas registradas';
+}
 function showCdp() {
   hideAll(); show('screenCdp');
   const hoje      = new Date().toLocaleDateString('pt-BR');
-  const leadsHoje = leads.filter(l => l.date === hoje);
-  document.getElementById('cdpSub').textContent = hoje + ' · ' + leadsHoje.length + ' pesquisas registradas';
+  const leadsHoje = filtrarPorAcesso(leads.filter(l => l.date === hoje));
+  document.getElementById('cdpSub').textContent = cdpSubTexto(leadsHoje, hoje);
   renderCdp(leadsHoje);
 
   if (API.ok()) {
@@ -2018,8 +2046,8 @@ function showCdp() {
     API.getLeads().then(remoto => {
       document.getElementById('cdpSync').classList.add('hidden');
       mergeRemoto(remoto);
-      const remotosHoje = leads.filter(l => l.date === hoje);
-      document.getElementById('cdpSub').textContent = hoje + ' · ' + remotosHoje.length + ' pesquisas registradas';
+      const remotosHoje = filtrarPorAcesso(leads.filter(l => l.date === hoje));
+      document.getElementById('cdpSub').textContent = cdpSubTexto(remotosHoje, hoje);
       renderCdp(remotosHoje);
     }).catch(() => { document.getElementById('cdpSync').classList.add('hidden'); });
   }
@@ -2027,13 +2055,11 @@ function showCdp() {
 
 function renderCdp(leadsHoje) {
   const totalAcesso = temAcessoTotal(captador);
-  const leadsVisíveis = totalAcesso
-    ? leadsHoje
-    : leadsHoje.filter(l => l.captador === captador.nome);
+  const leadsVisíveis = filtrarPorAcesso(leadsHoje);
 
   if (totalAcesso) {
-    const tQ   = leadsHoje.filter(l=>l.verdict==='Q').length;
-    const tNQ  = leadsHoje.filter(l=>l.verdict==='NQ').length;
+    const tQ   = leadsVisíveis.filter(l=>l.verdict==='Q').length;
+    const tNQ  = leadsVisíveis.filter(l=>l.verdict==='NQ').length;
     const tTot = tQ + tNQ;
     document.getElementById('cdpTotais').innerHTML = `
       <div class="cdp-totais">
