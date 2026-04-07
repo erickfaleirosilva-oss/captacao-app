@@ -1486,7 +1486,7 @@ function _checkAbandonQuiz() {
   }
 }
 function goTo(tab) {
-  _checkAbandonQuiz();
+  if (tab !== 'new') _checkAbandonQuiz(); // 'new' reinicia quiz — não é abandono
   setNav(tab);
   sessionStorage.setItem('yv_tab', tab);
   hideAll();
