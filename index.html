@@ -279,9 +279,11 @@
     .hist-empty { text-align: center; color: var(--muted); font-size: 14px; padding: 48px 0; }
     .summary-row { display: flex; gap: 10px; margin-bottom: 14px; }
     .sum-box { flex: 1; border-radius: 10px; padding: 12px; text-align: center; }
-    .sum-box.q  { background: rgba(46,204,113,.1); border:1px solid rgba(46,204,113,.3); }
-    .sum-box.p  { background: rgba(243,156,18,.1); border:1px solid rgba(243,156,18,.3); }
-    .sum-box.nq { background: rgba(231,76,60,.1);  border:1px solid rgba(231,76,60,.3); }
+    .sum-box.q   { background: rgba(46,204,113,.1); border:1px solid rgba(46,204,113,.3); }
+    .sum-box.p   { background: rgba(243,156,18,.1); border:1px solid rgba(243,156,18,.3); }
+    .sum-box.nq  { background: rgba(231,76,60,.1);  border:1px solid rgba(231,76,60,.3); }
+    .sum-box.tot { background: rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.25); }
+    .sum-num.tot { color: var(--gold2); }
     .sum-num    { font-size: 26px; font-weight: 900; }
     .sum-num.q  { color: var(--green); }
     .sum-num.p  { color: var(--yellow); }
@@ -335,12 +337,15 @@
     .cdp-tot-num.sala { color: #64a0ff; }
     .cdp-tot.conv  { background: rgba(201,168,76,.06); border:1px solid rgba(201,168,76,.2); }
     .cdp-tot-num.conv { color: var(--gold2); }
+    .cdp-tot.pi    { background: rgba(180,100,255,.08); border:1px solid rgba(180,100,255,.3); }
+    .cdp-tot-num.pi   { color: #b464ff; }
     /* ícone sala no histórico */
     .hc-sala-btn { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 2px; border-radius:6px; transition:transform .15s; line-height:1; flex-shrink:0; opacity:.75; }
     .hc-sala-btn:active { transform:scale(.85); }
     .hc-sala-btn.marcado { opacity:1; }
     .cdp-m-num.sala { color: #64a0ff; }
     .cdp-m-num.conv { color: var(--gold2); }
+    .cdp-m-num.pi   { color: #b464ff; }
     .cdp-card {
       background: var(--navy2); border: 1px solid var(--border);
       border-radius: 12px; padding: 16px; margin-bottom: 10px;
@@ -875,6 +880,16 @@ function filtrarPorAcesso(lista) {
   }
   return lista.filter(l => l.captador === captador.nome);
 }
+// Mesma lógica para PIs (usa campo captador e sala)
+function filtrarPorAcessoPI(lista) {
+  if (!captador) return [];
+  if (captador.cargo === 'ceo') return lista;
+  if (['lider','sublider'].includes(captador.cargo)) {
+    const sala = getSalaDoLider(captador);
+    return sala ? lista.filter(p => p.sala === sala) : lista;
+  }
+  return lista.filter(p => p.captador === captador.nome);
+}
 function getTodasSalas() {
   const extras = JSON.parse(localStorage.getItem('yv_salas_extras') || '[]');
   return [...CONFIG.salas, ...extras];
@@ -1043,7 +1058,7 @@ function doChangePw() {
 const QS = [
   {
     id:'nome', type:'text',
-    text:'Qual o primeiro nome do cliente?',
+    text:'Qual é o nome do casal?',
   },
   {
     id:'tipo', type:'chips',
@@ -1666,7 +1681,7 @@ function renderStep() {
     wTl.classList.remove('hidden'); wN.classList.add('hidden'); wCd.classList.add('hidden'); wC.classList.add('hidden');
     const f = document.getElementById('fieldTelQuiz');
     f.value = ans.tel || '';
-    btn.disabled = !(ans.tel && ans.tel.trim().length >= 8);
+    btn.disabled = !(ans.tel && ans.tel.replace(/\D/g,'').length === 11);
     setTimeout(() => f.focus(), 80);
   } else {
     wN.classList.add('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.remove('hidden');
@@ -1697,9 +1712,20 @@ function onCidadeInput() {
   document.getElementById('btnProx').disabled = !v;
 }
 function onTelInput() {
-  const v = document.getElementById('fieldTelQuiz').value.trim();
-  ans.tel = v;
-  document.getElementById('btnProx').disabled = v.length < 8;
+  const raw = document.getElementById('fieldTelQuiz').value.replace(/\D/g,'').slice(0,11);
+  // formata: (11) 9 1234-5678
+  let fmt = raw;
+  if (raw.length > 10) fmt = '(' + raw.slice(0,2) + ') ' + raw.slice(2,3) + ' ' + raw.slice(3,7) + '-' + raw.slice(7,11);
+  else if (raw.length > 6) fmt = '(' + raw.slice(0,2) + ') ' + raw.slice(2,6) + '-' + raw.slice(6);
+  else if (raw.length > 2) fmt = '(' + raw.slice(0,2) + ') ' + raw.slice(2);
+  else if (raw.length > 0) fmt = '(' + raw;
+  document.getElementById('fieldTelQuiz').value = fmt;
+  ans.tel = raw; // armazena só dígitos
+  const ok = raw.length === 11;
+  document.getElementById('btnProx').disabled = !ok;
+  // feedback visual
+  const f = document.getElementById('fieldTelQuiz');
+  f.style.borderColor = raw.length > 0 && !ok ? 'var(--red)' : '';
 }
 function pickChip(qid, value, el) {
   ans[qid] = value;
@@ -1713,7 +1739,7 @@ function nextStep() {
   const q = qs[step];
   if (q.type==='text'   && !(ans.nome   && ans.nome.trim())) return;
   if (q.type==='cidade' && !(ans.cidade && ans.cidade.trim())) return;
-  if (q.type==='tel'    && !(ans.tel    && ans.tel.trim().length >= 8)) return;
+  if (q.type==='tel'    && !(ans.tel    && ans.tel.replace(/\D/g,'').length === 11)) return;
   if (q.type==='chips'  && !ans[q.id]) return;
   step++;
   if (step >= qs.length) showResult();
@@ -1730,7 +1756,37 @@ function prevStep() {
 }
 
 // RESULTADO
+function _persistLead() {
+  // Salva o lead automaticamente ao chegar na tela de resultado
+  // Evita duplicatas usando _autoSavedId armazenado em ans
+  if (ans._autoSavedId) return; // já foi salvo nesta rodada
+  const { verdict } = calcResult();
+  const iso = todayISO();
+  const lead = {
+    id:       Date.now(),
+    nome:     ans.nome   || '—',
+    tel:      ans.tel    || '—',
+    verdict,
+    tipo:     ans.tipo   || '—',
+    renda:    ans.renda  || '—',
+    cidade:   ans.cidade || '—',
+    mode:     mode==='low'?'<3k':'>3k',
+    sala:     salaAtual ? salaAtual.nome : '—',
+    captador: captador  ? captador.nome  : '—',
+    time:     new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    date:     new Date().toLocaleDateString('pt-BR'),
+    dateISO:  iso,
+  };
+  ans._autoSavedId = lead.id;
+  leads.unshift(lead);
+  if (leads.length > 500) leads.pop();
+  sessionStorage.setItem('yv_leads', JSON.stringify(leads));
+  try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
+  if (navigator.onLine) { API.post(lead); } else { offlineEnqueue(lead); }
+}
+
 function showResult() {
+  _persistLead(); // salva imediatamente ao chegar na tela
   const { verdict, rows, rule, perfil } = calcResult();
   const ICON = { Q:'🟢', NQ:'🔴', PARCIAL:'🟡' };
   const SUB  = {
@@ -1758,34 +1814,16 @@ function showResult() {
 }
 
 function saveAndNew() {
-  const { verdict } = calcResult();
-  const tel = ans.tel || '';
-  const iso = todayISO();
-  const lead = {
-    id:       Date.now(),
-    nome:     ans.nome || '—',
-    tel:      tel || '—',
-    verdict,
-    tipo:     ans.tipo   || '—',
-    renda:    ans.renda  || '—',
-    cidade:   ans.cidade || '—',
-    mode:     mode==='low'?'<3k':'>3k',
-    sala:     salaAtual ? salaAtual.nome : '—',
-    captador: captador ? captador.nome : '—',
-    time:     new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-    date:     new Date().toLocaleDateString('pt-BR'),
-    dateISO:  iso,
-  };
-  leads.unshift(lead);
-  if (leads.length > 500) leads.pop();
-  sessionStorage.setItem('yv_leads', JSON.stringify(leads));
-  try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-  if (navigator.onLine) { API.post(lead); } else { offlineEnqueue(lead); }
+  // Lead já foi salvo automaticamente em showResult() — apenas reinicia
   step = 0; ans = {};
   hideAll(); show('screenQuiz');
   renderStep();
 }
 function skipNew() {
+  // Registra PI se o lead ainda não foi salvo (captador pulou antes do resultado)
+  if (!ans._autoSavedId && (ans.nome || ans.tel)) {
+    _registrarPI();
+  }
   step = 0; ans = {};
   hideAll(); show('screenQuiz');
   renderStep();
@@ -1915,15 +1953,15 @@ function renderHistList() {
     list.innerHTML = '<div class="hist-empty">Nenhuma qualificação neste período.</div>';
     return;
   }
-  const tL = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos', solteiro:'Solteiro', multiprop:'Multiprop.' };
-  const q  = visíveis.filter(h=>h.verdict==='Q').length;
-  const p  = visíveis.filter(h=>h.verdict==='PARCIAL').length;
-  const nq = visíveis.filter(h=>h.verdict==='NQ').length;
+  const tL  = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos', solteiro:'Solteiro', multiprop:'Multiprop.' };
+  const q   = visíveis.filter(h=>h.verdict==='Q').length;
+  const nq  = visíveis.filter(h=>h.verdict==='NQ').length;
+  const tot = visíveis.length;
   list.innerHTML = `
     <div class="summary-row">
-      <div class="sum-box q"> <div class="sum-num q">${q}</div>  <div class="sum-lbl">Q</div></div>
-      <div class="sum-box p"> <div class="sum-num p">${p}</div>  <div class="sum-lbl">PARCIAL</div></div>
-      <div class="sum-box nq"><div class="sum-num nq">${nq}</div><div class="sum-lbl">NQ</div></div>
+      <div class="sum-box q">   <div class="sum-num q">${q}</div>   <div class="sum-lbl">Q</div></div>
+      <div class="sum-box nq">  <div class="sum-num nq">${nq}</div> <div class="sum-lbl">NQ</div></div>
+      <div class="sum-box tot"> <div class="sum-num tot">${tot}</div><div class="sum-lbl">TOTAL</div></div>
     </div>
     ${visíveis.map(h=>`
       <div class="hist-card" style="display:flex;align-items:flex-start;gap:10px">
@@ -2263,6 +2301,17 @@ function renderCdp(leadsHoje) {
     const tSala = leadsVisíveis.filter(l=>l.emSala).length;
     const tConv = tQ > 0 ? Math.round(tSala / tQ * 100) : 0;
     const convStr = tQ > 0 ? tConv + '%' : '—';
+    // PI — filtra pelo mesmo período/sala/captador
+    const hoje = todayISO();
+    const allPIs = filtrarPorAcessoPI(getPIs());
+    const tPI = allPIs.filter(p => {
+      if (cdpFiltro.periodo === 'hoje')   return p.dateISO === hoje;
+      if (cdpFiltro.periodo === 'semana') return p.dateISO >= domingoSemana() && p.dateISO <= hoje;
+      if (cdpFiltro.periodo === 'mes')    return p.dateISO && p.dateISO.slice(0,7) === hoje.slice(0,7);
+      if (cdpFiltro.periodo === 'livre')  return (!cdpFiltro.de || p.dateISO >= cdpFiltro.de) && (!cdpFiltro.ate || p.dateISO <= cdpFiltro.ate);
+      return true;
+    }).filter(p => cdpFiltro.sala === 'todas' || p.sala === cdpFiltro.sala)
+      .filter(p => cdpFiltro.captador === 'todos' || p.captador === cdpFiltro.captador).length;
     document.getElementById('cdpTotais').innerHTML = `
       <div class="cdp-totais">
         <div class="cdp-tot total"><div class="cdp-tot-num total">${tTot}</div><div class="cdp-tot-lbl">TOTAL</div></div>
@@ -2270,6 +2319,7 @@ function renderCdp(leadsHoje) {
         <div class="cdp-tot nq">  <div class="cdp-tot-num nq">${tNQ}</div>  <div class="cdp-tot-lbl">NQ's</div></div>
         <div class="cdp-tot sala"><div class="cdp-tot-num sala">${tSala}</div><div class="cdp-tot-lbl">🏠 SALA</div></div>
         <div class="cdp-tot conv"><div class="cdp-tot-num conv">${convStr}</div><div class="cdp-tot-lbl">CONV.</div></div>
+        <div class="cdp-tot pi">  <div class="cdp-tot-num pi">${tPI}</div>  <div class="cdp-tot-lbl">PI</div></div>
       </div>`;
   } else {
     document.getElementById('cdpTotais').innerHTML = '';
@@ -2286,11 +2336,26 @@ function renderCdp(leadsHoje) {
   const map = {};
   leadsVisíveis.forEach(l => {
     const nome = l.captador || '—';
-    if (!map[nome]) map[nome] = { q:0, nq:0, sala:0 };
+    if (!map[nome]) map[nome] = { q:0, nq:0, sala:0, pi:0 };
     if (l.verdict==='Q')       map[nome].q++;
     else if (l.verdict==='NQ') map[nome].nq++;
     if (l.emSala) map[nome].sala++;
   });
+  // Acumula PIs no mapa (mesmo filtro de período/sala)
+  const hoje2 = todayISO();
+  filtrarPorAcessoPI(getPIs()).filter(p => {
+    if (cdpFiltro.periodo === 'hoje')   return p.dateISO === hoje2;
+    if (cdpFiltro.periodo === 'semana') return p.dateISO >= domingoSemana() && p.dateISO <= hoje2;
+    if (cdpFiltro.periodo === 'mes')    return p.dateISO && p.dateISO.slice(0,7) === hoje2.slice(0,7);
+    if (cdpFiltro.periodo === 'livre')  return (!cdpFiltro.de || p.dateISO >= cdpFiltro.de) && (!cdpFiltro.ate || p.dateISO <= cdpFiltro.ate);
+    return true;
+  }).filter(p => cdpFiltro.sala === 'todas' || p.sala === cdpFiltro.sala)
+    .filter(p => cdpFiltro.captador === 'todos' || p.captador === cdpFiltro.captador)
+    .forEach(p => {
+      const nome = p.captador || '—';
+      if (!map[nome]) map[nome] = { q:0, nq:0, sala:0, pi:0 };
+      map[nome].pi++;
+    });
 
   const ROLE_LABEL = { captador:'Captador(a)', sublider:'Sublíder', lider:'Líder', ceo:'CEO' };
   const posCls     = ['gold','silver','bronze'];
@@ -2299,7 +2364,7 @@ function renderCdp(leadsHoje) {
     .map(([nome, s]) => {
       const cfg  = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')].find(c=>c.nome===nome);
       const conv = s.q > 0 ? Math.round(s.sala / s.q * 100) : null;
-      return { nome, q:s.q, nq:s.nq, sala:s.sala, conv, total:s.q+s.nq, cargo: cfg?.cargo||'captador' };
+      return { nome, q:s.q, nq:s.nq, sala:s.sala, pi:s.pi||0, conv, total:s.q+s.nq, cargo: cfg?.cargo||'captador' };
     })
     .sort((a,b) => b.total - a.total);
 
@@ -2326,6 +2391,7 @@ function renderCdp(leadsHoje) {
         <div class="cdp-metric"><div class="cdp-m-num total">${c.total}</div><div class="cdp-m-lbl">Total</div></div>
         <div class="cdp-metric"><div class="cdp-m-num sala">${c.sala}</div> <div class="cdp-m-lbl">🏠 Sala</div></div>
         <div class="cdp-metric"><div class="cdp-m-num conv">${convStr}</div><div class="cdp-m-lbl">Conv.</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num pi">${c.pi}</div>    <div class="cdp-m-lbl">PI</div></div>
       </div>
       ${c.total > 0 ? `<div class="cdp-bar">
         <div class="cdp-bar-q"  style="width:${barQ}%"></div>
@@ -2495,6 +2561,25 @@ if ('serviceWorker' in navigator) {
 
 // ── PWA — Offline queue ───────────────────────────────────
 const OFFLINE_KEY = 'yv_offline_queue';
+const PI_KEY      = 'yv_pi'; // pesquisas incompletas
+
+function _registrarPI() {
+  const iso = todayISO();
+  const pi = {
+    id:       Date.now(),
+    captador: captador ? captador.nome : '—',
+    sala:     salaAtual ? salaAtual.nome : '—',
+    dateISO:  iso,
+    date:     new Date().toLocaleDateString('pt-BR'),
+    time:     new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    nomeParc: ans.nome || '—',
+  };
+  const arr = JSON.parse(localStorage.getItem(PI_KEY) || '[]');
+  arr.unshift(pi);
+  if (arr.length > 500) arr.pop();
+  try { localStorage.setItem(PI_KEY, JSON.stringify(arr)); } catch(e) {}
+}
+function getPIs() { return JSON.parse(localStorage.getItem(PI_KEY) || '[]'); }
 
 function offlineEnqueue(lead) {
   const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
