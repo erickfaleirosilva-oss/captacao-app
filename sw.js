@@ -1,9 +1,11 @@
 // Your Vacation — Service Worker (PWA offline)
-const CACHE_NAME = 'yv-captacao-v1';
+const CACHE_NAME = 'yv-captacao-v2';
 const ASSETS = [
   '/captacao-app/',
   '/captacao-app/index.html',
   '/captacao-app/manifest.json',
+  '/captacao-app/icon-192.png',
+  '/captacao-app/icon-512.png',
 ];
 
 // Instalação — faz cache dos arquivos principais

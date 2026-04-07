@@ -2166,17 +2166,30 @@ function normalizarTime(t, id) {
 // Merge leads remotos no array local (sem duplicar por id)
 function mergeRemoto(remoto) {
   if (!Array.isArray(remoto) || !remoto.length) return false;
-  const ids = new Set(leads.map(l => String(l.id)));
+  const idxMap = {};
+  leads.forEach((l, i) => { idxMap[String(l.id)] = i; });
   let changed = false;
   remoto.forEach(r => {
     r.date = normalizarDate(r.date, r.id);
     r.time = normalizarTime(r.time, r.id);
-    // garante dateISO (aaaa-mm-dd) para filtros de histórico
     if (!r.dateISO || r.dateISO === '') {
       const p = r.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       r.dateISO = p ? p[3] + '-' + p[2] + '-' + p[1] : '';
     }
-    if (!ids.has(String(r.id))) { leads.push(r); ids.add(String(r.id)); changed = true; }
+    const key = String(r.id);
+    if (idxMap[key] === undefined) {
+      // lead novo — adiciona
+      idxMap[key] = leads.length;
+      leads.push(r);
+      changed = true;
+    } else {
+      // lead existente — sincroniza emSala se o remoto tiver marcado
+      const local = leads[idxMap[key]];
+      if (r.emSala && !local.emSala) {
+        local.emSala = true;
+        changed = true;
+      }
+    }
   });
   if (changed) {
     try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
