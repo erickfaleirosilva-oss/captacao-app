@@ -101,6 +101,8 @@
     .btn-login:active { transform: scale(.98); }
     #pwChangePanel { width: 100%; max-width: 380px; }
     #pwChangePanel.hidden { display: none !important; }
+    #forgotPanel { width: 100%; max-width: 380px; }
+    #forgotPanel.hidden { display: none !important; }
     .pwc-title { font-size: 19px; font-weight: 800; color: var(--gold2); margin-bottom: 6px; }
     .pwc-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; text-align: center; }
     .pwc-form  { width: 100%; }
@@ -474,7 +476,20 @@
       </div>
       <div class="pw-error" id="pwError"></div>
       <button class="btn-login" onclick="doLogin()">Entrar →</button>
+      <button type="button" style="background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:10px;padding:4px 0;width:100%;text-align:center" onclick="mostrarAjudaSenha()">Esqueci minha senha</button>
     </div>
+  </div>
+
+  <!-- PAINEL: esqueci minha senha -->
+  <div id="forgotPanel" class="hidden">
+    <div class="pwc-title">🔒 Senha esquecida?</div>
+    <div class="pwc-sub" style="text-align:center;margin-bottom:24px;line-height:1.7">
+      Por segurança, a redefinição de senha<br>
+      é feita pelo seu <strong style="color:var(--gold2)">líder ou CEO</strong>.<br><br>
+      Procure seu líder e peça para redefinir<br>
+      sua senha na aba <strong style="color:var(--gold2)">Equipe</strong> do app.
+    </div>
+    <button class="btn-login" onclick="fecharAjudaSenha()">← Voltar</button>
   </div>
 
   <!-- PAINEL: trocar senha (abre por cima, dentro do mesmo screenLogin) -->
@@ -1016,6 +1031,15 @@ function trocarCaptador() {
 }
 
 // TROCAR SENHA
+function mostrarAjudaSenha() {
+  document.getElementById('loginSelectPanel').classList.add('hidden');
+  document.getElementById('forgotPanel').classList.remove('hidden');
+}
+function fecharAjudaSenha() {
+  document.getElementById('forgotPanel').classList.add('hidden');
+  document.getElementById('loginSelectPanel').classList.remove('hidden');
+}
+
 function openPwChange() {
   document.getElementById('pwOld').value  = '';
   document.getElementById('pwNew').value  = '';
@@ -2450,13 +2474,19 @@ function showEquipe() {
         ? '<span style="font-size:10px;background:rgba(201,168,76,.15);color:var(--gold);border-radius:8px;padding:2px 7px;margin-left:6px">novo</span>'
         : '';
       const nomeEsc = m.nome.replace(/'/g,"\\'");
+      const resetBtn = temAcessoTotal(captador)
+        ? `<button style="background:none;border:1px solid rgba(201,168,76,.3);border-radius:6px;color:var(--gold);font-size:11px;padding:4px 8px;cursor:pointer;flex-shrink:0" onclick="redefinirSenha('${nomeEsc}')">🔑 Redefinir</button>`
+        : '';
       return `<div class="eq-card">
         <div class="eq-av">${ini}</div>
         <div class="eq-info">
           <div class="eq-name">${m.nome}${tag}</div>
           <div class="eq-meta">${ROLE[m.cargo]||m.cargo}${m.sala ? ' · 🏢 '+m.sala : ''} · Senha: <span class="eq-pw-mask" data-nome="${m.nome}">••••••</span> <span class="eq-pw-eye" onclick="toggleEqPw('${nomeEsc}')">👁️</span></div>
         </div>
-        ${removeBtn}
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          ${resetBtn}
+          ${removeBtn}
+        </div>
       </div>`;
     }).join('');
   }
@@ -2523,6 +2553,22 @@ function salvarNovoMembro() {
   setSenha(nome, senha);
   fecharModalEquipe();
   showEquipe();
+}
+
+function redefinirSenha(nome) {
+  const todos = todosOsMembros();
+  const membro = todos.find(m => m.nome === nome);
+  if (!membro) return;
+  const senhaDefault = membro.senhaDefault || nome.split(' ')[0].toLowerCase();
+  if (!confirm(`Redefinir a senha de "${nome}" para a senha padrão?\n\nSenha padrão: ${senhaDefault}`)) return;
+  setSenha(nome, senhaDefault);
+  // Se era o captador logado, desloga para forçar nova senha
+  if (captador && captador.nome === nome) {
+    captador = null;
+    afterLogout();
+  }
+  showEquipe();
+  alert(`✅ Senha de "${nome}" redefinida para a senha padrão.`);
 }
 
 function removerMembro(nome) {
