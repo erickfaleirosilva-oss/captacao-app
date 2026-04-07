@@ -1475,7 +1475,18 @@ function setNav(tab) {
   const alvo = document.getElementById('nav'+ tab.charAt(0).toUpperCase()+tab.slice(1));
   if (alvo) alvo.classList.add('active');
 }
+function _estavaNaQuiz() {
+  const q = document.getElementById('screenQuiz');
+  return q && !q.classList.contains('hidden');
+}
+function _checkAbandonQuiz() {
+  // Se estava no quiz e o lead ainda não foi salvo, registra PI
+  if (_estavaNaQuiz() && !ans._autoSavedId && (ans.nome || ans.tel)) {
+    _registrarPI();
+  }
+}
 function goTo(tab) {
+  _checkAbandonQuiz();
   setNav(tab);
   sessionStorage.setItem('yv_tab', tab);
   hideAll();
@@ -1753,8 +1764,7 @@ function nextStep() {
 function prevStep() {
   if (step===0) {
     if (confirm('Sair da qualificação? As respostas serão perdidas.')) {
-      if (!ans._autoSavedId && (ans.nome || ans.tel)) _registrarPI();
-      goHome();
+      goHome(); // goTo → _checkAbandonQuiz registra PI se necessário
     }
     return;
   }
