@@ -336,9 +336,9 @@
     .cdp-tot.conv  { background: rgba(201,168,76,.06); border:1px solid rgba(201,168,76,.2); }
     .cdp-tot-num.conv { color: var(--gold2); }
     /* ícone sala no histórico */
-    .hc-sala-btn { background:none; border:none; cursor:pointer; font-size:18px; padding:4px 6px; border-radius:6px; transition:all .15s; line-height:1; flex-shrink:0; }
-    .hc-sala-btn:active { transform:scale(.9); }
-    .hc-sala-btn.marcado { filter: drop-shadow(0 0 4px #64a0ff); }
+    .hc-sala-btn { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 2px; border-radius:6px; transition:transform .15s; line-height:1; flex-shrink:0; opacity:.75; }
+    .hc-sala-btn:active { transform:scale(.85); }
+    .hc-sala-btn.marcado { opacity:1; }
     .cdp-m-num.sala { color: #64a0ff; }
     .cdp-m-num.conv { color: var(--gold2); }
     .cdp-card {
@@ -844,7 +844,7 @@ let salaAtual = null;
 let leads    = JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]');
 let loginSelectedNome = null;
 let histFiltro = { periodo: 'hoje', captador: 'todos', sala: 'todas', de: '', ate: '' };
-let cdpFiltro  = { periodo: 'hoje', sala: 'todas', de: '', ate: '' };
+let cdpFiltro  = { periodo: 'hoje', sala: 'todas', captador: 'todos', de: '', ate: '' };
 
 function getSenha(nome) {
   const stored = localStorage.getItem('yv_pw_' + nome);
@@ -1933,7 +1933,7 @@ function renderHistList() {
           ${h.tel!=='—'?`<div class="hc-phone">📞 ${h.tel}</div>`:''}
           <div class="hc-meta">${h.captador||'—'} · ${h.time} · ${h.mode} · ${rendaStr(h.renda)}${h.sala && h.sala!=='—'?' · '+h.sala:''}</div>
         </div>
-        <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Remover da sala':'Marcar como entrou em sala'}">${h.emSala?'🏠':'🪑'}</button>
+        <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Clique para desmarcar sala':'Clique para marcar que entrou em sala'}">${h.emSala?'🟢':'🔴'}</button>
       </div>`).join('')}`;
 }
 
@@ -2121,16 +2121,29 @@ function renderCdpFiltros() {
   periodos.forEach(p => {
     html += `<div class="filtro-chip${cdpFiltro.periodo===p.v?' active':''}" onclick="setCdpFiltro('periodo','${p.v}')">${p.l}</div>`;
   });
-  // Select de sala — só CEO
-  if (captador && captador.cargo === 'ceo') {
+  html += '</div><div class="filtros-wrap" style="margin-top:6px">';
+  // Select de sala — lider/CEO
+  if (captador && temAcessoTotal(captador)) {
     const todasSalas = getTodasSalas();
     html += '<select class="filtro-select" onchange="setCdpFiltro(\'sala\',this.value)">';
-    html += `<option value="todas"${cdpFiltro.sala==='todas'?' selected':''}>Sala</option>`;
+    html += `<option value="todas"${cdpFiltro.sala==='todas'?' selected':''}>Todas as salas</option>`;
     todasSalas.forEach(s => {
       html += `<option value="${s.nome}"${cdpFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
     });
     html += '</select>';
   }
+  // Select de captador — lider/CEO
+  if (captador && ['ceo','lider','sublider'].includes(captador.cargo)) {
+    const todos = todosOsMembros().filter(m => m.cargo === 'captador' || !m.cargo);
+    html += '<select class="filtro-select" onchange="setCdpFiltro(\'captador\',this.value)">';
+    html += `<option value="todos"${cdpFiltro.captador==='todos'?' selected':''}>Todos captadores</option>`;
+    todos.forEach(m => {
+      html += `<option value="${m.nome}"${cdpFiltro.captador===m.nome?' selected':''}>${m.nome}</option>`;
+    });
+    html += '</select>';
+  }
+  // Botão exportar
+  html += `<button class="filtro-chip" style="margin-left:auto;background:rgba(201,168,76,.15);border-color:rgba(201,168,76,.4);color:var(--gold2)" onclick="exportarCdpExcel()">⬇ Excel</button>`;
   html += '</div>';
   // Inputs de período livre
   if (cdpFiltro.periodo === 'livre') {
@@ -2155,7 +2168,7 @@ function setCdpFiltroDate(chave, valor) {
 }
 function cdpLeadsFiltrados() {
   const base = filtrarPorAcesso(leads);
-  return filtrarLeads(base, { periodo: cdpFiltro.periodo, sala: cdpFiltro.sala, captador: 'todos', de: cdpFiltro.de, ate: cdpFiltro.ate });
+  return filtrarLeads(base, { periodo: cdpFiltro.periodo, sala: cdpFiltro.sala, captador: cdpFiltro.captador, de: cdpFiltro.de, ate: cdpFiltro.ate });
 }
 function cdpSubTexto(lista) {
   const salaLider = getSalaDoLider(captador);
@@ -2164,6 +2177,60 @@ function cdpSubTexto(lista) {
   const periodoLabel = { hoje:'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período livre' };
   return (periodoLabel[cdpFiltro.periodo]||'') + sufixo + ' · ' + lista.length + ' pesquisas';
 }
+function exportarCdpExcel() {
+  const lista = cdpLeadsFiltrados();
+  if (!lista.length) { alert('Nenhuma pesquisa para exportar.'); return; }
+
+  // Agrupa por captador (mesmo cálculo do CDP)
+  const map = {};
+  lista.forEach(l => {
+    const nome = l.captador || '—';
+    if (!map[nome]) map[nome] = { q:0, nq:0, parcial:0, sala:0, total:0 };
+    if (l.verdict==='Q')      map[nome].q++;
+    else if (l.verdict==='NQ') map[nome].nq++;
+    else if (l.verdict==='PARCIAL') map[nome].parcial++;
+    if (l.emSala) map[nome].sala++;
+    map[nome].total++;
+  });
+
+  const sorted = Object.entries(map)
+    .map(([nome, s]) => ({ nome, ...s, conv: s.q > 0 ? Math.round(s.sala/s.q*100)+'%' : '0%' }))
+    .sort((a,b) => b.total - a.total);
+
+  // Período e filtros ativos
+  const periodoLabel = { hoje:'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período livre' };
+  const periodo = periodoLabel[cdpFiltro.periodo] || cdpFiltro.periodo;
+  const salaLabel = cdpFiltro.sala !== 'todas' ? cdpFiltro.sala : 'Todas';
+  const captadorLabel = cdpFiltro.captador !== 'todos' ? cdpFiltro.captador : 'Todos';
+
+  const BOM = '\uFEFF';
+  let csv = BOM;
+  csv += `Período;${periodo}\n`;
+  csv += `Sala;${salaLabel}\n`;
+  csv += `Captador;${captadorLabel}\n`;
+  csv += `Gerado em;${new Date().toLocaleString('pt-BR')}\n\n`;
+  csv += 'Captador;Q;NQ;PARCIAL;Total;Em Sala;Conversão\n';
+  sorted.forEach(r => {
+    csv += `${r.nome};${r.q};${r.nq};${r.parcial};${r.total};${r.sala};${r.conv}\n`;
+  });
+  // Totais
+  const tQ = sorted.reduce((a,r)=>a+r.q,0);
+  const tNQ = sorted.reduce((a,r)=>a+r.nq,0);
+  const tP = sorted.reduce((a,r)=>a+r.parcial,0);
+  const tT = sorted.reduce((a,r)=>a+r.total,0);
+  const tS = sorted.reduce((a,r)=>a+r.sala,0);
+  const tConv = tQ > 0 ? Math.round(tS/tQ*100)+'%' : '0%';
+  csv += `TOTAL;${tQ};${tNQ};${tP};${tT};${tS};${tConv}\n`;
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const data = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  a.href = url; a.download = `CDP_YV_${data}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
 function atualizarCdp() {
   const lista = cdpLeadsFiltrados();
   document.getElementById('cdpSub').textContent = cdpSubTexto(lista);
