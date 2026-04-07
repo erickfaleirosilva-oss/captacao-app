@@ -331,6 +331,16 @@
     .cdp-tot-num.q     { color: var(--green); }
     .cdp-tot-num.nq    { color: var(--red); }
     .cdp-tot-lbl   { font-size: 10px; color: var(--muted); margin-top: 2px; font-weight: 600; }
+    .cdp-tot.sala  { background: rgba(100,160,255,.08); border:1px solid rgba(100,160,255,.3); }
+    .cdp-tot-num.sala { color: #64a0ff; }
+    .cdp-tot.conv  { background: rgba(201,168,76,.06); border:1px solid rgba(201,168,76,.2); }
+    .cdp-tot-num.conv { color: var(--gold2); }
+    /* ícone sala no histórico */
+    .hc-sala-btn { background:none; border:none; cursor:pointer; font-size:18px; padding:4px 6px; border-radius:6px; transition:all .15s; line-height:1; flex-shrink:0; }
+    .hc-sala-btn:active { transform:scale(.9); }
+    .hc-sala-btn.marcado { filter: drop-shadow(0 0 4px #64a0ff); }
+    .cdp-m-num.sala { color: #64a0ff; }
+    .cdp-m-num.conv { color: var(--gold2); }
     .cdp-card {
       background: var(--navy2); border: 1px solid var(--border);
       border-radius: 12px; padding: 16px; margin-bottom: 10px;
@@ -1916,14 +1926,29 @@ function renderHistList() {
       <div class="sum-box nq"><div class="sum-num nq">${nq}</div><div class="sum-lbl">NQ</div></div>
     </div>
     ${visíveis.map(h=>`
-      <div class="hist-card">
-        <div class="hc-badge ${h.verdict}">${h.verdict}</div>
-        <div>
+      <div class="hist-card" style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div class="hc-badge ${h.verdict}">${h.verdict}</div>
           <div class="hc-name">${h.nome} · ${tL[h.tipo]||h.tipo}</div>
           ${h.tel!=='—'?`<div class="hc-phone">📞 ${h.tel}</div>`:''}
           <div class="hc-meta">${h.captador||'—'} · ${h.time} · ${h.mode} · ${rendaStr(h.renda)}${h.sala && h.sala!=='—'?' · '+h.sala:''}</div>
         </div>
+        <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Remover da sala':'Marcar como entrou em sala'}">${h.emSala?'🏠':'🪑'}</button>
       </div>`).join('')}`;
+}
+
+function toggleSala(leadId) {
+  const idx = leads.findIndex(l => String(l.id) === String(leadId));
+  if (idx === -1) return;
+  leads[idx].emSala = !leads[idx].emSala;
+  try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
+  try { sessionStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
+  // sincroniza flag no Sheets se online
+  if (navigator.onLine && API.ok()) {
+    API.post({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala });
+  }
+  renderHistList();
+  atualizarCdp();
 }
 
 function clearHist() {
@@ -2165,14 +2190,19 @@ function renderCdp(leadsHoje) {
   const leadsVisíveis = filtrarPorAcesso(leadsHoje);
 
   if (totalAcesso) {
-    const tQ   = leadsVisíveis.filter(l=>l.verdict==='Q').length;
-    const tNQ  = leadsVisíveis.filter(l=>l.verdict==='NQ').length;
-    const tTot = tQ + tNQ;
+    const tQ    = leadsVisíveis.filter(l=>l.verdict==='Q').length;
+    const tNQ   = leadsVisíveis.filter(l=>l.verdict==='NQ').length;
+    const tTot  = tQ + tNQ;
+    const tSala = leadsVisíveis.filter(l=>l.emSala).length;
+    const tConv = tQ > 0 ? Math.round(tSala / tQ * 100) : 0;
+    const convStr = tQ > 0 ? tConv + '%' : '—';
     document.getElementById('cdpTotais').innerHTML = `
       <div class="cdp-totais">
         <div class="cdp-tot total"><div class="cdp-tot-num total">${tTot}</div><div class="cdp-tot-lbl">TOTAL</div></div>
         <div class="cdp-tot q">   <div class="cdp-tot-num q">${tQ}</div>    <div class="cdp-tot-lbl">Q's</div></div>
         <div class="cdp-tot nq">  <div class="cdp-tot-num nq">${tNQ}</div>  <div class="cdp-tot-lbl">NQ's</div></div>
+        <div class="cdp-tot sala"><div class="cdp-tot-num sala">${tSala}</div><div class="cdp-tot-lbl">🏠 SALA</div></div>
+        <div class="cdp-tot conv"><div class="cdp-tot-num conv">${convStr}</div><div class="cdp-tot-lbl">CONV.</div></div>
       </div>`;
   } else {
     document.getElementById('cdpTotais').innerHTML = '';
@@ -2189,9 +2219,10 @@ function renderCdp(leadsHoje) {
   const map = {};
   leadsVisíveis.forEach(l => {
     const nome = l.captador || '—';
-    if (!map[nome]) map[nome] = { q:0, nq:0 };
-    if (l.verdict==='Q')  map[nome].q++;
+    if (!map[nome]) map[nome] = { q:0, nq:0, sala:0 };
+    if (l.verdict==='Q')       map[nome].q++;
     else if (l.verdict==='NQ') map[nome].nq++;
+    if (l.emSala) map[nome].sala++;
   });
 
   const ROLE_LABEL = { captador:'Captador(a)', sublider:'Sublíder', lider:'Líder', ceo:'CEO' };
@@ -2200,7 +2231,8 @@ function renderCdp(leadsHoje) {
   const sorted = Object.entries(map)
     .map(([nome, s]) => {
       const cfg  = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')].find(c=>c.nome===nome);
-      return { nome, q:s.q, nq:s.nq, total:s.q+s.nq, cargo: cfg?.cargo||'captador' };
+      const conv = s.q > 0 ? Math.round(s.sala / s.q * 100) : null;
+      return { nome, q:s.q, nq:s.nq, sala:s.sala, conv, total:s.q+s.nq, cargo: cfg?.cargo||'captador' };
     })
     .sort((a,b) => b.total - a.total);
 
@@ -2210,6 +2242,7 @@ function renderCdp(leadsHoje) {
     const pLabel  = totalAcesso ? (posLabel[idx]||(idx+1)) : '👤';
     const barQ    = c.total ? Math.round(c.q  / c.total * 100) : 0;
     const barNQ   = c.total ? Math.round(c.nq / c.total * 100) : 0;
+    const convStr = c.conv !== null ? c.conv + '%' : '—';
     const isSelf  = captador && c.nome === captador.nome;
     return `<div class="cdp-card${isSelf?' self':''}">
       <div class="cdp-card-top">
@@ -2221,9 +2254,11 @@ function renderCdp(leadsHoje) {
         </div>
       </div>
       <div class="cdp-metrics">
-        <div class="cdp-metric"><div class="cdp-m-num q">${c.q}</div>   <div class="cdp-m-lbl">Q's</div></div>
-        <div class="cdp-metric"><div class="cdp-m-num nq">${c.nq}</div>  <div class="cdp-m-lbl">NQ's</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num q">${c.q}</div>      <div class="cdp-m-lbl">Q's</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num nq">${c.nq}</div>    <div class="cdp-m-lbl">NQ's</div></div>
         <div class="cdp-metric"><div class="cdp-m-num total">${c.total}</div><div class="cdp-m-lbl">Total</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num sala">${c.sala}</div> <div class="cdp-m-lbl">🏠 Sala</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num conv">${convStr}</div><div class="cdp-m-lbl">Conv.</div></div>
       </div>
       ${c.total > 0 ? `<div class="cdp-bar">
         <div class="cdp-bar-q"  style="width:${barQ}%"></div>
