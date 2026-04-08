@@ -1504,8 +1504,9 @@ function _estavaNaQuiz() {
   return q && !q.classList.contains('hidden');
 }
 function _checkAbandonQuiz() {
-  // Se estava no quiz e o lead ainda não foi salvo, registra PI
-  if (_estavaNaQuiz() && !ans._autoSavedId) {
+  // Registra PI apenas se o captador avançou pelo menos uma pergunta
+  // step > 0 garante que foi abandono deliberado, não reload da página
+  if (_estavaNaQuiz() && !ans._autoSavedId && step > 0) {
     _registrarPI();
   }
 }
