@@ -1498,7 +1498,7 @@ function setNav(tab) {
 }
 function _estavaNaQuiz() {
   const q = document.getElementById('screenQuiz');
-  return q && !q.classList.contains('hidden');
+  return q && q.classList.contains('active');
 }
 function _checkAbandonQuiz() {
   // Registra PI apenas se o captador avançou pelo menos uma pergunta
@@ -2044,6 +2044,7 @@ function clearHist() {
   if (!confirm('Limpar todo o histórico?')) return;
   leads = [];
   localStorage.removeItem('yv_leads');
+  localStorage.removeItem('yv_pi');
   renderHistList();
 }
 
