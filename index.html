@@ -2345,13 +2345,28 @@ function showCdp() {
 
   if (API.ok()) {
     document.getElementById('cdpSync').classList.remove('hidden');
-    API.getLeads().then(remoto => {
+    Promise.all([
+      API.getLeads(),
+      fetch(CONFIG.webhookUrl + '?_type=pi').then(r=>r.json()).catch(()=>null)
+    ]).then(([remoto, piRemoto]) => {
       document.getElementById('cdpSync').classList.add('hidden');
       mergeRemoto(remoto);
+      mergePIsRemoto(piRemoto);
       renderCdpFiltros();
       atualizarCdp();
     }).catch(() => { document.getElementById('cdpSync').classList.add('hidden'); });
   }
+}
+
+function mergePIsRemoto(remoto) {
+  if (!remoto || !Array.isArray(remoto.pis) || !remoto.pis.length) return;
+  const arr = JSON.parse(localStorage.getItem(PI_KEY) || '[]');
+  const ids = new Set(arr.map(p => String(p.id)));
+  let changed = false;
+  remoto.pis.forEach(p => {
+    if (!ids.has(String(p.id))) { arr.unshift(p); ids.add(String(p.id)); changed = true; }
+  });
+  if (changed) try { localStorage.setItem(PI_KEY, JSON.stringify(arr)); } catch(e) {}
 }
 
 function renderCdp(leadsHoje) {
@@ -2664,6 +2679,9 @@ function _registrarPI() {
   arr.unshift(pi);
   if (arr.length > 500) arr.pop();
   try { localStorage.setItem(PI_KEY, JSON.stringify(arr)); } catch(e) {}
+  if (navigator.onLine && API.ok()) {
+    API.post({ _action: 'register_pi', ...pi });
+  }
 }
 function getPIs() { return JSON.parse(localStorage.getItem(PI_KEY) || '[]'); }
 

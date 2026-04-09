@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════
 // Your Vacation — Qualificador de Captação
-// Google Apps Script Backend — v5
+// Google Apps Script Backend — v6
 // Cole este código em: Planilha > Extensões > Apps Script
 // Depois: Implantar > Gerenciar implantações > Editar > Nova versão > Implantar
 // ═══════════════════════════════════════════════════════
@@ -60,10 +60,21 @@ function findRowById(sheet, id) {
   return pos >= 0 ? pos + 2 : -1;
 }
 
+// ── PI — armazenado em PropertiesService (invisível na planilha) ──
+function getPIs() {
+  const raw = PropertiesService.getScriptProperties().getProperty('pi_store');
+  return raw ? JSON.parse(raw) : [];
+}
+function savePIs(arr) {
+  // PropertiesService suporta até 500KB por propriedade — suficiente para meses de PI
+  PropertiesService.getScriptProperties().setProperty('pi_store', JSON.stringify(arr));
+}
+
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
 
+    // update_sala: atualiza coluna EmSala de um lead existente
     if (data._action === 'update_sala') {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheetsAlvo = Object.values(SALA_SHEETS).map(n => ss.getSheetByName(n)).filter(Boolean);
@@ -81,6 +92,28 @@ function doPost(e) {
       return jsonResponse({ status: 'not_found', id: data.id });
     }
 
+    // register_pi: salva em PropertiesService (sem criar aba na planilha)
+    if (data._action === 'register_pi') {
+      const pis = getPIs();
+      if (pis.some(p => String(p.id) === String(data.id))) {
+        return jsonResponse({ status: 'duplicate', id: data.id });
+      }
+      pis.unshift({
+        id:       String(data.id),
+        date:     data.date     || '',
+        time:     data.time     || '',
+        captador: data.captador || '',
+        sala:     data.sala     || '',
+        nomeParc: data.nomeParc || '',
+        dateISO:  data.dateISO  || '',
+      });
+      // Mantém últimos 1000 PIs
+      if (pis.length > 1000) pis.pop();
+      savePIs(pis);
+      return jsonResponse({ status: 'ok', id: data.id });
+    }
+
+    // novo lead — salva na aba da sala correspondente
     const sheet = resolverSheet(data.sala || '');
     const existingRow = findRowById(sheet, data.id);
     if (existingRow > 0) {
@@ -95,8 +128,10 @@ function doPost(e) {
       data.emSala ? 'SIM' : '',
     ]);
 
+    // Aplica cor na linha recém inserida
     const row = sheet.getLastRow();
-    const range = sheet.getRange(row, 1, 1, N_COLS);
+    const nCols = sheet.getLastColumn();
+    const range = sheet.getRange(row, 1, 1, nCols);
     if (data.verdict === 'Q')       range.setBackground('#d4edda');
     if (data.verdict === 'PARCIAL') range.setBackground('#fff3cd');
     if (data.verdict === 'NQ')      range.setBackground('#f8d7da');
@@ -112,6 +147,11 @@ function doGet(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const params = e && e.parameter ? e.parameter : {};
     const salaFiltro = params.sala || null;
+
+    // ?_type=pi — retorna pesquisas incompletas do PropertiesService
+    if (params._type === 'pi') {
+      return jsonResponse({ status: 'ok', pis: getPIs() });
+    }
 
     const sheetsAlvo = salaFiltro
       ? [ss.getSheetByName(SALA_SHEETS[salaFiltro] || salaFiltro)].filter(Boolean)
@@ -148,6 +188,30 @@ function doGet(e) {
 function migrarTodasAsAbas() {
   Object.values(SALA_SHEETS).forEach(nome => getOrCreateSheetByName(nome));
   Logger.log('Migração concluída.');
+}
+
+// Reaplica cores em todas as linhas existentes (rodar uma vez manualmente)
+function reaplCarCores() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  Object.values(SALA_SHEETS).forEach(nome => {
+    const sheet = ss.getSheetByName(nome);
+    if (!sheet) return;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+    const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const resultIdx = cabecalho.indexOf('Resultado');
+    if (resultIdx < 0) return;
+    const nCols = sheet.getLastColumn();
+    const rows = sheet.getRange(2, 1, lastRow - 1, nCols).getValues();
+    rows.forEach((r, i) => {
+      const verdict = r[resultIdx];
+      const range = sheet.getRange(i + 2, 1, 1, nCols);
+      if (verdict === 'Q')       range.setBackground('#d4edda');
+      else if (verdict === 'PARCIAL') range.setBackground('#fff3cd');
+      else if (verdict === 'NQ') range.setBackground('#f8d7da');
+    });
+    Logger.log(`${nome}: ${lastRow - 1} linhas processadas`);
+  });
 }
 
 function jsonResponse(obj) {
