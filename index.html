@@ -1858,8 +1858,8 @@ function saveAndNew() {
   renderStep();
 }
 function skipNew() {
-  // Registra PI se o lead ainda não foi salvo (captador pulou antes do resultado)
-  if (!ans._autoSavedId && (ans.nome || ans.tel)) {
+  // Registra PI se o lead ainda não foi salvo e captador avançou pelo menos uma pergunta
+  if (!ans._autoSavedId && step > 0) {
     _registrarPI();
   }
   step = 0; ans = {};
