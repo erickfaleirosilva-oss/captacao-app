@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════
 // Your Vacation — Qualificador de Captação
-// Google Apps Script Backend — v3 (cabeçalho auto-migração)
+// Google Apps Script Backend — v5
 // Cole este código em: Planilha > Extensões > Apps Script
 // Depois: Implantar > Gerenciar implantações > Editar > Nova versão > Implantar
 // ═══════════════════════════════════════════════════════
@@ -12,12 +12,15 @@ const SALA_SHEETS = {
   'Atibaia':          'Atibaia',
 };
 const DEFAULT_SHEET = 'Leads'; // fallback para salas não mapeadas
+const PI_SHEET = 'PI'; // aba de pesquisas incompletas
+const PI_COLUNAS = ['ID','Data','Hora','Captador','Sala','NomeParcial'];
+const PI_WIDTHS  = [180, 100, 80, 150, 150, 200];
 
-const COLUNAS = ['ID','Data','Hora','Captador','Sala','Nome','Telefone','Cidade','Resultado','Tipo','Renda','Modo'];
+const COLUNAS = ['ID','Data','Hora','Captador','Sala','Nome','Telefone','Cidade','Resultado','Tipo','Renda','Modo','EmSala'];
 const N_COLS  = COLUNAS.length;
 
 // Larguras das colunas (em pixels)
-const COL_WIDTHS = [180, 100, 80, 150, 150, 150, 130, 130, 90, 150, 130, 80];
+const COL_WIDTHS = [180, 100, 80, 150, 150, 150, 130, 130, 90, 150, 130, 80, 80];
 
 function aplicarCabecalho(sheet) {
   const header = sheet.getRange(1, 1, 1, N_COLS);
@@ -71,19 +74,82 @@ function resolverSheet(sala) {
   return getOrCreateSheetByName(nome);
 }
 
-// POST — recebe um lead e salva na aba da sala correspondente
+function getPiSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(PI_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(PI_SHEET);
+    const header = sheet.getRange(1, 1, 1, PI_COLUNAS.length);
+    header.setValues([PI_COLUNAS]);
+    header.setBackground('#1a2340');
+    header.setFontColor('#c9a84c');
+    header.setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    PI_WIDTHS.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
+  }
+  return sheet;
+}
+
+// Encontra a linha de um ID em uma sheet (retorna número da linha ou -1)
+function findRowById(sheet, id) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return -1;
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+  const pos = ids.map(String).indexOf(String(id));
+  return pos >= 0 ? pos + 2 : -1;
+}
+
+// POST — recebe um lead ou uma atualização de sala
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
+
+    // update_sala: atualiza coluna EmSala de um lead existente em todas as abas
+    if (data._action === 'update_sala') {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheetsAlvo = Object.values(SALA_SHEETS).map(n => ss.getSheetByName(n)).filter(Boolean);
+      for (const sheet of sheetsAlvo) {
+        const row = findRowById(sheet, data.id);
+        if (row > 0) {
+          const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          const emSalaCol = cabecalho.indexOf('EmSala');
+          if (emSalaCol >= 0) {
+            sheet.getRange(row, emSalaCol + 1).setValue(data.emSala ? 'SIM' : '');
+          }
+          return jsonResponse({ status: 'ok', id: data.id });
+        }
+      }
+      return jsonResponse({ status: 'not_found', id: data.id });
+    }
+
+    // register_pi: salva pesquisa incompleta na aba PI
+    if (data._action === 'register_pi') {
+      const sheet = getPiSheet();
+      const lastRow = sheet.getLastRow();
+      if (lastRow >= 2) {
+        const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+        if (ids.map(String).includes(String(data.id))) {
+          return jsonResponse({ status: 'duplicate', id: data.id });
+        }
+      }
+      sheet.appendRow([
+        data.id       || '',
+        data.date     || '',
+        data.time     || '',
+        data.captador || '',
+        data.sala     || '',
+        data.nomeParc || '',
+      ]);
+      return jsonResponse({ status: 'ok', id: data.id });
+    }
+
+    // novo lead — salva na aba da sala correspondente
     const sheet = resolverSheet(data.sala || '');
 
     // Evita duplicatas pelo ID
-    const lastRow = sheet.getLastRow();
-    if (lastRow >= 2) {
-      const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-      if (ids.map(String).includes(String(data.id))) {
-        return jsonResponse({ status: 'duplicate', id: data.id });
-      }
+    const existingRow = findRowById(sheet, data.id);
+    if (existingRow > 0) {
+      return jsonResponse({ status: 'duplicate', id: data.id });
     }
 
     sheet.appendRow([
@@ -99,6 +165,7 @@ function doPost(e) {
       data.tipo     || '',
       data.renda    || '',
       data.mode     || '',
+      data.emSala   ? 'SIM' : '',
     ]);
 
     const row = sheet.getLastRow();
@@ -152,9 +219,37 @@ function doGet(e) {
           tipo:     get('Tipo'),
           renda:    get('Renda'),
           mode:     get('Modo'),
+          emSala:   get('EmSala') === 'SIM',
         });
       });
     });
+
+    // Se ?_type=pi retorna pesquisas incompletas
+    if (params._type === 'pi') {
+      const piSheet = getPiSheet();
+      const pis = [];
+      const lastPiRow = piSheet.getLastRow();
+      if (lastPiRow >= 2) {
+        const piRows = piSheet.getRange(2, 1, lastPiRow - 1, PI_COLUNAS.length).getValues();
+        piRows.forEach(r => {
+          if (!r[0]) return;
+          pis.push({
+            id:       String(r[0]),
+            date:     String(r[1]),
+            time:     String(r[2]),
+            captador: r[3],
+            sala:     r[4],
+            nomeParc: r[5],
+            dateISO:  (() => {
+              const d = String(r[1]);
+              const p = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+              return p ? p[3]+'-'+p[2]+'-'+p[1] : '';
+            })(),
+          });
+        });
+      }
+      return jsonResponse({ status: 'ok', pis });
+    }
 
     return jsonResponse({ status: 'ok', leads });
   } catch (err) {

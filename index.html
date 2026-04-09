@@ -617,10 +617,7 @@
   <div class="screen" id="screenHist">
     <div class="hist-head">
       <div class="hist-head-title">Histórico</div>
-      <div style="display:flex;gap:14px;align-items:center">
-        <span style="font-size:13px;color:var(--green);cursor:pointer;font-weight:700" onclick="abrirModalExport()">⬇ Exportar</span>
-        <div class="hist-clear" onclick="clearHist()">Limpar tudo</div>
-      </div>
+      <div id="histHeadActions" style="display:flex;gap:14px;align-items:center"></div>
     </div>
     <div id="histFiltrosWrap"></div>
     <div id="histList"></div>
@@ -1923,6 +1920,19 @@ function showHist() {
 }
 
 function renderHistFiltros() {
+  // Botões de ação do cabeçalho — dinâmicos por cargo
+  const actions = document.getElementById('histHeadActions');
+  if (actions) {
+    let btns = '';
+    if (captador && ['lider','sublider','ceo'].includes(captador.cargo)) {
+      btns += `<span style="font-size:13px;color:var(--green);cursor:pointer;font-weight:700" onclick="abrirModalExport()">⬇ Exportar</span>`;
+    }
+    if (captador && captador.cargo === 'ceo') {
+      btns += `<div class="hist-clear" onclick="clearHist()">Limpar tudo</div>`;
+    }
+    actions.innerHTML = btns;
+  }
+
   const wrap = document.getElementById('histFiltrosWrap');
   const todos = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
   const periodos = [
@@ -2199,6 +2209,17 @@ function mergeRemoto(remoto) {
   return changed;
 }
 
+function mergePIsRemoto(remoto) {
+  if (!remoto || !Array.isArray(remoto.pis) || !remoto.pis.length) return;
+  const arr = JSON.parse(localStorage.getItem(PI_KEY) || '[]');
+  const ids = new Set(arr.map(p => String(p.id)));
+  let changed = false;
+  remoto.pis.forEach(p => {
+    if (!ids.has(String(p.id))) { arr.unshift(p); ids.add(String(p.id)); changed = true; }
+  });
+  if (changed) try { localStorage.setItem(PI_KEY, JSON.stringify(arr)); } catch(e) {}
+}
+
 // CDP
 function renderCdpFiltros() {
   const wrap = document.getElementById('cdpFiltrosWrap');
@@ -2335,9 +2356,13 @@ function showCdp() {
 
   if (API.ok()) {
     document.getElementById('cdpSync').classList.remove('hidden');
-    API.getLeads().then(remoto => {
+    Promise.all([
+      API.getLeads(),
+      fetch(CONFIG.webhookUrl + '?_type=pi').then(r=>r.json()).catch(()=>null)
+    ]).then(([remoto, piRemoto]) => {
       document.getElementById('cdpSync').classList.add('hidden');
       mergeRemoto(remoto);
+      mergePIsRemoto(piRemoto);
       renderCdpFiltros();
       atualizarCdp();
     }).catch(() => { document.getElementById('cdpSync').classList.add('hidden'); });
@@ -2654,6 +2679,10 @@ function _registrarPI() {
   arr.unshift(pi);
   if (arr.length > 500) arr.pop();
   try { localStorage.setItem(PI_KEY, JSON.stringify(arr)); } catch(e) {}
+  // Envia para o backend para que liderança/CEO possam ver
+  if (navigator.onLine && API.ok()) {
+    API.post({ _action: 'register_pi', ...pi });
+  }
 }
 function getPIs() { return JSON.parse(localStorage.getItem(PI_KEY) || '[]'); }
 
