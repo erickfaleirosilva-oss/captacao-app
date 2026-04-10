@@ -1820,7 +1820,7 @@ function _persistLead() {
   if (leads.length > 500) leads.pop();
   sessionStorage.setItem('yv_leads', JSON.stringify(leads));
   try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-  if (navigator.onLine) { API.post(lead); } else { offlineEnqueue(lead); }
+  if (navigator.onLine) { API.post(lead).catch(() => offlineEnqueue(lead)); } else { offlineEnqueue(lead); }
 }
 
 function showResult() {
@@ -2034,7 +2034,8 @@ function toggleSala(leadId) {
   try { sessionStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
   // sincroniza flag no Sheets se online
   if (navigator.onLine && API.ok()) {
-    API.post({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala });
+    API.post({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala })
+      .catch(() => offlineEnqueue({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala }));
   }
   renderHistList();
   atualizarCdp();
