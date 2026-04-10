@@ -1,7 +1,7 @@
 {
-  "name": "YV Captação",
-  "short_name": "YV Captação",
-  "description": "Qualificador de Captação — Your Vacation",
+  "name": "QualifiQ · Your Vacation",
+  "short_name": "QualifiQ",
+  "description": "QualifiQ — App de Captação · Your Vacation",
   "start_url": "/captacao-app/",
   "scope": "/captacao-app/",
   "display": "standalone",

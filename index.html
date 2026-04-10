@@ -6,10 +6,10 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="YV Captação" />
+  <meta name="apple-mobile-web-app-title" content="QualifiQ" />
   <meta name="theme-color" content="#1a2340" />
   <link rel="manifest" href="manifest.json" />
-  <title>Your Vacation — Captação</title>
+  <title>QualifiQ · Your Vacation</title>
   <style>
     :root {
       --navy:    #1a2340;
@@ -123,10 +123,12 @@
       position: sticky; top: 0; z-index: 20; flex-shrink: 0;
     }
     .header-logo { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-    .logo-mark   { width: 36px; height: 36px; flex-shrink: 0; }
+    .logo-mark   { width: 36px; height: 36px; flex-shrink: 0; border-radius: 9px; border: 1.5px solid var(--gold); overflow: hidden; }
     .header-text { line-height: 1.2; min-width: 0; }
-    .header-text .brand { font-size: 13px; font-weight: 800; color: var(--gold2); letter-spacing: .5px; }
-    .header-text .sub   { font-size: 10px; color: var(--muted); font-weight: 500; }
+    .header-text .brand { font-size: 14px; font-weight: 900; color: #fff; letter-spacing: -.3px; }
+    .header-text .brand em { color: var(--gold2); font-style: normal; }
+    .header-text .sub   { font-size: 9px; color: var(--muted); font-weight: 500; letter-spacing: .5px; }
+    .yv-tag { font-size: 8px; font-weight: 800; color: #1a2340; background: var(--gold); padding: 3px 7px; border-radius: 5px; letter-spacing: .5px; white-space: nowrap; flex-shrink: 0; }
     .captador-pill {
       font-size: 11px; font-weight: 700; padding: 5px 10px;
       border-radius: 20px; background: rgba(201,168,76,.1);
@@ -163,8 +165,10 @@
     @keyframes slideIn { from { opacity:0; transform:translateX(18px); } to { opacity:1; transform:translateX(0); } }
     .slide-in { animation: slideIn .2s ease; }
     .splash { text-align: center; padding: 10px 0 28px; }
-    .splash-logo { width: 88px; height: 88px; margin: 0 auto 16px; }
-    .splash-title { font-size: 21px; font-weight: 800; color: var(--gold2); margin-bottom: 6px; }
+    .splash-logo { width: 88px; height: 88px; margin: 0 auto 16px; border-radius: 20px; border: 2.5px solid var(--gold); overflow: hidden; }
+    .splash-title { font-size: 26px; font-weight: 900; color: #fff; margin-bottom: 2px; letter-spacing: -.5px; }
+    .splash-title em { color: var(--gold2); font-style: normal; }
+    .splash-yv { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
     .splash-sub   { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 22px; }
     .splash-captador {
       display: inline-block; margin-bottom: 20px;
@@ -519,13 +523,18 @@
 <!-- HEADER -->
 <div class="header">
   <div class="header-logo">
-    <svg class="logo-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="14" fill="#1f2b4d"/><rect x="4" y="4" width="43" height="43" rx="9" fill="#c9a84c"/><rect x="53" y="4" width="43" height="43" rx="9" fill="#c9a84c"/><rect x="4" y="53" width="43" height="43" rx="9" fill="#c9a84c"/><rect x="53" y="53" width="43" height="43" rx="9" fill="#c9a84c"/><text x="25.5" y="38" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">Y</text><text x="74.5" y="38" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">O</text><text x="25.5" y="87" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">U</text><text x="74.5" y="87" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">R</text></svg>
+    <svg class="logo-mark" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg" style="background:#1a2340">
+      <text x="4" y="41" font-family="-apple-system,Arial Black,sans-serif" font-weight="900" font-size="40" fill="#c9a84c" letter-spacing="-2">Q</text>
+      <circle cx="38" cy="36" r="9" fill="#c9a84c"/>
+      <polyline points="33,36 37,40 43,32" stroke="#1a2340" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
     <div class="header-text">
-      <div class="brand">YOUR VACATION</div>
-      <div class="sub">App de Captação · v2.1</div>
+      <div class="brand">Qualifi<em>Q</em></div>
+      <div class="sub">by Your Vacation</div>
     </div>
   </div>
   <div id="themeBtn" onclick="toggleTheme()">🌙</div>
+  <div class="yv-tag">YOUR VACATION</div>
   <div class="sala-pill hidden" id="salaPill">🏢 —</div>
   <div class="captador-pill" id="captadorPill" onclick="trocarCaptador()">👤 —</div>
   <div class="mode-badge low" id="modeBadge" onclick="goHome()">▾ &lt;3k</div>
@@ -537,8 +546,13 @@
   <!-- HOME -->
   <div class="screen active" id="screenHome">
     <div class="splash">
-      <svg class="splash-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="18" fill="#1f2b4d"/><rect x="4" y="4" width="43" height="43" rx="9" fill="#c9a84c"/><rect x="53" y="4" width="43" height="43" rx="9" fill="#c9a84c"/><rect x="4" y="53" width="43" height="43" rx="9" fill="#c9a84c"/><rect x="53" y="53" width="43" height="43" rx="9" fill="#c9a84c"/><text x="25.5" y="38" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">Y</text><text x="74.5" y="38" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">O</text><text x="25.5" y="87" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">U</text><text x="74.5" y="87" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="30" fill="#1a2340">R</text></svg>
-      <div class="splash-title">Qualificador de Captação</div>
+      <svg class="splash-logo" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg" style="background:#1a2340">
+        <text x="4" y="41" font-family="-apple-system,Arial Black,sans-serif" font-weight="900" font-size="40" fill="#c9a84c" letter-spacing="-2">Q</text>
+        <circle cx="38" cy="36" r="9" fill="#c9a84c"/>
+        <polyline points="33,36 37,40 43,32" stroke="#1a2340" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="splash-title">Qualifi<em>Q</em></div>
+      <div class="splash-yv">by Your Vacation</div>
       <div class="splash-captador" id="splashCaptador">👤 —</div>
       <div style="margin-bottom:20px;display:flex;gap:18px;justify-content:center">
         <button type="button" style="background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;text-decoration-color:rgba(136,153,187,.4);padding:6px 0" onclick="openPwChange()">🔐 Alterar senha</button>
