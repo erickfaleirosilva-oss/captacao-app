@@ -2191,10 +2191,13 @@ function normalizarTime(t, id) {
 }
 
 // Merge leads remotos no array local (sem duplicar por id)
+// Também corrige divergências: leads locais não enviados e emSala pendente
 function mergeRemoto(remoto) {
   if (!Array.isArray(remoto) || !remoto.length) return false;
   const idxMap = {};
   leads.forEach((l, i) => { idxMap[String(l.id)] = i; });
+  // Monta set de ids que existem no Sheets para detectar leads faltantes
+  const remotosIds = new Set(remoto.map(r => String(r.id)));
   let changed = false;
   remoto.forEach(r => {
     r.date = normalizarDate(r.date, r.id);
@@ -2205,7 +2208,7 @@ function mergeRemoto(remoto) {
     }
     const key = String(r.id);
     if (idxMap[key] === undefined) {
-      // lead novo — adiciona
+      // lead novo vindo do servidor — adiciona localmente
       idxMap[key] = leads.length;
       leads.push(r);
       changed = true;
@@ -2216,8 +2219,20 @@ function mergeRemoto(remoto) {
         local.emSala = true;
         changed = true;
       }
+      // se local tem emSala=true mas remoto está false → reenviar update_sala silenciosamente
+      if (local.emSala && !r.emSala && navigator.onLine && API.ok()) {
+        API.post({ _action: 'update_sala', id: local.id, emSala: true }).catch(() => {});
+      }
     }
   });
+  // Leads locais que não chegaram ao Sheets — reenviar silenciosamente
+  if (navigator.onLine && API.ok()) {
+    leads.forEach(l => {
+      if (!remotosIds.has(String(l.id))) {
+        API.post(l).catch(() => offlineEnqueue(l));
+      }
+    });
+  }
   if (changed) {
     try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
     try { sessionStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
