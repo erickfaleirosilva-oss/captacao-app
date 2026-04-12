@@ -926,7 +926,12 @@ function saveSalasExtras(arr) {
   localStorage.setItem('yv_salas_extras', JSON.stringify(arr));
 }
 function todayISO() {
-  return new Date().toISOString().slice(0,10);
+  // usa data local (não UTC) para evitar virada de dia às 21h BRT
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 // TEMA
