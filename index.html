@@ -32,10 +32,19 @@
       --navy2:  #ffffff;
       --navy3:  #e8eaf0;
       --border: #d0d5e8;
-      --text:   #1a2340;
+      --text:   #13243A;
       --muted:  #5a6a8a;
+      --gold:   #8B6134;
+      --gold2:  #8B6134;
+      --gold3:  #a07040;
+      --gold-dark: #6a4520;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    /* Scrollbar dourada — padrão YV */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(241,214,145,.35); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(241,214,145,.6); }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; scrollbar-width: thin; scrollbar-color: rgba(241,214,145,.35) transparent; }
     html, body { height: 100%; }
     body {
       background: var(--navy); color: var(--text);
