@@ -6,8 +6,8 @@
   "scope": "/captacao-app/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0d1120",
-  "theme_color": "#1a2340",
+  "background_color": "#13243A",
+  "theme_color": "#13243A",
   "icons": [
     {
       "src": "icon-192.png",
