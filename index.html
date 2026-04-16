@@ -1130,7 +1130,6 @@ const QS = [
       { icon:'🤝', label:'União estável',          sub:'Morando juntos',             value:'uniao'     },
       { icon:'💑', label:'Noivos / Namorados',     sub:'Sem formalização',           value:'noivos'    },
       { icon:'👤', label:'Solteiro / Divorciado',  sub:'',                           value:'solteiro'  },
-      { icon:'🏡', label:'Já tem multiprop.',      sub:'',                           value:'multiprop' },
     ]
   },
   // Pergunta condicional — só exibida se tipo === 'uniao'
@@ -1147,8 +1146,18 @@ const QS = [
     text:'Qual a cidade vocês moram?',
   },
   {
-    id:'idade', type:'chips',
-    text:'Idade de pelo menos um do casal?',
+    id:'idadeMarido', type:'chips',
+    text:'Qual a idade do marido / primeiro titular?',
+    opts:[
+      { icon:'⚠️', label:'Abaixo de 30 anos', sub:'', value:'menor30' },
+      { icon:'✅', label:'30 a 65 anos',       sub:'', value:'30a65'   },
+      { icon:'⚠️', label:'Acima de 65 anos',  sub:'', value:'acima65' },
+    ]
+  },
+  // Pergunta condicional — só exibida se há cônjuge (casado, UE ou noivos)
+  {
+    id:'idadeConjuge', type:'chips', condicional: (a) => a.tipo === 'casados' || a.tipo === 'uniao' || a.tipo === 'noivos',
+    text:'Qual a idade do cônjuge / segundo titular?',
     opts:[
       { icon:'⚠️', label:'Abaixo de 30 anos', sub:'', value:'menor30' },
       { icon:'✅', label:'30 a 65 anos',       sub:'', value:'30a65'   },
@@ -1179,6 +1188,16 @@ const QS = [
     opts:[
       { icon:'✅', label:'Sim, usa cartão de crédito', sub:'', value:'sim' },
       { icon:'⚠️', label:'Não usa cartão de crédito', sub:'', value:'nao' },
+    ]
+  },
+  {
+    id:'viagens', type:'chips',
+    text:'Quantas viagens de férias por ano?',
+    opts:[
+      { icon:'✈️', label:'1x por ano',       sub:'', value:'1x' },
+      { icon:'✈️', label:'2x por ano',       sub:'', value:'2x' },
+      { icon:'✈️', label:'3x por ano',       sub:'', value:'3x' },
+      { icon:'✈️', label:'Mais de 4x por ano', sub:'', value:'4x' },
     ]
   },
   {
@@ -1219,6 +1238,11 @@ function carroAno(v) {
   return m[v] ?? 0;
 }
 function idadeOk(v) { return v === '30a65'; }
+function idadeOkCasal(a) {
+  // Solteiro: só idadeMarido; casal: pelo menos um titular com 30–65
+  if (a.tipo === 'solteiro') return idadeOk(a.idadeMarido);
+  return idadeOk(a.idadeMarido) || idadeOk(a.idadeConjuge);
+}
 
 // ─────────────────────────────────────────────
 // QUALIFICAÇÃO — roteada por sala
@@ -1237,26 +1261,24 @@ function _base(a) {
   const cAno     = carroAno(a.carro);
   const isSol    = a.tipo === 'solteiro';
   const isNoivos = a.tipo === 'noivos';
-  const isMult   = a.tipo === 'multiprop';
   const relOk    = (a.tipo === 'casados') || (a.tipo === 'uniao' && a.tempoRel === '1anoMais');
-  const idOk     = idadeOk(a.idade);
+  const idOk     = idadeOkCasal(a);
   const cartaoS  = a.cartao === 'sim';
   const casaS    = a.casa === 'sim';
-  return { rNum, cAno, isSol, isNoivos, isMult, relOk, idOk, cartaoS, casaS };
+  return { rNum, cAno, isSol, isNoivos, relOk, idOk, cartaoS, casaS };
 }
 function _relLabel(a) { return a.tipo==='casados' ? 'Casados' : 'União estável ≥1 ano'; }
 function _row(ok, l, v) { return {i: ok?'✅':'⚠️', l, v}; }
 function _nqNoivos()   { return { verdict:'NQ', rows:[{i:'⚠️', l:'Relacionamento', v:'Noivos — consultar líderes'}], rule:'⚠️ Noivos/namorados: requer aprovação prévia dos líderes.', perfil:null }; }
-function _nqMult()     { return { verdict:'NQ', rows:[{i:'⚠️', l:'Multipropriedade', v:'Não qualificado como titular'}], rule:'📌 Multiproprietário não entra como casal qualificado.', perfil:null }; }
+
 
 // ── ALTA VISTA ──────────────────────────────
 function calcAltaVista() {
   const a = ans;
-  const { rNum, cAno, isSol, isNoivos, isMult, relOk, idOk, cartaoS, casaS } = _base(a);
+  const { rNum, cAno, isSol, isNoivos, relOk, idOk, cartaoS, casaS } = _base(a);
   const baixa = mode === 'low'; // baixa temporada = low, alta = high
 
   if (isNoivos) return _nqNoivos();
-  if (isMult)   return _nqMult();
 
   if (isSol) {
     // Solteiro: R$6k+, carro 2016+, idade 30-65, cartão
@@ -1343,11 +1365,10 @@ function calcAltaVista() {
 // ── SÃO PEDRO ───────────────────────────────
 function calcSaoPedro() {
   const a = ans;
-  const { rNum, cAno, isSol, isNoivos, isMult, relOk, idOk, cartaoS, casaS } = _base(a);
+  const { rNum, cAno, isSol, isNoivos, relOk, idOk, cartaoS, casaS } = _base(a);
   const hi = mode === 'high';
 
   if (isNoivos) return _nqNoivos();
-  if (isMult)   return _nqMult();
 
   if (isSol) {
     const ok = rNum>=10000 && cAno>=2010 && idOk;
@@ -1452,10 +1473,9 @@ function calcSaoPedro() {
 // ── ATIBAIA ─────────────────────────────────
 function calcAtibaia() {
   const a = ans;
-  const { rNum, cAno, isSol, isNoivos, isMult, relOk, idOk, cartaoS } = _base(a);
+  const { rNum, cAno, isSol, isNoivos, relOk, idOk, cartaoS } = _base(a);
 
   if (isNoivos) return _nqNoivos();
-  if (isMult)   return _nqMult();
 
   if (isSol) {
     const ok = rNum>=8000 && cAno>=2016 && idOk && cartaoS;
@@ -1892,12 +1912,14 @@ function showResult() {
   });
 
   // Bloco de respostas completas para print/WhatsApp
-  const TIPO_LABEL = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos/Namorados', solteiro:'Solteiro/Divorciado', multiprop:'Já tem multipropriedade' };
+  const TIPO_LABEL = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos/Namorados', solteiro:'Solteiro/Divorciado' };
   const RENDA_LABEL = { abaixo6k:'Abaixo de R$ 6.000', '6k':'R$ 6.000 – R$ 7.999', '8k':'R$ 8.000 – R$ 9.999', '10k':'R$ 10.000 – R$ 11.999', '12k':'R$ 12.000 – R$ 14.999', '15k':'R$ 15.000 – R$ 19.999', '20k':'R$ 20.000 ou mais' };
   const CARRO_LABEL = { sem:'Sem carro', ate2009:'Até 2009', '2010a2013':'2010 a 2013', '2014mais':'2014 ou mais recente' };
   const IDADE_LABEL = { menor30:'Abaixo de 30 anos', '30a65':'30 a 65 anos', acima65:'Acima de 65 anos' };
   const TEMPO_LABEL = { menos1ano:'Menos de 1 ano', '1anoMais':'1 ano ou mais' };
   const telFmt = (t) => t ? t.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3') : '—';
+
+  const VIAGENS_LABEL = { '1x':'1x por ano', '2x':'2x por ano', '3x':'3x por ano', '4x':'Mais de 4x por ano' };
 
   const respItems = [
     { label: 'Nome',        val: ans.nome   || '—' },
@@ -1908,11 +1930,15 @@ function showResult() {
   if (ans.tipo === 'uniao' && ans.tempoRel) {
     respItems.push({ label: 'Tempo relação', val: TEMPO_LABEL[ans.tempoRel] || ans.tempoRel });
   }
+  respItems.push({ label: 'Idade (titular)', val: IDADE_LABEL[ans.idadeMarido] || ans.idadeMarido || '—' });
+  if (ans.tipo === 'casados' || ans.tipo === 'uniao' || ans.tipo === 'noivos') {
+    respItems.push({ label: 'Idade (cônjuge)', val: IDADE_LABEL[ans.idadeConjuge] || ans.idadeConjuge || '—' });
+  }
   respItems.push(
-    { label: 'Idade',       val: IDADE_LABEL[ans.idade] || ans.idade || '—' },
     { label: 'Casa própria',val: ans.casa   === 'sim' ? 'Sim' : ans.casa === 'nao' ? 'Não' : '—' },
     { label: 'Carro',       val: CARRO_LABEL[ans.carro] || ans.carro || '—' },
     { label: 'Cartão',      val: ans.cartao === 'sim' ? 'Sim' : ans.cartao === 'nao' ? 'Não' : '—' },
+    { label: 'Viagens/ano', val: VIAGENS_LABEL[ans.viagens] || ans.viagens || '—' },
     { label: 'Renda',       val: RENDA_LABEL[ans.renda] || ans.renda || '—' },
   );
 
@@ -2078,7 +2104,7 @@ function renderHistList() {
     list.innerHTML = '<div class="hist-empty">Nenhuma qualificação neste período.</div>';
     return;
   }
-  const tL  = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos', solteiro:'Solteiro', multiprop:'Multiprop.' };
+  const tL  = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos', solteiro:'Solteiro' };
   const q   = visíveis.filter(h=>h.verdict==='Q').length;
   const nq  = visíveis.filter(h=>h.verdict==='NQ').length;
   const tot = visíveis.length;
@@ -2182,7 +2208,7 @@ function executarExport() {
 
   const TIPO_LABEL = {
     casados:'Casal casado', uniao:'União estável', noivos:'Noivos/Namorados',
-    solteiro:'Solteiro/Divorciado', multiprop:'Multiproprietário',
+    solteiro:'Solteiro/Divorciado',
   };
   const RENDA_LABEL = {
     abaixo10k:'< R$10.000', '10k':'R$10.000–11.999', '12k':'R$12.000–14.999',
