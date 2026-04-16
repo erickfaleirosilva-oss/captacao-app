@@ -288,6 +288,11 @@
     .rbd-icon  { font-size: 13px; width: 16px; text-align: center; flex-shrink: 0; }
     .rbd-label { flex: 1; color: var(--text); }
     .rbd-val   { color: var(--muted); font-size: 12px; text-align: right; max-width: 130px; }
+    .res-respostas { background: var(--navy3); border-radius: 12px; padding: 14px; text-align: left; margin-top: 12px; }
+    .res-resp-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .res-resp-row:last-child { border-bottom: none; }
+    .res-resp-label { color: var(--muted); font-size: 11px; min-width: 90px; flex-shrink: 0; padding-top: 1px; }
+    .res-resp-val   { color: var(--text); font-size: 13px; flex: 1; }
 
     .hist-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .hist-head-title { font-size: 17px; font-weight: 800; }
@@ -633,6 +638,7 @@
       <div class="result-sub"     id="resSub"></div>
       <div class="result-rule"    id="resRule" style="display:none"></div>
       <div class="result-bd"      id="resBd"></div>
+      <div class="res-respostas"  id="resRespostas"></div>
     </div>
     <button class="btn btn-green" onclick="saveAndNew()">→ Iniciar nova pesquisa</button>
   </div>
@@ -1884,6 +1890,38 @@ function showResult() {
       <div class="rbd-label">${r.l}</div>
       <div class="rbd-val">${r.v}</div></div>`;
   });
+
+  // Bloco de respostas completas para print/WhatsApp
+  const TIPO_LABEL = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos/Namorados', solteiro:'Solteiro/Divorciado', multiprop:'Já tem multipropriedade' };
+  const RENDA_LABEL = { abaixo6k:'Abaixo de R$ 6.000', '6k':'R$ 6.000 – R$ 7.999', '8k':'R$ 8.000 – R$ 9.999', '10k':'R$ 10.000 – R$ 11.999', '12k':'R$ 12.000 – R$ 14.999', '15k':'R$ 15.000 – R$ 19.999', '20k':'R$ 20.000 ou mais' };
+  const CARRO_LABEL = { sem:'Sem carro', ate2009:'Até 2009', '2010a2013':'2010 a 2013', '2014mais':'2014 ou mais recente' };
+  const IDADE_LABEL = { menor30:'Abaixo de 30 anos', '30a65':'30 a 65 anos', acima65:'Acima de 65 anos' };
+  const TEMPO_LABEL = { menos1ano:'Menos de 1 ano', '1anoMais':'1 ano ou mais' };
+  const telFmt = (t) => t ? t.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3') : '—';
+
+  const respItems = [
+    { label: 'Nome',        val: ans.nome   || '—' },
+    { label: 'Telefone',    val: telFmt(ans.tel) },
+    { label: 'Cidade',      val: ans.cidade || '—' },
+    { label: 'Perfil',      val: TIPO_LABEL[ans.tipo]  || ans.tipo  || '—' },
+  ];
+  if (ans.tipo === 'uniao' && ans.tempoRel) {
+    respItems.push({ label: 'Tempo relação', val: TEMPO_LABEL[ans.tempoRel] || ans.tempoRel });
+  }
+  respItems.push(
+    { label: 'Idade',       val: IDADE_LABEL[ans.idade] || ans.idade || '—' },
+    { label: 'Casa própria',val: ans.casa   === 'sim' ? 'Sim' : ans.casa === 'nao' ? 'Não' : '—' },
+    { label: 'Carro',       val: CARRO_LABEL[ans.carro] || ans.carro || '—' },
+    { label: 'Cartão',      val: ans.cartao === 'sim' ? 'Sim' : ans.cartao === 'nao' ? 'Não' : '—' },
+    { label: 'Renda',       val: RENDA_LABEL[ans.renda] || ans.renda || '—' },
+  );
+
+  const rr = document.getElementById('resRespostas');
+  rr.innerHTML = '<div class="rbd-title">Respostas do casal</div>';
+  respItems.forEach(item => {
+    rr.innerHTML += `<div class="res-resp-row"><div class="res-resp-label">${item.label}</div><div class="res-resp-val">${item.val}</div></div>`;
+  });
+
   hideAll(); show('screenResult');
 }
 
