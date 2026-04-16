@@ -2446,9 +2446,9 @@ function renderCdp(leadsHoje) {
       .filter(p => cdpFiltro.captador === 'todos' || p.captador === cdpFiltro.captador).length;
     document.getElementById('cdpTotais').innerHTML = `
       <div class="cdp-totais">
-        <div class="cdp-tot total"><div class="cdp-tot-num total">${tTot}</div><div class="cdp-tot-lbl">TOTAL</div></div>
         <div class="cdp-tot q">   <div class="cdp-tot-num q">${tQ}</div>    <div class="cdp-tot-lbl">Q's</div></div>
         <div class="cdp-tot nq">  <div class="cdp-tot-num nq">${tNQ}</div>  <div class="cdp-tot-lbl">NQ's</div></div>
+        <div class="cdp-tot total"><div class="cdp-tot-num total">${tTot}</div><div class="cdp-tot-lbl">TOTAL</div></div>
         <div class="cdp-tot sala"><div class="cdp-tot-num sala">${tSala}</div><div class="cdp-tot-lbl">🏠 SALA</div></div>
         <div class="cdp-tot conv"><div class="cdp-tot-num conv">${convStr}</div><div class="cdp-tot-lbl">CONV.</div></div>
         <div class="cdp-tot pi">  <div class="cdp-tot-num pi">${tPI}</div>  <div class="cdp-tot-lbl">PI</div></div>
