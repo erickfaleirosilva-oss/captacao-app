@@ -354,8 +354,10 @@
     .cdp-tot-num.q     { color: var(--green); }
     .cdp-tot-num.nq    { color: var(--red); }
     .cdp-tot-lbl   { font-size: 10px; color: var(--muted); margin-top: 2px; font-weight: 600; }
-    .cdp-tot.sala  { background: rgba(100,160,255,.08); border:1px solid rgba(100,160,255,.3); }
+    .cdp-tot.sala   { background: rgba(100,160,255,.08); border:1px solid rgba(100,160,255,.3); }
     .cdp-tot-num.sala { color: #64a0ff; }
+    .cdp-tot.sala-nq { background: rgba(255,100,100,.08); border:1px solid rgba(255,100,100,.3); }
+    .cdp-tot-num.sala-nq { color: var(--red); }
     .cdp-tot.conv  { background: rgba(201,168,76,.06); border:1px solid rgba(201,168,76,.2); }
     .cdp-tot-num.conv { color: var(--gold2); }
     .cdp-tot.pi    { background: rgba(180,100,255,.08); border:1px solid rgba(180,100,255,.3); }
@@ -365,6 +367,7 @@
     .hc-sala-btn:active { transform:scale(.85); }
     .hc-sala-btn.marcado { opacity:1; }
     .cdp-m-num.sala { color: #64a0ff; }
+    .cdp-m-num.sala-nq { color: var(--red); }
     .cdp-m-num.conv { color: var(--gold2); }
     .cdp-m-num.pi   { color: #b464ff; }
     .cdp-card {
@@ -2404,16 +2407,19 @@ function exportarCdpExcel() {
   const map = {};
   lista.forEach(l => {
     const nome = l.captador || '—';
-    if (!map[nome]) map[nome] = { q:0, nq:0, parcial:0, sala:0, total:0 };
-    if (l.verdict==='Q')      map[nome].q++;
-    else if (l.verdict==='NQ') map[nome].nq++;
+    if (!map[nome]) map[nome] = { q:0, nq:0, parcial:0, salaQ:0, salaNQ:0, total:0 };
+    if (l.verdict==='Q')           map[nome].q++;
+    else if (l.verdict==='NQ')     map[nome].nq++;
     else if (l.verdict==='PARCIAL') map[nome].parcial++;
-    if (l.emSala) map[nome].sala++;
+    if (l.emSala) {
+      if (l.verdict==='Q') map[nome].salaQ++;
+      else                 map[nome].salaNQ++;
+    }
     map[nome].total++;
   });
 
   const sorted = Object.entries(map)
-    .map(([nome, s]) => ({ nome, ...s, conv: s.q > 0 ? Math.round(s.sala/s.q*100)+'%' : '0%' }))
+    .map(([nome, s]) => ({ nome, ...s, salaTot: s.salaQ+s.salaNQ, conv: s.q > 0 ? Math.round(s.salaQ/s.q*100)+'%' : '0%' }))
     .sort((a,b) => b.total - a.total);
 
   // Período e filtros ativos
@@ -2428,18 +2434,20 @@ function exportarCdpExcel() {
   csv += `Sala;${salaLabel}\n`;
   csv += `Captador;${captadorLabel}\n`;
   csv += `Gerado em;${new Date().toLocaleString('pt-BR')}\n\n`;
-  csv += 'Captador;Q;NQ;PARCIAL;Total;Em Sala;Conversão\n';
+  csv += 'Captador;Q;NQ;PARCIAL;Total;Sala Q;Sala NQ;Total Sala;Conversão\n';
   sorted.forEach(r => {
-    csv += `${r.nome};${r.q};${r.nq};${r.parcial};${r.total};${r.sala};${r.conv}\n`;
+    csv += `${r.nome};${r.q};${r.nq};${r.parcial};${r.total};${r.salaQ};${r.salaNQ};${r.salaTot};${r.conv}\n`;
   });
   // Totais
-  const tQ = sorted.reduce((a,r)=>a+r.q,0);
-  const tNQ = sorted.reduce((a,r)=>a+r.nq,0);
-  const tP = sorted.reduce((a,r)=>a+r.parcial,0);
-  const tT = sorted.reduce((a,r)=>a+r.total,0);
-  const tS = sorted.reduce((a,r)=>a+r.sala,0);
-  const tConv = tQ > 0 ? Math.round(tS/tQ*100)+'%' : '0%';
-  csv += `TOTAL;${tQ};${tNQ};${tP};${tT};${tS};${tConv}\n`;
+  const tQ   = sorted.reduce((a,r)=>a+r.q,0);
+  const tNQ  = sorted.reduce((a,r)=>a+r.nq,0);
+  const tP   = sorted.reduce((a,r)=>a+r.parcial,0);
+  const tT   = sorted.reduce((a,r)=>a+r.total,0);
+  const tSQ  = sorted.reduce((a,r)=>a+r.salaQ,0);
+  const tSNQ = sorted.reduce((a,r)=>a+r.salaNQ,0);
+  const tST  = tSQ + tSNQ;
+  const tConv = tQ > 0 ? Math.round(tSQ/tQ*100)+'%' : '0%';
+  csv += `TOTAL;${tQ};${tNQ};${tP};${tT};${tSQ};${tSNQ};${tST};${tConv}\n`;
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
@@ -2491,11 +2499,13 @@ function renderCdp(leadsHoje) {
   const leadsVisíveis = filtrarPorAcesso(leadsHoje);
 
   if (totalAcesso) {
-    const tQ    = leadsVisíveis.filter(l=>l.verdict==='Q').length;
-    const tNQ   = leadsVisíveis.filter(l=>l.verdict==='NQ').length;
-    const tTot  = tQ + tNQ;
-    const tSala = leadsVisíveis.filter(l=>l.emSala).length;
-    const tConv = tQ > 0 ? Math.round(tSala / tQ * 100) : 0;
+    const tQ      = leadsVisíveis.filter(l=>l.verdict==='Q').length;
+    const tNQ     = leadsVisíveis.filter(l=>l.verdict==='NQ').length;
+    const tTot    = tQ + tNQ;
+    const tSalaQ  = leadsVisíveis.filter(l=>l.emSala && l.verdict==='Q').length;
+    const tSalaNQ = leadsVisíveis.filter(l=>l.emSala && l.verdict!=='Q').length;
+    const tSalaTot= tSalaQ + tSalaNQ;
+    const tConv   = tQ > 0 ? Math.round(tSalaQ / tQ * 100) : 0;
     const convStr = tQ > 0 ? tConv + '%' : '—';
     // PI — filtra pelo mesmo período/sala/captador
     const hoje = todayISO();
@@ -2510,12 +2520,14 @@ function renderCdp(leadsHoje) {
       .filter(p => cdpFiltro.captador === 'todos' || p.captador === cdpFiltro.captador).length;
     document.getElementById('cdpTotais').innerHTML = `
       <div class="cdp-totais">
-        <div class="cdp-tot q">   <div class="cdp-tot-num q">${tQ}</div>    <div class="cdp-tot-lbl">Q's</div></div>
-        <div class="cdp-tot nq">  <div class="cdp-tot-num nq">${tNQ}</div>  <div class="cdp-tot-lbl">NQ's</div></div>
-        <div class="cdp-tot total"><div class="cdp-tot-num total">${tTot}</div><div class="cdp-tot-lbl">TOTAL</div></div>
-        <div class="cdp-tot sala"><div class="cdp-tot-num sala">${tSala}</div><div class="cdp-tot-lbl">🏠 SALA</div></div>
-        <div class="cdp-tot conv"><div class="cdp-tot-num conv">${convStr}</div><div class="cdp-tot-lbl">CONV.</div></div>
-        <div class="cdp-tot pi">  <div class="cdp-tot-num pi">${tPI}</div>  <div class="cdp-tot-lbl">PI</div></div>
+        <div class="cdp-tot q">       <div class="cdp-tot-num q">${tQ}</div>         <div class="cdp-tot-lbl">Q's</div></div>
+        <div class="cdp-tot nq">      <div class="cdp-tot-num nq">${tNQ}</div>        <div class="cdp-tot-lbl">NQ's</div></div>
+        <div class="cdp-tot total">   <div class="cdp-tot-num total">${tTot}</div>    <div class="cdp-tot-lbl">TOTAL</div></div>
+        <div class="cdp-tot sala">    <div class="cdp-tot-num sala">${tSalaQ}</div>   <div class="cdp-tot-lbl">🏠 Sala Q</div></div>
+        <div class="cdp-tot sala-nq"> <div class="cdp-tot-num sala-nq">${tSalaNQ}</div><div class="cdp-tot-lbl">🏠 Sala NQ</div></div>
+        <div class="cdp-tot total">   <div class="cdp-tot-num total">${tSalaTot}</div><div class="cdp-tot-lbl">🏠 Total</div></div>
+        <div class="cdp-tot conv">    <div class="cdp-tot-num conv">${convStr}</div>  <div class="cdp-tot-lbl">CONV.</div></div>
+        <div class="cdp-tot pi">      <div class="cdp-tot-num pi">${tPI}</div>        <div class="cdp-tot-lbl">PI</div></div>
       </div>`;
   } else {
     document.getElementById('cdpTotais').innerHTML = '';
@@ -2532,10 +2544,13 @@ function renderCdp(leadsHoje) {
   const map = {};
   leadsVisíveis.forEach(l => {
     const nome = l.captador || '—';
-    if (!map[nome]) map[nome] = { q:0, nq:0, sala:0, pi:0 };
+    if (!map[nome]) map[nome] = { q:0, nq:0, salaQ:0, salaNQ:0, pi:0 };
     if (l.verdict==='Q')       map[nome].q++;
     else if (l.verdict==='NQ') map[nome].nq++;
-    if (l.emSala) map[nome].sala++;
+    if (l.emSala) {
+      if (l.verdict==='Q') map[nome].salaQ++;
+      else                 map[nome].salaNQ++;
+    }
   });
   // Acumula PIs no mapa (mesmo filtro de período/sala)
   const hoje2 = todayISO();
@@ -2559,8 +2574,8 @@ function renderCdp(leadsHoje) {
   const sorted = Object.entries(map)
     .map(([nome, s]) => {
       const cfg  = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')].find(c=>c.nome===nome);
-      const conv = s.q > 0 ? Math.round(s.sala / s.q * 100) : null;
-      return { nome, q:s.q, nq:s.nq, sala:s.sala, pi:s.pi||0, conv, total:s.q+s.nq, cargo: cfg?.cargo||'captador' };
+      const conv = s.q > 0 ? Math.round(s.salaQ / s.q * 100) : null;
+      return { nome, q:s.q, nq:s.nq, salaQ:s.salaQ, salaNQ:s.salaNQ, salaTot:s.salaQ+s.salaNQ, pi:s.pi||0, conv, total:s.q+s.nq, cargo: cfg?.cargo||'captador' };
     })
     .sort((a,b) => b.total - a.total);
 
@@ -2582,12 +2597,14 @@ function renderCdp(leadsHoje) {
         </div>
       </div>
       <div class="cdp-metrics">
-        <div class="cdp-metric"><div class="cdp-m-num q">${c.q}</div>      <div class="cdp-m-lbl">Q's</div></div>
-        <div class="cdp-metric"><div class="cdp-m-num nq">${c.nq}</div>    <div class="cdp-m-lbl">NQ's</div></div>
-        <div class="cdp-metric"><div class="cdp-m-num total">${c.total}</div><div class="cdp-m-lbl">Total</div></div>
-        <div class="cdp-metric"><div class="cdp-m-num sala">${c.sala}</div> <div class="cdp-m-lbl">🏠 Sala</div></div>
-        <div class="cdp-metric"><div class="cdp-m-num conv">${convStr}</div><div class="cdp-m-lbl">Conv.</div></div>
-        <div class="cdp-metric"><div class="cdp-m-num pi">${c.pi}</div>    <div class="cdp-m-lbl">PI</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num q">${c.q}</div>           <div class="cdp-m-lbl">Q's</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num nq">${c.nq}</div>         <div class="cdp-m-lbl">NQ's</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num total">${c.total}</div>   <div class="cdp-m-lbl">Total</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num sala">${c.salaQ}</div>    <div class="cdp-m-lbl">🏠 Sala Q</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num sala-nq">${c.salaNQ}</div><div class="cdp-m-lbl">🏠 Sala NQ</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num total">${c.salaTot}</div> <div class="cdp-m-lbl">🏠 Total</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num conv">${convStr}</div>    <div class="cdp-m-lbl">Conv.</div></div>
+        <div class="cdp-metric"><div class="cdp-m-num pi">${c.pi}</div>         <div class="cdp-m-lbl">PI</div></div>
       </div>
       ${c.total > 0 ? `<div class="cdp-bar">
         <div class="cdp-bar-q"  style="width:${barQ}%"></div>
