@@ -458,24 +458,23 @@
     .tr-tot { font-size: 10px; color: var(--muted); width: 24px; text-align: right; flex-shrink: 0; font-weight: 600; }
     .tr-tot.pico { color: var(--gold); font-weight: 800; }
     .tr-empty { font-size: 12px; color: var(--muted); text-align: center; padding: 20px 0; }
-    /* heatmap */
-    .tr-hm-grid { display: grid; gap: 3px; }
-    .tr-hm-cell { border-radius: 4px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,.8); }
-    .tr-hm-lbl  { font-size: 9px; color: var(--muted); font-weight: 600; display: flex; align-items: center; padding-right: 2px; }
-    .tr-hm-hdr  { font-size: 8px; color: var(--muted); font-weight: 700; text-align: center; }
-    .hm-0 { background: rgba(255,255,255,.03); color: var(--muted) !important; font-size: 8px; }
-    .hm-1 { background: rgba(46,204,113,.12); }
-    .hm-2 { background: rgba(46,204,113,.25); }
-    .hm-3 { background: rgba(46,204,113,.42); }
-    .hm-4 { background: rgba(46,204,113,.62); }
-    .hm-5 { background: rgba(46,204,113,.82); color: #fff !important; }
-    .tr-hm-legenda { display: flex; align-items: center; gap: 4px; margin-top: 10px; }
-    .tr-hm-leg { width: 18px; height: 12px; border-radius: 3px; }
-    .tr-hm-leg.hm-1 { background: rgba(46,204,113,.12); }
-    .tr-hm-leg.hm-2 { background: rgba(46,204,113,.25); }
-    .tr-hm-leg.hm-3 { background: rgba(46,204,113,.42); }
-    .tr-hm-leg.hm-4 { background: rgba(46,204,113,.62); }
-    .tr-hm-leg.hm-5 { background: rgba(46,204,113,.82); }
+    /* cards de pico */
+    .tr-pico-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
+    .tr-pico-card { border-radius: 12px; padding: 14px 12px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+    .tr-pico-card.melhor { background: rgba(46,204,113,.10); border: 1px solid rgba(46,204,113,.35); }
+    .tr-pico-card.medio  { background: rgba(241,214,145,.07); border: 1px solid rgba(241,214,145,.3); }
+    .tr-pico-card.fraco  { background: rgba(231,76,60,.08); border: 1px solid rgba(231,76,60,.3); }
+    .tr-pico-icon { font-size: 18px; margin-bottom: 2px; }
+    .tr-pico-label { font-size: 8px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .tr-pico-card.melhor .tr-pico-label { color: var(--green); }
+    .tr-pico-card.medio  .tr-pico-label { color: var(--gold); }
+    .tr-pico-card.fraco  .tr-pico-label { color: var(--red); }
+    .tr-pico-hora { font-size: 22px; font-weight: 900; color: var(--text); line-height: 1; margin: 4px 0; }
+    .tr-pico-stats { font-size: 10px; color: var(--muted); line-height: 1.6; }
+    .tr-pico-conv { font-size: 13px; font-weight: 800; margin-top: 4px; }
+    .tr-pico-card.melhor .tr-pico-conv { color: var(--green); }
+    .tr-pico-card.medio  .tr-pico-conv { color: var(--gold); }
+    .tr-pico-card.fraco  .tr-pico-conv { color: var(--red); }
     .tr-insight { background: rgba(201,168,76,.06); border: 1px solid rgba(201,168,76,.2); border-radius: 10px; padding: 10px 14px; font-size: 11px; color: rgba(255,255,255,.6); line-height: 1.6; margin-top: 12px; }
     .tr-insight strong { color: var(--gold2); }
     .salas-section { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
@@ -762,19 +761,13 @@
       </div>
       <div id="trBarras"></div>
     </div>
-    <!-- Bloco B: heatmap (oculto em "hoje") -->
-    <div class="tr-section" id="trHeatmapSection" style="display:none">
+    <!-- Bloco C: cards de pico -->
+    <div class="tr-section" id="trPicoSection">
       <div class="tr-section-hd">
-        <div class="tr-section-title">Heatmap — Q's por dia × hora</div>
+        <div class="tr-section-title">Picos de Abordagem</div>
+        <div class="tr-section-sub">Melhores e piores janelas do período</div>
       </div>
-      <div id="trHeatmap"></div>
-      <div class="tr-hm-legenda">
-        <span style="font-size:9px;color:var(--muted)">Intensidade: </span>
-        <span class="tr-hm-leg hm-1"></span><span class="tr-hm-leg hm-2"></span>
-        <span class="tr-hm-leg hm-3"></span><span class="tr-hm-leg hm-4"></span>
-        <span class="tr-hm-leg hm-5"></span>
-        <span style="font-size:9px;color:var(--muted);margin-left:4px">mais Q's →</span>
-      </div>
+      <div id="trPico"></div>
     </div>
   </div>
 
@@ -2782,15 +2775,7 @@ function atualizarTimeRange() {
   document.getElementById('trSub').textContent = (periodoLabel[trFiltro.periodo]||'') + sufixo + ' · ' + lista.length + ' pesquisas';
 
   renderTrBarras(lista);
-
-  // Heatmap só faz sentido em períodos > 1 dia
-  const hmSection = document.getElementById('trHeatmapSection');
-  if (trFiltro.periodo === 'hoje') {
-    hmSection.style.display = 'none';
-  } else {
-    hmSection.style.display = 'block';
-    renderTrHeatmap(lista);
-  }
+  renderTrPico(lista);
 }
 
 function _trHoraNum(lead) {
@@ -2891,56 +2876,68 @@ function renderTrBarras(lista) {
   document.getElementById('trBarras').innerHTML = html;
 }
 
-function renderTrHeatmap(lista) {
-  const DIAS = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+function renderTrPico(lista) {
   const HORAS = [];
   for (let h = 7; h <= 19; h++) HORAS.push(h);
 
-  // Agrupa q's por [diaSemana][hora]
+  // Agrupa por hora
   const map = {};
-  HORAS.forEach(h => { map[h] = {}; DIAS.forEach((_,d) => { map[h][d] = 0; }); });
+  HORAS.forEach(h => { map[h] = { q:0, nq:0, salaQ:0 }; });
   lista.forEach(l => {
-    if (l.verdict !== 'Q') return;
     const h = _trHoraNum(l);
     if (h === null || h < 7 || h > 19) return;
-    // dia da semana a partir do dateISO
-    if (!l.dateISO) return;
-    const d = new Date(l.dateISO + 'T12:00:00').getDay(); // 0=dom
-    map[h][d]++;
+    if (l.verdict === 'Q')       map[h].q++;
+    else if (l.verdict === 'NQ') map[h].nq++;
+    if (l.emSala && l.verdict === 'Q') map[h].salaQ++;
   });
 
-  // máximo para escala de intensidade
-  let maxVal = 1;
-  HORAS.forEach(h => DIAS.forEach((_,d) => { if (map[h][d] > maxVal) maxVal = map[h][d]; }));
+  // Filtra horas com pelo menos 1 pesquisa
+  const horasAtivas = HORAS.filter(h => map[h].q + map[h].nq > 0);
 
-  function hmClass(v) {
-    if (v === 0) return 'hm-0';
-    const r = v / maxVal;
-    if (r < 0.2) return 'hm-1';
-    if (r < 0.4) return 'hm-2';
-    if (r < 0.6) return 'hm-3';
-    if (r < 0.8) return 'hm-4';
-    return 'hm-5';
+  const el = document.getElementById('trPico');
+  if (horasAtivas.length < 2) {
+    el.innerHTML = '<div class="tr-empty">Dados insuficientes para análise de picos.</div>';
+    return;
   }
 
-  const cols = 1 + DIAS.length; // 1 col label + 7 dias
-  let html = `<div class="tr-hm-grid" style="grid-template-columns:38px repeat(7,1fr)">`;
-  // header
-  html += '<div class="tr-hm-lbl"></div>';
-  DIAS.forEach(d => { html += `<div class="tr-hm-hdr">${d}</div>`; });
-  // linhas
-  HORAS.forEach(h => {
-    const rowTotal = DIAS.reduce((acc,_,d) => acc + map[h][d], 0);
-    if (rowTotal === 0) return;
-    html += `<div class="tr-hm-lbl">${h.toString().padStart(2,'0')}h</div>`;
-    DIAS.forEach((_,d) => {
-      const v = map[h][d];
-      const cls = hmClass(v);
-      html += `<div class="tr-hm-cell ${cls}">${v > 0 ? v : '·'}</div>`;
-    });
+  // Ordena por total de abordagens (q+nq) descrescente
+  const ordenado = [...horasAtivas].sort((a, b) => {
+    const totA = map[a].q + map[a].nq;
+    const totB = map[b].q + map[b].nq;
+    return totB - totA;
   });
-  html += '</div>';
-  document.getElementById('trHeatmap').innerHTML = html;
+
+  const melhorH = ordenado[0];
+  const fracoH  = ordenado[ordenado.length - 1];
+  // médio = hora mais próxima da mediana de total
+  const medIdx  = Math.floor(ordenado.length / 2);
+  const medioH  = ordenado[medIdx];
+
+  function cardStats(h) {
+    const { q, nq, salaQ } = map[h];
+    const tot  = q + nq;
+    const conv = q > 0 ? Math.round(salaQ / q * 100) + '%' : '—';
+    return { q, nq, salaQ, tot, conv };
+  }
+
+  function renderCard(h, tipo, icon, label) {
+    const { q, nq, tot, conv } = cardStats(h);
+    return `<div class="tr-pico-card ${tipo}">
+      <div class="tr-pico-icon">${icon}</div>
+      <div class="tr-pico-label">${label}</div>
+      <div class="tr-pico-hora">${h.toString().padStart(2,'0')}h</div>
+      <div class="tr-pico-stats">${q} Q's · ${nq} NQ's<br>${tot} pesquisas</div>
+      <div class="tr-pico-conv">${conv} conv.</div>
+    </div>`;
+  }
+
+  const html = `<div class="tr-pico-grid">
+    ${renderCard(melhorH, 'melhor', '🏆', 'Melhor horário')}
+    ${renderCard(medioH,  'medio',  '⚡', 'Horário médio')}
+    ${renderCard(fracoH,  'fraco',  '⚠️', 'Horário fraco')}
+  </div>`;
+
+  el.innerHTML = html;
 }
 
 // EQUIPE
