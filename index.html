@@ -429,6 +429,55 @@
       padding: 10px 14px; margin-bottom: 18px; line-height: 1.5;
     }
     .eq-pw-eye { cursor: pointer; font-size: 14px; margin-left: 4px; }
+    /* ── TIME RANGE ── */
+    .tr-section { background: var(--navy2); border-radius: 14px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); }
+    .tr-section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .tr-section-title { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
+    .tr-legenda { display: flex; gap: 8px; }
+    .tr-leg { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+    .tr-leg.q    { background: rgba(46,204,113,.15); color: var(--green); }
+    .tr-leg.nq   { background: rgba(231,76,60,.15); color: var(--red); }
+    .tr-leg.salaQ { background: rgba(100,160,255,.15); color: #64a0ff; }
+    /* linha de hora */
+    .tr-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+    .tr-hora { font-size: 11px; color: var(--muted); font-weight: 700; width: 36px; flex-shrink: 0; }
+    .tr-hora.pico { color: var(--gold); }
+    .tr-bar-wrap { flex: 1; height: 24px; background: rgba(255,255,255,.04); border-radius: 5px; overflow: hidden; display: flex; position: relative; }
+    .tr-bar-wrap.pico { outline: 1px solid rgba(201,168,76,.35); border-radius: 5px; }
+    .tr-seg-q    { background: rgba(46,204,113,.55); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,.9); min-width: 0; transition: width .3s; }
+    .tr-seg-nq   { background: rgba(231,76,60,.4);  height: 100%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,.9); min-width: 0; transition: width .3s; }
+    .tr-seg-sala { background: rgba(100,160,255,.55); height: 100%; transition: width .3s; }
+    .tr-cols { display: flex; gap: 4px; width: 130px; flex-shrink: 0; }
+    .tr-col  { text-align: center; flex: 1; }
+    .tr-col-num { font-size: 11px; font-weight: 700; line-height: 1; }
+    .tr-col-num.q    { color: var(--green); }
+    .tr-col-num.nq   { color: var(--red); }
+    .tr-col-num.sala { color: #64a0ff; }
+    .tr-col-num.conv { color: var(--gold); }
+    .tr-col-lbl { font-size: 8px; color: var(--muted); margin-top: 1px; }
+    .tr-tot { font-size: 10px; color: var(--muted); width: 24px; text-align: right; flex-shrink: 0; font-weight: 600; }
+    .tr-tot.pico { color: var(--gold); font-weight: 800; }
+    .tr-empty { font-size: 12px; color: var(--muted); text-align: center; padding: 20px 0; }
+    /* heatmap */
+    .tr-hm-grid { display: grid; gap: 3px; }
+    .tr-hm-cell { border-radius: 4px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: rgba(255,255,255,.8); }
+    .tr-hm-lbl  { font-size: 9px; color: var(--muted); font-weight: 600; display: flex; align-items: center; padding-right: 2px; }
+    .tr-hm-hdr  { font-size: 8px; color: var(--muted); font-weight: 700; text-align: center; }
+    .hm-0 { background: rgba(255,255,255,.03); color: var(--muted) !important; font-size: 8px; }
+    .hm-1 { background: rgba(46,204,113,.12); }
+    .hm-2 { background: rgba(46,204,113,.25); }
+    .hm-3 { background: rgba(46,204,113,.42); }
+    .hm-4 { background: rgba(46,204,113,.62); }
+    .hm-5 { background: rgba(46,204,113,.82); color: #fff !important; }
+    .tr-hm-legenda { display: flex; align-items: center; gap: 4px; margin-top: 10px; }
+    .tr-hm-leg { width: 18px; height: 12px; border-radius: 3px; }
+    .tr-hm-leg.hm-1 { background: rgba(46,204,113,.12); }
+    .tr-hm-leg.hm-2 { background: rgba(46,204,113,.25); }
+    .tr-hm-leg.hm-3 { background: rgba(46,204,113,.42); }
+    .tr-hm-leg.hm-4 { background: rgba(46,204,113,.62); }
+    .tr-hm-leg.hm-5 { background: rgba(46,204,113,.82); }
+    .tr-insight { background: rgba(201,168,76,.06); border: 1px solid rgba(201,168,76,.2); border-radius: 10px; padding: 10px 14px; font-size: 11px; color: rgba(255,255,255,.6); line-height: 1.6; margin-top: 12px; }
+    .tr-insight strong { color: var(--gold2); }
     .salas-section { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
     .salas-title { font-size: 13px; font-weight: 700; color: var(--gold2); margin-bottom: 12px; }
     .sala-item {
@@ -691,6 +740,44 @@
     <div id="cdpRank"></div>
   </div>
 
+  <!-- TIME RANGE -->
+  <div class="screen" id="screenTimeRange">
+    <div class="cdp-header">
+      <div>
+        <span class="cdp-title">Time Range</span>
+        <span class="cdp-badge">Análise por Horário</span>
+      </div>
+      <div class="cdp-sub" id="trSub"></div>
+    </div>
+    <div id="trFiltrosWrap"></div>
+    <!-- Bloco A: barras por hora -->
+    <div class="tr-section">
+      <div class="tr-section-hd">
+        <div class="tr-section-title">Abordagens por hora</div>
+        <div class="tr-legenda">
+          <span class="tr-leg q">Q</span>
+          <span class="tr-leg nq">NQ</span>
+          <span class="tr-leg salaQ">Sala Q</span>
+        </div>
+      </div>
+      <div id="trBarras"></div>
+    </div>
+    <!-- Bloco B: heatmap (oculto em "hoje") -->
+    <div class="tr-section" id="trHeatmapSection" style="display:none">
+      <div class="tr-section-hd">
+        <div class="tr-section-title">Heatmap — Q's por dia × hora</div>
+      </div>
+      <div id="trHeatmap"></div>
+      <div class="tr-hm-legenda">
+        <span style="font-size:9px;color:var(--muted)">Intensidade: </span>
+        <span class="tr-hm-leg hm-1"></span><span class="tr-hm-leg hm-2"></span>
+        <span class="tr-hm-leg hm-3"></span><span class="tr-hm-leg hm-4"></span>
+        <span class="tr-hm-leg hm-5"></span>
+        <span style="font-size:9px;color:var(--muted);margin-left:4px">mais Q's →</span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- NAV -->
@@ -706,6 +793,9 @@
   </div>
   <div class="nav-btn" id="navCdp" onclick="goTo('cdp')">
     <div class="nav-icon">📊</div><span class="nav-label">CDP</span>
+  </div>
+  <div class="nav-btn hidden" id="navTimeRange" onclick="goTo('timerange')">
+    <div class="nav-icon">⏱️</div><span class="nav-label">Time Range</span>
   </div>
   <div class="nav-btn hidden" id="navEquipe" onclick="goTo('equipe')">
     <div class="nav-icon">👥</div><span class="nav-label">Equipe</span>
@@ -1055,8 +1145,12 @@ function afterLogin() {
   document.getElementById('captadorPill').textContent = '👤 ' + primeiroNome;
   document.getElementById('splashCaptador').textContent = '👤 ' + captador.nome;
   const navEq = document.getElementById('navEquipe');
+  const navTR = document.getElementById('navTimeRange');
+  const isLider = ['lider','sublider','ceo'].includes(captador.cargo);
   if (['lider','ceo'].includes(captador.cargo)) navEq.classList.remove('hidden');
   else navEq.classList.add('hidden');
+  if (isLider) navTR.classList.remove('hidden');
+  else navTR.classList.add('hidden');
   // Restaurar a aba onde o usuário estava antes do reload
   const savedTab = sessionStorage.getItem('yv_tab') || 'home';
   goTo(savedTab);
@@ -1554,11 +1648,12 @@ function show(id) {
   document.getElementById('main').scrollTop = 0;
 }
 function setNav(tab) {
-  ['Home','New','Hist','Cdp','Equipe'].forEach(t => {
+  ['Home','New','Hist','Cdp','TimeRange','Equipe'].forEach(t => {
     const el = document.getElementById('nav'+t);
     if (el) el.classList.remove('active');
   });
-  const alvo = document.getElementById('nav'+ tab.charAt(0).toUpperCase()+tab.slice(1));
+  const key = tab === 'timerange' ? 'TimeRange' : tab.charAt(0).toUpperCase()+tab.slice(1);
+  const alvo = document.getElementById('nav'+ key);
   if (alvo) alvo.classList.add('active');
 }
 function _estavaNaQuiz() {
@@ -1577,11 +1672,12 @@ function goTo(tab) {
   setNav(tab);
   sessionStorage.setItem('yv_tab', tab);
   hideAll();
-  if      (tab==='home')   show('screenHome');
-  else if (tab==='new')    startQuiz();
-  else if (tab==='hist')   showHist();
-  else if (tab==='cdp')    showCdp();
-  else if (tab==='equipe') showEquipe();
+  if      (tab==='home')      show('screenHome');
+  else if (tab==='new')       startQuiz();
+  else if (tab==='hist')      showHist();
+  else if (tab==='cdp')       showCdp();
+  else if (tab==='timerange') showTimeRange();
+  else if (tab==='equipe')    showEquipe();
 }
 function goHome() { goTo('home'); }
 function selectMode(m) {
@@ -2612,6 +2708,239 @@ function renderCdp(leadsHoje) {
       </div>` : ''}
     </div>`;
   }).join('');
+}
+
+// ─────────────────────────────────────────────
+// TIME RANGE
+// ─────────────────────────────────────────────
+let trFiltro = { periodo: 'hoje', sala: 'todas', captador: 'todos', de: '', ate: '' };
+
+function showTimeRange() {
+  hideAll(); show('screenTimeRange');
+  renderTrFiltros();
+  atualizarTimeRange();
+}
+
+function renderTrFiltros() {
+  const periodos = [
+    { v:'hoje', l:'Hoje' }, { v:'semana', l:'Esta semana' },
+    { v:'mes',  l:'Este mês' }, { v:'livre', l:'Período' },
+  ];
+  let html = '<div class="filtros-wrap">';
+  html += '<div class="filtros-chips">';
+  periodos.forEach(p => {
+    html += `<div class="filtro-chip${trFiltro.periodo===p.v?' active':''}" onclick="setTrFiltro('periodo','${p.v}')">${p.l}</div>`;
+  });
+  html += '</div>';
+  if (trFiltro.periodo === 'livre') {
+    html += `<div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      <input type="date" class="filtro-select" value="${trFiltro.de}" onchange="setTrFiltro('de',this.value)" style="flex:1">
+      <span style="color:var(--muted);font-size:12px">até</span>
+      <input type="date" class="filtro-select" value="${trFiltro.ate}" onchange="setTrFiltro('ate',this.value)" style="flex:1">
+    </div>`;
+  }
+  if (captador && temAcessoTotal(captador)) {
+    html += '<div style="display:flex;gap:8px;margin-top:8px">';
+    const todasSalas = getTodasSalas();
+    html += '<select class="filtro-select" onchange="setTrFiltro(\'sala\',this.value)">';
+    html += `<option value="todas"${trFiltro.sala==='todas'?' selected':''}>Todas as salas</option>`;
+    todasSalas.forEach(s => {
+      html += `<option value="${s.nome}"${trFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
+    });
+    html += '</select>';
+    html += '<select class="filtro-select" onchange="setTrFiltro(\'captador\',this.value)">';
+    html += `<option value="todos"${trFiltro.captador==='todos'?' selected':''}>Todos captadores</option>`;
+    const caps = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')]
+      .filter(c => c.cargo === 'captador');
+    caps.forEach(c => {
+      html += `<option value="${c.nome}"${trFiltro.captador===c.nome?' selected':''}>${c.nome.split(' ')[0]}</option>`;
+    });
+    html += '</select>';
+    html += '</div>';
+  }
+  html += '</div>';
+  document.getElementById('trFiltrosWrap').innerHTML = html;
+}
+
+function setTrFiltro(k, v) {
+  trFiltro[k] = v;
+  renderTrFiltros();
+  atualizarTimeRange();
+}
+
+function trLeadsFiltrados() {
+  const base = filtrarPorAcesso(leads);
+  return filtrarLeads(base, trFiltro);
+}
+
+function atualizarTimeRange() {
+  const lista = trLeadsFiltrados();
+  const periodoLabel = { hoje:'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período' };
+  const salaLider = getSalaDoLider(captador);
+  const salaExib  = trFiltro.sala !== 'todas' ? trFiltro.sala : (salaLider || null);
+  const sufixo    = salaExib ? ' · ' + salaExib : '';
+  document.getElementById('trSub').textContent = (periodoLabel[trFiltro.periodo]||'') + sufixo + ' · ' + lista.length + ' pesquisas';
+
+  renderTrBarras(lista);
+
+  // Heatmap só faz sentido em períodos > 1 dia
+  const hmSection = document.getElementById('trHeatmapSection');
+  if (trFiltro.periodo === 'hoje') {
+    hmSection.style.display = 'none';
+  } else {
+    hmSection.style.display = 'block';
+    renderTrHeatmap(lista);
+  }
+}
+
+function _trHoraNum(lead) {
+  // Retorna número da hora (0-23) a partir do campo time "HH:MM"
+  if (!lead.time) return null;
+  const t = String(lead.time);
+  // formato "HH:MM"
+  const m = t.match(/^(\d{1,2}):(\d{2})$/);
+  if (m) return parseInt(m[1], 10);
+  // timestamp numérico (id)
+  const ts = parseInt(lead.id, 10);
+  if (!isNaN(ts) && ts > 1e12) {
+    return new Date(ts).getHours();
+  }
+  return null;
+}
+
+function renderTrBarras(lista) {
+  const HORAS = [];
+  for (let h = 7; h <= 19; h++) HORAS.push(h);
+
+  // Agrupa por hora
+  const map = {};
+  HORAS.forEach(h => { map[h] = { q:0, nq:0, salaQ:0 }; });
+  lista.forEach(l => {
+    const h = _trHoraNum(l);
+    if (h === null || h < 7 || h > 19) return;
+    if (l.verdict === 'Q')       map[h].q++;
+    else if (l.verdict === 'NQ') map[h].nq++;
+    if (l.emSala && l.verdict === 'Q') map[h].salaQ++;
+  });
+
+  // Acha o máximo para escalar as barras e o melhor horário
+  let maxTot = 1;
+  let picoH = null, picoConv = -1;
+  HORAS.forEach(h => {
+    const tot = map[h].q + map[h].nq;
+    if (tot > maxTot) maxTot = tot;
+    const conv = map[h].q > 0 ? map[h].salaQ / map[h].q : 0;
+    // melhor hora = maior conversão com pelo menos 3 Q's
+    if (map[h].q >= 3 && conv > picoConv) { picoConv = conv; picoH = h; }
+  });
+
+  const totalGeral = lista.length;
+  if (totalGeral === 0) {
+    document.getElementById('trBarras').innerHTML = '<div class="tr-empty">Nenhuma pesquisa no período.</div>';
+    return;
+  }
+
+  // cabeçalho
+  let html = `<div style="display:flex;gap:8px;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border)">
+    <div style="width:36px;font-size:8px;color:var(--muted);font-weight:700">HORA</div>
+    <div style="flex:1;font-size:8px;color:var(--muted);font-weight:700">ABORDAGENS</div>
+    <div style="width:130px;font-size:8px;color:var(--muted);font-weight:700;text-align:center">Q · NQ · Sala Q · Conv</div>
+    <div style="width:24px;font-size:8px;color:var(--muted);font-weight:700;text-align:right">TOT</div>
+  </div>`;
+
+  HORAS.forEach(h => {
+    const { q, nq, salaQ } = map[h];
+    const tot  = q + nq;
+    if (tot === 0) return; // pula horas vazias
+    const isPico = h === picoH;
+    const pct    = tot / maxTot;
+    const wQ     = q   / maxTot * 100;
+    const wNQ    = nq  / maxTot * 100;
+    const wSQ    = salaQ / maxTot * 100;
+    const conv   = q > 0 ? Math.round(salaQ / q * 100) + '%' : '—';
+    const convColor = q > 0 && salaQ/q >= 0.5 ? 'var(--green)' : q > 0 && salaQ/q >= 0.3 ? 'var(--gold)' : 'var(--red)';
+    const label  = h.toString().padStart(2,'0') + 'h' + (isPico ? ' ★' : '');
+
+    html += `<div class="tr-row">
+      <div class="tr-hora${isPico?' pico':''}">${label}</div>
+      <div class="tr-bar-wrap${isPico?' pico':''}">
+        <div class="tr-seg-q"  style="width:${wQ}%">${q>0?q:''}</div>
+        <div class="tr-seg-nq" style="width:${wNQ}%">${nq>0?nq:''}</div>
+        <div class="tr-seg-sala" style="width:${wSQ}%"></div>
+      </div>
+      <div class="tr-cols">
+        <div class="tr-col"><div class="tr-col-num q">${q}</div><div class="tr-col-lbl">Q</div></div>
+        <div class="tr-col"><div class="tr-col-num nq">${nq}</div><div class="tr-col-lbl">NQ</div></div>
+        <div class="tr-col"><div class="tr-col-num sala">${salaQ}</div><div class="tr-col-lbl">Sala Q</div></div>
+        <div class="tr-col"><div class="tr-col-num conv" style="color:${convColor}">${conv}</div><div class="tr-col-lbl">Conv</div></div>
+      </div>
+      <div class="tr-tot${isPico?' pico':''}">${tot}</div>
+    </div>`;
+  });
+
+  // Insight automático
+  if (picoH !== null) {
+    const { q, nq, salaQ } = map[picoH];
+    const conv = Math.round(salaQ / q * 100);
+    html += `<div class="tr-insight">
+      <strong>★ Melhor horário: ${picoH.toString().padStart(2,'0')}h</strong> — ${q} Q's · ${nq} NQ's · ${salaQ} em sala · ${conv}% conversão.
+      ${conv >= 60 ? 'Excelente janela de abordagem — priorize reforço de equipe nesse horário.' : conv >= 40 ? 'Boa conversão. Mantenha captadores ativos nessa faixa.' : 'Volume alto mas conversão moderada — revisar abordagem neste horário.'}
+    </div>`;
+  }
+
+  document.getElementById('trBarras').innerHTML = html;
+}
+
+function renderTrHeatmap(lista) {
+  const DIAS = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+  const HORAS = [];
+  for (let h = 7; h <= 19; h++) HORAS.push(h);
+
+  // Agrupa q's por [diaSemana][hora]
+  const map = {};
+  HORAS.forEach(h => { map[h] = {}; DIAS.forEach((_,d) => { map[h][d] = 0; }); });
+  lista.forEach(l => {
+    if (l.verdict !== 'Q') return;
+    const h = _trHoraNum(l);
+    if (h === null || h < 7 || h > 19) return;
+    // dia da semana a partir do dateISO
+    if (!l.dateISO) return;
+    const d = new Date(l.dateISO + 'T12:00:00').getDay(); // 0=dom
+    map[h][d]++;
+  });
+
+  // máximo para escala de intensidade
+  let maxVal = 1;
+  HORAS.forEach(h => DIAS.forEach((_,d) => { if (map[h][d] > maxVal) maxVal = map[h][d]; }));
+
+  function hmClass(v) {
+    if (v === 0) return 'hm-0';
+    const r = v / maxVal;
+    if (r < 0.2) return 'hm-1';
+    if (r < 0.4) return 'hm-2';
+    if (r < 0.6) return 'hm-3';
+    if (r < 0.8) return 'hm-4';
+    return 'hm-5';
+  }
+
+  const cols = 1 + DIAS.length; // 1 col label + 7 dias
+  let html = `<div class="tr-hm-grid" style="grid-template-columns:38px repeat(7,1fr)">`;
+  // header
+  html += '<div class="tr-hm-lbl"></div>';
+  DIAS.forEach(d => { html += `<div class="tr-hm-hdr">${d}</div>`; });
+  // linhas
+  HORAS.forEach(h => {
+    const rowTotal = DIAS.reduce((acc,_,d) => acc + map[h][d], 0);
+    if (rowTotal === 0) return;
+    html += `<div class="tr-hm-lbl">${h.toString().padStart(2,'0')}h</div>`;
+    DIAS.forEach((_,d) => {
+      const v = map[h][d];
+      const cls = hmClass(v);
+      html += `<div class="tr-hm-cell ${cls}">${v > 0 ? v : '·'}</div>`;
+    });
+  });
+  html += '</div>';
+  document.getElementById('trHeatmap').innerHTML = html;
 }
 
 // EQUIPE
