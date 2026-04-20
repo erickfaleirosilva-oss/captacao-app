@@ -495,24 +495,12 @@
       display: flex; align-items: flex-end; justify-content: center;
     }
     #modalEquipe.hidden, #modalSala.hidden, #modalExport.hidden { display: none !important; }
-    /* perfil expansível inline */
-    .hc-perfil-btn { background: var(--navy3); border: 1.5px solid var(--border); padding: 6px 7px; color: var(--muted); cursor: pointer; line-height: 0; border-radius: 8px; transition: border-color .15s, color .15s; flex-shrink: 0; }
-    .hc-perfil-btn.open { border-color: var(--gold2); color: var(--gold); background: rgba(241,214,145,.06); }
-    .hc-card-open { border-color: var(--gold2) !important; }
-    .hc-expand { overflow: hidden; max-height: 0; transition: max-height .32s ease, opacity .25s ease; opacity: 0; }
-    .hc-expand.open { max-height: 800px; opacity: 1; }
-    /* corpo expandido — igual mockup B */
-    .hc-exp-body { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
-    .hc-exp-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
-    .hc-exp-row:last-of-type { border-bottom: none; }
-    .hc-exp-lbl { font-size: 13px; color: var(--muted); font-weight: 400; }
-    .hc-exp-val { font-size: 13px; font-weight: 700; color: var(--text); text-align: right; }
-    /* tags de critérios booleanos */
-    .hc-exp-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
-    .hc-exp-tag { border-radius: 7px; font-size: 11px; font-weight: 600; padding: 5px 11px; }
-    .hc-exp-tag.ok  { background: rgba(46,204,113,.10); border: 1px solid rgba(46,204,113,.3); color: var(--green); }
-    .hc-exp-tag.no  { background: rgba(231,76,60,.09); border: 1px solid rgba(231,76,60,.25); color: var(--red); }
-    .hc-exp-tag.neu { background: var(--navy3); border: 1px solid var(--border); color: var(--muted); }
+    /* resumo inline do perfil */
+    .hc-resumo { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .hc-chip { border-radius: 6px; font-size: 10px; font-weight: 600; padding: 3px 8px; }
+    .hc-chip.ok  { background: rgba(46,204,113,.09); border: 1px solid rgba(46,204,113,.25); color: var(--green); }
+    .hc-chip.no  { background: rgba(231,76,60,.08); border: 1px solid rgba(231,76,60,.22); color: var(--red); }
+    .hc-chip.neu { background: var(--navy3); border: 1px solid var(--border); color: var(--muted); }
     .modal-box {
       background: var(--navy2); border: 1.5px solid var(--border);
       border-radius: 20px 20px 0 0; padding: 24px 20px 36px;
@@ -2234,24 +2222,34 @@ function renderHistList() {
       <div class="sum-box nq">  <div class="sum-num nq">${nq}</div> <div class="sum-lbl">NQ</div></div>
       <div class="sum-box tot"> <div class="sum-num tot">${tot}</div><div class="sum-lbl">TOTAL</div></div>
     </div>
-    ${visíveis.map(h=>`
-      <div class="hist-card" id="hcard-${h.id}">
-        <div style="display:flex;align-items:flex-start;gap:10px">
-          <div style="flex:1;min-width:0">
-            <div class="hc-badge ${h.verdict}">${h.verdict}</div>
-            <div class="hc-name">${h.nome} · ${tL[h.tipo]||h.tipo}</div>
-            ${h.tel!=='—'?`<div class="hc-phone">📞 ${h.tel}</div>`:''}
-            <div class="hc-meta">${h.captador||'—'} · ${h.time} · ${h.mode} · ${rendaStr(h.renda)}${h.sala && h.sala!=='—'?' · '+h.sala:''}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-top:2px">
-            <button class="hc-perfil-btn" id="hpbtn-${h.id}" onclick="togglePerfilInline('${h.id}')" title="Ver perfil completo">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-            </button>
-            <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Clique para desmarcar sala':'Clique para marcar que entrou em sala'}">${h.emSala?'🟢':'🔴'}</button>
-          </div>
+    ${visíveis.map(h=>{
+      const a = h._ans || {};
+      const CARRO_LABEL   = { sem:'Sem carro', ate2009:'Carro até 2009', '2010a2013':'Carro 2010–2013', '2014mais':'Carro 2014+' };
+      const IDADE_LABEL   = { menor30:'< 30 anos', '30a65':'30–65 anos', acima65:'> 65 anos' };
+      const VIAGENS_LABEL = { '1x':'1x/ano', '2x':'2x/ano', '3x':'3x/ano', '4x':'4x+/ano' };
+      const chips = [];
+      if (h.cidade && h.cidade !== '—') chips.push({ t: h.cidade, c:'neu' });
+      if (a.idadeMarido)  chips.push({ t: IDADE_LABEL[a.idadeMarido]  || a.idadeMarido,  c:'neu' });
+      if (a.idadeConjuge && h.tipo !== 'solteiro') chips.push({ t: IDADE_LABEL[a.idadeConjuge] || a.idadeConjuge, c:'neu' });
+      if (a.carro)    chips.push({ t: CARRO_LABEL[a.carro]  || a.carro,  c: a.carro === 'sem' || a.carro === 'ate2009' ? 'no' : 'ok' });
+      if (a.viagens)  chips.push({ t: VIAGENS_LABEL[a.viagens] || a.viagens, c:'neu' });
+      if (a.casa   !== null && a.casa   !== undefined) chips.push({ t: a.casa   === 'sim' ? '✓ Casa própria'      : '✗ Sem casa',    c: a.casa   === 'sim' ? 'ok' : 'no' });
+      if (a.cartao !== null && a.cartao !== undefined) chips.push({ t: a.cartao === 'sim' ? '✓ Cartão de crédito' : '✗ Sem cartão',  c: a.cartao === 'sim' ? 'ok' : 'no' });
+      const resumoHtml = chips.length
+        ? `<div class="hc-resumo">${chips.map(ch=>`<span class="hc-chip ${ch.c}">${ch.t}</span>`).join('')}</div>`
+        : '';
+      return `
+      <div class="hist-card" style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div class="hc-badge ${h.verdict}">${h.verdict}</div>
+          <div class="hc-name">${h.nome} · ${tL[h.tipo]||h.tipo}</div>
+          ${h.tel!=='—'?`<div class="hc-phone">📞 ${h.tel}</div>`:''}
+          <div class="hc-meta">${h.captador||'—'} · ${h.time} · ${h.mode} · ${rendaStr(h.renda)}${h.sala && h.sala!=='—'?' · '+h.sala:''}</div>
+          ${resumoHtml}
         </div>
-        <div class="hc-expand" id="hexp-${h.id}"></div>
-      </div>`).join('')}`;
+        <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Clique para desmarcar sala':'Clique para marcar que entrou em sala'}">${h.emSala?'🟢':'🔴'}</button>
+      </div>`;
+    }).join('')}`;
 }
 
 function toggleSala(leadId) {
@@ -2295,65 +2293,6 @@ function fecharModalExport() {
   document.getElementById('modalExport').classList.add('hidden');
 }
 
-function togglePerfilInline(leadId) {
-  const exp  = document.getElementById('hexp-' + leadId);
-  const btn  = document.getElementById('hpbtn-' + leadId);
-  const card = document.getElementById('hcard-' + leadId);
-  if (!exp) return;
-
-  const isOpen = exp.classList.contains('open');
-  if (isOpen) {
-    exp.classList.remove('open');
-    btn.classList.remove('open');
-    if (card) card.classList.remove('hc-card-open');
-    return;
-  }
-
-  const l = leads.find(x => String(x.id) === String(leadId));
-  if (!l) return;
-
-  const RENDA_LABEL   = { abaixo6k:'Abaixo de R$ 6.000', '6k':'R$ 6.000 – R$ 7.999', '8k':'R$ 8.000 – R$ 9.999', '10k':'R$ 10.000 – R$ 11.999', '12k':'R$ 12.000 – R$ 14.999', '15k':'R$ 15.000 – R$ 19.999', '20k':'R$ 20.000 ou mais' };
-  const CARRO_LABEL   = { sem:'Sem carro', ate2009:'Até 2009', '2010a2013':'2010 a 2013', '2014mais':'2014 ou mais recente' };
-  const IDADE_LABEL   = { menor30:'Abaixo de 30 anos', '30a65':'30 a 65 anos', acima65:'Acima de 65 anos' };
-  const TEMPO_LABEL   = { menos1ano:'Menos de 1 ano', '1anoMais':'1 ano ou mais' };
-  const VIAGENS_LABEL = { '1x':'1x por ano', '2x':'2x por ano', '3x':'3x por ano', '4x':'Mais de 4x por ano' };
-  const a = l._ans || {};
-
-  // Linhas na ordem pedida: Cidade · Renda · Carro · Viagens · Idades
-  const rows = [];
-  if (l.cidade && l.cidade !== '—')        rows.push({ l:'Cidade',          v: l.cidade });
-  rows.push({ l:'Renda',                   v: RENDA_LABEL[l.renda] || l.renda || '—' });
-  if (a.carro)                             rows.push({ l:'Carro',           v: CARRO_LABEL[a.carro] || a.carro });
-  if (a.viagens)                           rows.push({ l:'Viagens/ano',     v: VIAGENS_LABEL[a.viagens] || a.viagens });
-  if (a.idadeMarido)                       rows.push({ l:'Idade titular',   v: IDADE_LABEL[a.idadeMarido] || a.idadeMarido });
-  if (a.idadeConjuge && l.tipo !== 'solteiro') rows.push({ l:'Idade cônjuge', v: IDADE_LABEL[a.idadeConjuge] || a.idadeConjuge });
-  if (a.tempoRel && l.tipo === 'uniao')    rows.push({ l:'Tempo de relação',v: TEMPO_LABEL[a.tempoRel] || a.tempoRel });
-
-  // Tags de critérios booleanos: Casa · Cartão
-  const tags = [];
-  if (a.casa !== null && a.casa !== undefined)
-    tags.push({ txt: a.casa   === 'sim' ? '✓ Casa própria' : '✗ Sem casa própria', ok: a.casa === 'sim' });
-  if (a.cartao !== null && a.cartao !== undefined)
-    tags.push({ txt: a.cartao === 'sim' ? '✓ Cartão de crédito' : '✗ Sem cartão',  ok: a.cartao === 'sim' });
-
-  const mkRows = arr => arr.map(r =>
-    `<div class="hc-exp-row"><span class="hc-exp-lbl">${r.l}</span><span class="hc-exp-val">${r.v}</span></div>`
-  ).join('');
-  const mkTags = arr => arr.length
-    ? `<div class="hc-exp-tags">${arr.map(t => `<span class="hc-exp-tag ${t.ok ? 'ok' : 'no'}">${t.txt}</span>`).join('')}</div>`
-    : '';
-
-  // Se não há nenhum detalhe salvo (_ans vazio), exibe aviso
-  const temDetalhes = rows.length > 1 || tags.length > 0;
-  const corpo = temDetalhes
-    ? mkRows(rows) + mkTags(tags)
-    : mkRows(rows) + `<div style="font-size:11px;color:var(--muted);margin-top:8px;font-style:italic">Detalhes disponíveis apenas em novos cadastros.</div>`;
-
-  exp.innerHTML = `<div class="hc-exp-body">${corpo}</div>`;
-  exp.classList.add('open');
-  btn.classList.add('open');
-  if (card) card.classList.add('hc-card-open');
-}
 
 
 function executarExport() {
