@@ -494,22 +494,22 @@
       background: rgba(10,15,30,.85);
       display: flex; align-items: flex-end; justify-content: center;
     }
-    #modalEquipe.hidden, #modalSala.hidden, #modalExport.hidden, #modalPerfil.hidden { display: none !important; }
-    #modalPerfil { position: fixed; inset: 0; z-index: 300; background: rgba(10,15,30,.85); display: flex; align-items: flex-end; justify-content: center; }
-    .perfil-verdict-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
-    .perfil-verdict-icon { font-size: 28px; }
-    .perfil-verdict-label { font-size: 22px; font-weight: 900; }
-    .perfil-verdict-label.Q      { color: var(--green); }
-    .perfil-verdict-label.NQ     { color: var(--red); }
-    .perfil-verdict-label.PARCIAL{ color: var(--yellow); }
-    .perfil-nome { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 2px; }
-    .perfil-meta { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
-    .perfil-section { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(241,214,145,.45); margin: 16px 0 8px; }
-    .perfil-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-    .perfil-row:last-child { border-bottom: none; }
-    .perfil-row-label { color: var(--muted); font-weight: 500; }
-    .perfil-row-val   { color: var(--text); font-weight: 600; text-align: right; max-width: 55%; }
-    .hc-name-btn { background: none; border: none; padding: 0; color: var(--text); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; text-align: left; display: block; width: 100%; }
+    #modalEquipe.hidden, #modalSala.hidden, #modalExport.hidden { display: none !important; }
+    /* perfil expansível inline */
+    .hc-perfil-btn { background: none; border: none; padding: 4px; color: var(--muted); cursor: pointer; font-size: 15px; flex-shrink: 0; line-height: 1; border-radius: 7px; transition: background .15s, color .15s; }
+    .hc-perfil-btn:active, .hc-perfil-btn.open { background: rgba(241,214,145,.1); color: var(--gold); }
+    .hc-expand { overflow: hidden; max-height: 0; transition: max-height .28s ease, opacity .2s ease; opacity: 0; }
+    .hc-expand.open { max-height: 600px; opacity: 1; }
+    .hc-exp-body { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .hc-exp-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 12px; }
+    .hc-exp-row:last-child { border-bottom: none; }
+    .hc-exp-lbl { color: var(--muted); }
+    .hc-exp-val { font-weight: 600; color: var(--text); text-align: right; }
+    .hc-exp-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .hc-exp-tag { border-radius: 6px; font-size: 10px; font-weight: 600; padding: 3px 8px; }
+    .hc-exp-tag.ok  { background: rgba(46,204,113,.08); border: 1px solid rgba(46,204,113,.25); color: var(--green); }
+    .hc-exp-tag.no  { background: rgba(231,76,60,.07); border: 1px solid rgba(231,76,60,.2); color: var(--red); }
+    .hc-exp-tag.neu { background: var(--navy3); border: 1px solid var(--border); color: var(--muted); }
     .modal-box {
       background: var(--navy2); border: 1.5px solid var(--border);
       border-radius: 20px 20px 0 0; padding: 24px 20px 36px;
@@ -834,14 +834,6 @@
     <div class="modal-error" id="eqError"></div>
     <button class="btn btn-gold" style="margin-top:4px" onclick="salvarNovoMembro()">Salvar membro</button>
     <button class="btn btn-ghost" style="margin-top:8px" onclick="fecharModalEquipe()">Cancelar</button>
-  </div>
-</div>
-
-<!-- MODAL PERFIL DO LEAD -->
-<div id="modalPerfil" class="hidden">
-  <div class="modal-box">
-    <div id="modalPerfilBody"></div>
-    <button class="btn btn-ghost" style="margin-top:16px" onclick="fecharModalPerfil()">Fechar</button>
   </div>
 </div>
 
@@ -2240,14 +2232,20 @@ function renderHistList() {
       <div class="sum-box tot"> <div class="sum-num tot">${tot}</div><div class="sum-lbl">TOTAL</div></div>
     </div>
     ${visíveis.map(h=>`
-      <div class="hist-card" style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div class="hc-badge ${h.verdict}">${h.verdict}</div>
-          <button class="hc-name-btn" onclick="abrirPerfilLead('${h.id}')">${h.nome} · ${tL[h.tipo]||h.tipo}</button>
-          ${h.tel!=='—'?`<div class="hc-phone">📞 ${h.tel}</div>`:''}
-          <div class="hc-meta">${h.captador||'—'} · ${h.time} · ${h.mode} · ${rendaStr(h.renda)}${h.sala && h.sala!=='—'?' · '+h.sala:''}</div>
+      <div class="hist-card" id="hcard-${h.id}">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div class="hc-badge ${h.verdict}">${h.verdict}</div>
+            <div class="hc-name">${h.nome} · ${tL[h.tipo]||h.tipo}</div>
+            ${h.tel!=='—'?`<div class="hc-phone">📞 ${h.tel}</div>`:''}
+            <div class="hc-meta">${h.captador||'—'} · ${h.time} · ${h.mode} · ${rendaStr(h.renda)}${h.sala && h.sala!=='—'?' · '+h.sala:''}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
+            <button class="hc-perfil-btn" id="hpbtn-${h.id}" onclick="togglePerfilInline('${h.id}')" title="Ver perfil completo">👤</button>
+            <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Clique para desmarcar sala':'Clique para marcar que entrou em sala'}">${h.emSala?'🟢':'🔴'}</button>
+          </div>
         </div>
-        <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Clique para desmarcar sala':'Clique para marcar que entrou em sala'}">${h.emSala?'🟢':'🔴'}</button>
+        <div class="hc-expand" id="hexp-${h.id}"></div>
       </div>`).join('')}`;
 }
 
@@ -2292,61 +2290,51 @@ function fecharModalExport() {
   document.getElementById('modalExport').classList.add('hidden');
 }
 
-function abrirPerfilLead(leadId) {
+function togglePerfilInline(leadId) {
+  const exp  = document.getElementById('hexp-' + leadId);
+  const btn  = document.getElementById('hpbtn-' + leadId);
+  if (!exp) return;
+
+  const isOpen = exp.classList.contains('open');
+  if (isOpen) {
+    exp.classList.remove('open');
+    btn.classList.remove('open');
+    return;
+  }
+
   const l = leads.find(x => String(x.id) === String(leadId));
   if (!l) return;
 
-  const TIPO_LABEL   = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos/Namorados', solteiro:'Solteiro/Divorciado' };
-  const RENDA_LABEL  = { abaixo6k:'Abaixo de R$ 6.000', '6k':'R$ 6.000 – R$ 7.999', '8k':'R$ 8.000 – R$ 9.999', '10k':'R$ 10.000 – R$ 11.999', '12k':'R$ 12.000 – R$ 14.999', '15k':'R$ 15.000 – R$ 19.999', '20k':'R$ 20.000 ou mais' };
-  const CARRO_LABEL  = { sem:'Sem carro', ate2009:'Até 2009', '2010a2013':'2010 a 2013', '2014mais':'2014 ou mais recente' };
-  const IDADE_LABEL  = { menor30:'Abaixo de 30 anos', '30a65':'30 a 65 anos', acima65:'Acima de 65 anos' };
-  const TEMPO_LABEL  = { menos1ano:'Menos de 1 ano', '1anoMais':'1 ano ou mais' };
-  const VIAGENS_LABEL= { '1x':'1x por ano', '2x':'2x por ano', '3x':'3x por ano', '4x':'Mais de 4x por ano' };
-  const ICONS        = { Q:'🟢', NQ:'🔴', PARCIAL:'🟡' };
-  const telFmt = (t) => t && t !== '—' ? t.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3') : (t || '—');
+  const RENDA_LABEL  = { abaixo6k:'< R$6.000', '6k':'R$6–7k', '8k':'R$8–9k', '10k':'R$10–11k', '12k':'R$12–14k', '15k':'R$15–19k', '20k':'R$20k+' };
+  const CARRO_LABEL  = { sem:'Sem carro', ate2009:'Até 2009', '2010a2013':'2010–2013', '2014mais':'2014+' };
+  const IDADE_LABEL  = { menor30:'< 30 anos', '30a65':'30–65 anos', acima65:'> 65 anos' };
+  const TEMPO_LABEL  = { menos1ano:'< 1 ano', '1anoMais':'1 ano+' };
+  const VIAGENS_LABEL= { '1x':'1x/ano', '2x':'2x/ano', '3x':'3x/ano', '4x':'4x+/ano' };
   const a = l._ans || {};
 
-  const rows1 = [
-    { label:'Captador',    val: l.captador || '—' },
-    { label:'Sala',        val: l.sala     || '—' },
-    { label:'Data',        val: l.date + ' · ' + l.time },
-    { label:'Visitantes',  val: l.mode },
-  ];
+  // linhas de detalhes
+  const rows = [];
+  if (l.cidade && l.cidade !== '—') rows.push({ l:'Cidade', v: l.cidade });
+  rows.push({ l:'Renda', v: RENDA_LABEL[l.renda] || l.renda || '—' });
+  if (a.idadeMarido)  rows.push({ l:'Idade (titular)', v: IDADE_LABEL[a.idadeMarido] || a.idadeMarido });
+  if (a.idadeConjuge && l.tipo !== 'solteiro') rows.push({ l:'Idade (cônjuge)', v: IDADE_LABEL[a.idadeConjuge] || a.idadeConjuge });
+  if (a.tempoRel && l.tipo === 'uniao') rows.push({ l:'Tempo de relação', v: TEMPO_LABEL[a.tempoRel] || a.tempoRel });
+  if (a.carro)   rows.push({ l:'Carro',  v: CARRO_LABEL[a.carro] || a.carro });
+  if (a.viagens) rows.push({ l:'Viagens/ano', v: VIAGENS_LABEL[a.viagens] || a.viagens });
+  rows.push({ l:'Sala', v: l.sala || '—' });
+  rows.push({ l:'Visitantes', v: l.mode });
 
-  const rows2 = [
-    { label:'Perfil',          val: TIPO_LABEL[l.tipo] || l.tipo || '—' },
-    { label:'Renda',           val: RENDA_LABEL[l.renda] || l.renda || '—' },
-    { label:'Cidade',          val: l.cidade || '—' },
-    { label:'Telefone',        val: telFmt(l.tel) },
-  ];
-  if (a.idadeMarido) rows2.push({ label:'Idade (titular)',  val: IDADE_LABEL[a.idadeMarido] || a.idadeMarido });
-  if (a.idadeConjuge && (l.tipo === 'casados' || l.tipo === 'uniao' || l.tipo === 'noivos'))
-    rows2.push({ label:'Idade (cônjuge)', val: IDADE_LABEL[a.idadeConjuge] || a.idadeConjuge });
-  if (a.tempoRel && l.tipo === 'uniao')
-    rows2.push({ label:'Tempo de relação', val: TEMPO_LABEL[a.tempoRel] || a.tempoRel });
-  if (a.casa)    rows2.push({ label:'Casa própria', val: a.casa === 'sim' ? 'Sim' : 'Não' });
-  if (a.carro)   rows2.push({ label:'Carro',        val: CARRO_LABEL[a.carro] || a.carro });
-  if (a.cartao)  rows2.push({ label:'Cartão de crédito', val: a.cartao === 'sim' ? 'Sim' : 'Não' });
-  if (a.viagens) rows2.push({ label:'Viagens/ano',  val: VIAGENS_LABEL[a.viagens] || a.viagens });
+  // tags de critérios booleanos
+  const tags = [];
+  if (a.casa)   tags.push({ txt: a.casa   === 'sim' ? '✓ Casa própria' : '✗ Sem casa', ok: a.casa === 'sim' });
+  if (a.cartao) tags.push({ txt: a.cartao === 'sim' ? '✓ Cartão' : '✗ Sem cartão',    ok: a.cartao === 'sim' });
 
-  const mkRows = arr => arr.map(r => `<div class="perfil-row"><span class="perfil-row-label">${r.label}</span><span class="perfil-row-val">${r.val}</span></div>`).join('');
+  const mkRows = arr => arr.map(r => `<div class="hc-exp-row"><span class="hc-exp-lbl">${r.l}</span><span class="hc-exp-val">${r.v}</span></div>`).join('');
+  const mkTags = arr => arr.length ? `<div class="hc-exp-tags">${arr.map(t=>`<span class="hc-exp-tag ${t.ok?'ok':'no'}">${t.txt}</span>`).join('')}</div>` : '';
 
-  document.getElementById('modalPerfilBody').innerHTML = `
-    <div class="perfil-verdict-bar">
-      <div class="perfil-verdict-icon">${ICONS[l.verdict] || '⬜'}</div>
-      <div class="perfil-verdict-label ${l.verdict}">${l.verdict}</div>
-    </div>
-    <div class="perfil-nome">${l.nome}</div>
-    <div class="perfil-meta">${TIPO_LABEL[l.tipo] || l.tipo}</div>
-    <div class="perfil-section">Atendimento</div>
-    ${mkRows(rows1)}
-    <div class="perfil-section">Perfil do cliente</div>
-    ${mkRows(rows2)}
-  `;
-  document.getElementById('modalPerfil').classList.remove('hidden');
-}
-function fecharModalPerfil() {
-  document.getElementById('modalPerfil').classList.add('hidden');
+  exp.innerHTML = `<div class="hc-exp-body">${mkRows(rows)}${mkTags(tags)}</div>`;
+  exp.classList.add('open');
+  btn.classList.add('open');
 }
 
 
