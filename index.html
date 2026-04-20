@@ -496,17 +496,17 @@
     }
     #modalEquipe.hidden, #modalSala.hidden, #modalExport.hidden { display: none !important; }
     /* perfil expansível inline */
-    .hc-perfil-btn { background: none; border: none; padding: 4px; color: var(--muted); cursor: pointer; font-size: 15px; flex-shrink: 0; line-height: 1; border-radius: 7px; transition: background .15s, color .15s; }
-    .hc-perfil-btn:active, .hc-perfil-btn.open { background: rgba(241,214,145,.1); color: var(--gold); }
-    .hc-expand { overflow: hidden; max-height: 0; transition: max-height .28s ease, opacity .2s ease; opacity: 0; }
-    .hc-expand.open { max-height: 600px; opacity: 1; }
-    .hc-exp-body { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-    .hc-exp-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 12px; }
+    .hc-perfil-btn { background: var(--navy3); border: 1.5px solid var(--border); padding: 6px 7px; color: var(--muted); cursor: pointer; line-height: 0; border-radius: 8px; transition: border-color .15s, color .15s; flex-shrink: 0; }
+    .hc-perfil-btn:active, .hc-perfil-btn.open { border-color: var(--gold2); color: var(--gold); }
+    .hc-expand { overflow: hidden; max-height: 0; transition: max-height .3s ease, opacity .25s ease; opacity: 0; }
+    .hc-expand.open { max-height: 700px; opacity: 1; }
+    .hc-exp-body { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+    .hc-exp-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 12px; }
     .hc-exp-row:last-child { border-bottom: none; }
-    .hc-exp-lbl { color: var(--muted); }
-    .hc-exp-val { font-weight: 600; color: var(--text); text-align: right; }
-    .hc-exp-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-    .hc-exp-tag { border-radius: 6px; font-size: 10px; font-weight: 600; padding: 3px 8px; }
+    .hc-exp-lbl { color: var(--muted); font-weight: 500; }
+    .hc-exp-val { font-weight: 700; color: var(--text); text-align: right; }
+    .hc-exp-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.04); }
+    .hc-exp-tag { border-radius: 6px; font-size: 10px; font-weight: 600; padding: 4px 9px; }
     .hc-exp-tag.ok  { background: rgba(46,204,113,.08); border: 1px solid rgba(46,204,113,.25); color: var(--green); }
     .hc-exp-tag.no  { background: rgba(231,76,60,.07); border: 1px solid rgba(231,76,60,.2); color: var(--red); }
     .hc-exp-tag.neu { background: var(--navy3); border: 1px solid var(--border); color: var(--muted); }
@@ -2240,8 +2240,10 @@ function renderHistList() {
             ${h.tel!=='—'?`<div class="hc-phone">📞 ${h.tel}</div>`:''}
             <div class="hc-meta">${h.captador||'—'} · ${h.time} · ${h.mode} · ${rendaStr(h.renda)}${h.sala && h.sala!=='—'?' · '+h.sala:''}</div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0">
-            <button class="hc-perfil-btn" id="hpbtn-${h.id}" onclick="togglePerfilInline('${h.id}')" title="Ver perfil completo">👤</button>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-top:2px">
+            <button class="hc-perfil-btn" id="hpbtn-${h.id}" onclick="togglePerfilInline('${h.id}')" title="Ver perfil completo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </button>
             <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Clique para desmarcar sala':'Clique para marcar que entrou em sala'}">${h.emSala?'🟢':'🔴'}</button>
           </div>
         </div>
