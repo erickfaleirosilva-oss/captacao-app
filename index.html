@@ -2434,8 +2434,10 @@ function mergeRemoto(remoto) {
       leads.push(r);
       changed = true;
     } else {
-      // lead existente — sincroniza emSala se o remoto tiver marcado
+      // lead existente — preserva _ans local (Sheets não armazena esse campo)
       const local = leads[idxMap[key]];
+      if (!r._ans && local._ans) r._ans = local._ans;
+      // sincroniza emSala se o remoto tiver marcado
       if (r.emSala && !local.emSala) {
         local.emSala = true;
         changed = true;
