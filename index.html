@@ -1103,34 +1103,38 @@ const CONFIG = {
     { nome: 'Vinicius Alves Brilho',             cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'vinicius123'  },
     { nome: 'Vinicius Eduardo Alves de Lima',    cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'viniciuse123' },
     { nome: 'Walasson de Jesus Alves',           cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'walasson123'  },
-    // — Alta Vista (Caldas Novas) —
-    { nome: 'Vanessa Silva',      cargo: 'captador', sala: 'Alta Vista', senhaDefault: 'vanessa123'   },
-    { nome: 'Natur Calixto',      cargo: 'captador', sala: 'Alta Vista', senhaDefault: 'natur123'     },
-    { nome: 'Neuselia Ferreira',  cargo: 'captador', sala: 'Alta Vista', senhaDefault: 'neuselia123'  },
-    { nome: 'Eduardo Castellani', cargo: 'captador', sala: 'Alta Vista', senhaDefault: 'eduardo123'   },
-    { nome: 'Luciano Camilo',     cargo: 'captador', sala: 'Alta Vista', senhaDefault: 'luciano123'   },
-    { nome: 'Cleber Araujo',      cargo: 'captador', sala: 'Alta Vista', senhaDefault: 'cleber123'    },
+    // — Caldas Novas (Alta Vista / Atrium / Marina) —
+    { nome: 'Vanessa Silva',      cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'vanessa123'   },
+    { nome: 'Natur Calixto',      cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'natur123'     },
+    { nome: 'Neuselia Ferreira',  cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'neuselia123'  },
+    { nome: 'Eduardo Castellani', cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'eduardo123'   },
+    { nome: 'Luciano Camilo',     cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'luciano123'   },
+    { nome: 'Cleber Araujo',      cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'cleber123'    },
     // — Atibaia —
     { nome: 'Evelyn Mirella Bueno Ramos',          cargo: 'captador', sala: 'Atibaia', senhaDefault: 'evelyn123'   },
     { nome: 'Pablo César Sánchez Montealegre',     cargo: 'captador', sala: 'Atibaia', senhaDefault: 'pablo123'    },
     // — Lideranças —
     { nome: 'Lucas Marotti',         cargo: 'sublider', operacao: 'São Pedro', senhaDefault: 'lucaslucas'        },
-    { nome: 'Bruno Teixeira',         cargo: 'lider',    sala: 'Alta Vista',       senhaDefault: 'brunoteixeira'    },
-    { nome: 'Gustavo Viana',          cargo: 'sublider', sala: 'Alta Vista',       senhaDefault: 'gustavo123'       },
+    { nome: 'Bruno Teixeira',         cargo: 'lider',    operacao: 'Caldas Novas', senhaDefault: 'brunoteixeira'    },
+    { nome: 'Gustavo Viana',          cargo: 'sublider', operacao: 'Caldas Novas', senhaDefault: 'gustavo123'       },
     { nome: 'Rogerio Medeiros',       cargo: 'lider',    operacao: 'São Pedro', senhaDefault: 'rogeriorogerio'   },
     { nome: 'André Luis Neves Fontes',cargo: 'sublider', sala: 'Atibaia',          senhaDefault: 'andreneves123'    },
     { nome: 'Erick Faleiro',          cargo: 'ceo',      senhaDefault: 'erickerick'     },
   ],
   salas: [
     { id: 'alta-vista', nome: 'Alta Vista',  cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Alta Vista',  operacao: 'Caldas Novas', ddpHotel: 'Alta Vista' },
+    { id: 'atrium',     nome: 'Atrium',      cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Atrium',      operacao: 'Caldas Novas', ddpHotel: 'Atrium'     },
+    { id: 'marina',     nome: 'Marina',      cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Marina',      operacao: 'Caldas Novas', ddpHotel: 'Marina'     },
     { id: 'thermas-sp', nome: 'Thermas SP',  cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'Thermas SP',  operacao: 'São Pedro',    ddpHotel: null         },
     { id: 'sptr',       nome: 'SPTR',        cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'São Pedro',   operacao: 'São Pedro',    ddpHotel: 'SPTR'       },
     { id: 'atibaia',    nome: 'Atibaia',     cidade: 'Atibaia',      modos: [],                   sheetName: 'Atibaia',     operacao: null,           ddpHotel: null         },
   ],
   // Salas que alimentam o DDP automaticamente (captadores marcam tipo+venda no histórico)
-  salasDdpAuto: ['Alta Vista', 'SPTR'],
+  salasDdpAuto: ['Alta Vista', 'Atrium', 'Marina', 'SPTR'],
   // Salas onde aparece apenas 🤝 venda (sem chips de tipo)
   salasDdpVenda: ['Atibaia', 'Thermas SP'],
+  // Hotéis de Caldas Novas (captadores escolhem ao iniciar)
+  salasCaldas: ['Alta Vista', 'Atrium', 'Marina'],
   // Operações de São Pedro (captadores escolhem a sala ao iniciar)
   salasSaoPedro: ['Thermas SP', 'SPTR'],
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
@@ -2042,7 +2046,13 @@ function atualizarModoBadge() {
 }
 
 function startQuiz() {
-  // Captadores de São Pedro sem sala fixa → mostram tela de escolha de sala (Thermas SP / SPTR)
+  // Captadores de Caldas Novas sem sala fixa → escolhem entre Alta Vista / Atrium / Marina
+  if (captador && captador.operacao === 'Caldas Novas' && !captador.sala) {
+    renderSalaCnScreen();
+    hideAll(); show('screenSala');
+    return;
+  }
+  // Captadores de São Pedro sem sala fixa → escolhem entre Thermas SP / SPTR
   if (captador && captador.operacao === 'São Pedro' && !captador.sala) {
     renderSalaSpScreen();
     hideAll(); show('screenSala');
@@ -2069,6 +2079,28 @@ function startQuiz() {
   }
   renderSalaScreen();
   hideAll(); show('screenSala');
+}
+
+// Tela específica de seleção de hotel para captadores de Caldas Novas
+function renderSalaCnScreen() {
+  const chips = document.getElementById('salaChips');
+  const salas = CONFIG.salasCaldas; // ['Alta Vista', 'Atrium', 'Marina']
+  const icons = { 'Alta Vista': '🏔️', 'Atrium': '🏩', 'Marina': '⛵' };
+  const descs = { 'Alta Vista': 'Hotel Alta Vista Resort', 'Atrium': 'Hotel Atrium Thermas Resort', 'Marina': 'Marina Thermas Resort' };
+  chips.innerHTML = salas.map(nome => {
+    const cfg = CONFIG.salas.find(s => s.nome === nome);
+    return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nome}')">
+      <div class="sala-chip-icon">${icons[nome] || '🏢'}</div>
+      <div class="sala-chip-label">${nome}</div>
+      <div class="sala-chip-sub">${descs[nome] || ''}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('fieldOutraSala').value = '';
+  document.getElementById('btnIniciarQuiz').disabled = true;
+  const title = document.getElementById('salaTitulo');
+  if (title) title.textContent = '📍 Qual hotel hoje?';
+  const sub = document.getElementById('salaSub');
+  if (sub) sub.textContent = 'Selecione o hotel onde você está prospectando agora';
 }
 
 // Tela específica de seleção de sala para captadores de São Pedro
