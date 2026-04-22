@@ -1197,19 +1197,28 @@ const API = {
   }
 };
 
-// Mapa de normalização: nomes antigos de sala → nomes atuais
-// Definido aqui (antes de leads) para poder ser usado no carregamento inicial
-const SALA_ALIAS = {
-  'São Pedro Resort': 'SPTR',
-  'Thermas São Pedro': 'Thermas SP',
-  'THERMAS SÃO PEDRO': 'Thermas SP',
-  'THERMAS SÃO PEDRO - HOTEL': 'SPTR',
-  'Thermas - UH AP': 'Thermas SP',
-  'SP Resort': 'SPTR',
+// Captadores com sala fixa SPTR (leads antigos com "São Pedro Resort" → SPTR)
+const CAPTADORES_SPTR = new Set([
+  'Bruno Moisés', 'Mayra Teixeira', 'José Heraldo', 'Lucas Marotti',
+]);
+// Nomes antigos de São Pedro que precisam ser migrados para o nome correto por captador
+const SALAS_SP_ANTIGAS = new Set([
+  'São Pedro Resort', 'Thermas São Pedro', 'THERMAS SÃO PEDRO',
+  'THERMAS SÃO PEDRO - HOTEL', 'Thermas - UH AP', 'SP Resort',
+]);
+// Nomes antigos de outros hotéis (mapeamento direto, sem ambiguidade)
+const SALA_ALIAS_DIRETO = {
+  // Adicionar aqui se houver outros hotéis com nomes antigos
 };
-function normalizarSala(sala) {
+function normalizarSala(sala, captadorNome) {
   if (!sala) return sala;
-  return SALA_ALIAS[sala] || sala;
+  // Mapeamento direto (sem ambiguidade)
+  if (SALA_ALIAS_DIRETO[sala]) return SALA_ALIAS_DIRETO[sala];
+  // Nomes antigos de São Pedro → SPTR ou Thermas SP conforme o captador
+  if (SALAS_SP_ANTIGAS.has(sala)) {
+    return CAPTADORES_SPTR.has(captadorNome) ? 'SPTR' : 'Thermas SP';
+  }
+  return sala;
 }
 
 // ESTADO
@@ -1218,7 +1227,7 @@ let step     = 0;
 let ans      = {};
 let captador = null;
 let salaAtual = null;
-let leads    = (JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]')).map(l => ({ ...l, sala: normalizarSala(l.sala) }));
+let leads    = (JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]')).map(l => ({ ...l, sala: normalizarSala(l.sala, l.captador) }));
 let loginSelectedNome = null;
 let histFiltro = { periodo: 'hoje', captador: 'todos', sala: 'todas', de: '', ate: '' };
 let cdpFiltro  = { periodo: 'hoje', sala: 'todas', captador: 'todos', de: '', ate: '' };
@@ -2835,7 +2844,7 @@ function mergeRemoto(remoto) {
   remoto.forEach(r => {
     r.date = normalizarDate(r.date, r.id);
     r.time = normalizarTime(r.time, r.id);
-    r.sala = normalizarSala(r.sala); // translada nomes antigos → atuais
+    r.sala = normalizarSala(r.sala, r.captador); // translada nomes antigos → atuais por captador
     if (!r.dateISO || r.dateISO === '') {
       const p = r.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       r.dateISO = p ? p[3] + '-' + p[2] + '-' + p[1] : '';
