@@ -531,6 +531,109 @@
     .modal-check-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
     .modal-check-row label { font-size: 14px; font-weight: 600; cursor: pointer; }
     .modal-check-row input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--gold); }
+    /* ── DDP ── */
+    .ddp-wrap { padding: 14px 14px 100px; }
+    .ddp-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .ddp-hd-left .ddp-title { font-size:16px; font-weight:800; color:var(--gold); }
+    .ddp-hd-left .ddp-sub   { font-size:11px; color:var(--muted); margin-top:1px; }
+    .ddp-date-pill {
+      font-size:11px; font-weight:700;
+      background:rgba(241,214,145,.1); border:1px solid rgba(241,214,145,.25);
+      color:var(--gold); border-radius:8px; padding:5px 10px;
+    }
+    .ddp-lock {
+      display:inline-flex; align-items:center; gap:5px;
+      background:rgba(139,97,52,.15); border:1px solid rgba(139,97,52,.4);
+      color:#c8943a; font-size:10px; font-weight:700;
+      border-radius:6px; padding:3px 9px; margin-bottom:12px;
+    }
+    .ddp-sel-lbl { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:6px; }
+    .ddp-op-chips, .ddp-hotel-chips { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
+    .ddp-chip {
+      background:var(--navy2); border:1.5px solid var(--border);
+      border-radius:20px; padding:7px 14px;
+      font-size:11px; font-weight:700; color:var(--muted); cursor:pointer;
+      transition:border-color .15s, background .15s, color .15s;
+    }
+    .ddp-chip.active { background:rgba(241,214,145,.1); border-color:var(--gold); color:var(--gold); }
+    .ddp-card {
+      background:var(--navy2); border:1px solid var(--border);
+      border-radius:14px; padding:13px; margin-bottom:10px;
+    }
+    .ddp-card-title {
+      font-size:10px; font-weight:700; letter-spacing:.08em;
+      text-transform:uppercase; color:var(--muted);
+      margin-bottom:10px; display:flex; align-items:center; gap:6px;
+    }
+    .ddp-card-title .ddp-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    .ddp-ir {
+      display:flex; align-items:center; gap:10px;
+      padding:8px 0; border-bottom:1px solid var(--navy3);
+    }
+    .ddp-ir:last-child { border-bottom:none; padding-bottom:0; }
+    .ddp-ir-lbl { flex:1; }
+    .ddp-ir-lbl strong { font-size:12px; color:var(--text); display:block; }
+    .ddp-ir-lbl span   { font-size:10px; color:var(--muted); }
+    .ddp-num-in {
+      width:70px; background:var(--navy3); border:1.5px solid var(--border);
+      border-radius:10px; padding:8px 6px; font-size:18px; font-weight:800;
+      color:var(--text); text-align:center;
+    }
+    .ddp-num-in:focus { border-color:var(--gold); outline:none; }
+    .ddp-num-calc {
+      width:70px; background:rgba(241,214,145,.07); border:1.5px solid rgba(241,214,145,.25);
+      border-radius:10px; padding:8px 6px; font-size:18px; font-weight:900;
+      color:var(--gold); text-align:center;
+    }
+    .ddp-num-calc.green { background:rgba(46,204,113,.07); border-color:rgba(46,204,113,.3); color:var(--green); }
+    .ddp-mc-pill {
+      display:inline-flex; align-items:center; gap:4px;
+      background:rgba(74,158,255,.1); border:1px solid rgba(74,158,255,.3);
+      color:#4a9eff; font-size:10px; font-weight:700;
+      border-radius:6px; padding:2px 8px;
+    }
+    .ddp-res-row  { display:flex; gap:8px; margin-bottom:10px; }
+    .ddp-res-box  {
+      flex:1; background:var(--navy3); border:1px solid var(--border);
+      border-radius:12px; padding:10px 8px; text-align:center;
+    }
+    .ddp-res-box.gold  { background:rgba(241,214,145,.07); border-color:rgba(241,214,145,.3); }
+    .ddp-res-box.green { background:rgba(46,204,113,.07); border-color:rgba(46,204,113,.3); }
+    .ddp-res-val  { font-size:22px; font-weight:900; line-height:1; margin-bottom:3px; }
+    .ddp-res-lbl  { font-size:9px; color:var(--muted); font-weight:600; line-height:1.3; }
+    .ddp-prog-wrap { margin-bottom:9px; }
+    .ddp-prog-wrap:last-child { margin-bottom:0; }
+    .ddp-prog-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+    .ddp-prog-lbl { font-size:11px; color:var(--muted); font-weight:600; }
+    .ddp-prog-pct { font-size:13px; font-weight:800; }
+    .ddp-prog-track { height:7px; background:var(--navy3); border-radius:4px; overflow:hidden; position:relative; }
+    .ddp-prog-fill  { height:100%; border-radius:4px; transition:width .4s; }
+    .ddp-meta-line  { position:absolute; top:0; bottom:0; width:2px; background:rgba(241,214,145,.6); }
+    .ddp-meta-tip   { font-size:9px; color:rgba(241,214,145,.6); text-align:right; margin-top:2px; font-weight:600; }
+    .ddp-c-green { color:var(--green); }
+    .ddp-c-yellow{ color:var(--yellow);}
+    .ddp-c-red   { color:var(--red);   }
+    .ddp-c-gold  { color:var(--gold);  }
+    .ddp-fill-green  { background:linear-gradient(90deg,#1a8a4a,var(--green)); }
+    .ddp-fill-yellow { background:linear-gradient(90deg,#b07000,var(--yellow));}
+    .ddp-fill-red    { background:linear-gradient(90deg,#8a1a1a,var(--red));   }
+    .ddp-fill-gold   { background:linear-gradient(90deg,var(--gold-dark),var(--gold)); }
+    .ddp-ac-table { width:100%; border-collapse:collapse; font-size:10px; }
+    .ddp-ac-table th {
+      color:var(--muted); font-size:8.5px; font-weight:700; letter-spacing:.04em;
+      text-transform:uppercase; padding:5px 4px; text-align:center;
+      border-bottom:1px solid var(--border);
+    }
+    .ddp-ac-table th:first-child { text-align:left; }
+    .ddp-ac-table td {
+      padding:7px 4px; text-align:center; border-bottom:1px solid var(--navy3);
+      font-weight:700; color:var(--text); font-size:11px;
+    }
+    .ddp-ac-table td:first-child { text-align:left; color:var(--muted); font-size:10px; }
+    .ddp-ac-table .total-row td { color:var(--gold); font-size:11px; border-top:1px solid var(--border); border-bottom:none; background:rgba(241,214,145,.04); }
+    .ddp-hist-row { display:flex; align-items:center; gap:6px; padding:8px 0; border-bottom:1px solid var(--navy3); font-size:11px; }
+    .ddp-hist-row:last-child { border-bottom:none; }
+
     .nav {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: var(--navy2); border-top: 1px solid var(--border);
@@ -792,6 +895,11 @@
 
 </div>
 
+<!-- TELA DDP -->
+<div class="screen" id="screenDdp">
+  <div class="ddp-wrap" id="ddpWrap"></div>
+</div>
+
 <!-- NAV -->
 <div class="nav">
   <div class="nav-btn active" id="navHome" onclick="goTo('home')">
@@ -808,6 +916,9 @@
   </div>
   <div class="nav-btn hidden" id="navTimeRange" onclick="goTo('timerange')">
     <div class="nav-icon">⏱️</div><span class="nav-label">Time Range</span>
+  </div>
+  <div class="nav-btn hidden" id="navDdp" onclick="goTo('ddp')">
+    <div class="nav-icon">🏨</div><span class="nav-label">DDP</span>
   </div>
   <div class="nav-btn hidden" id="navEquipe" onclick="goTo('equipe')">
     <div class="nav-icon">👥</div><span class="nav-label">Equipe</span>
@@ -1159,11 +1270,14 @@ function afterLogin() {
   document.getElementById('splashCaptador').textContent = '👤 ' + captador.nome;
   const navEq = document.getElementById('navEquipe');
   const navTR = document.getElementById('navTimeRange');
+  const navDD = document.getElementById('navDdp');
   const isLider = ['lider','sublider','ceo'].includes(captador.cargo);
   if (['lider','ceo'].includes(captador.cargo)) navEq.classList.remove('hidden');
   else navEq.classList.add('hidden');
   if (isLider) navTR.classList.remove('hidden');
   else navTR.classList.add('hidden');
+  if (isLider) navDD.classList.remove('hidden');
+  else navDD.classList.add('hidden');
   // Restaurar a aba onde o usuário estava antes do reload
   const savedTab = sessionStorage.getItem('yv_tab') || 'home';
   goTo(savedTab);
@@ -1687,7 +1801,7 @@ function show(id) {
   document.getElementById('main').scrollTop = 0;
 }
 function setNav(tab) {
-  ['Home','New','Hist','Cdp','TimeRange','Equipe'].forEach(t => {
+  ['Home','New','Hist','Cdp','TimeRange','Ddp','Equipe'].forEach(t => {
     const el = document.getElementById('nav'+t);
     if (el) el.classList.remove('active');
   });
@@ -1716,6 +1830,7 @@ function goTo(tab) {
   else if (tab==='hist')      showHist();
   else if (tab==='cdp')       showCdp();
   else if (tab==='timerange') showTimeRange();
+  else if (tab==='ddp')       showDdp();
   else if (tab==='equipe')    showEquipe();
 }
 function goHome() { goTo('home'); }
@@ -3069,6 +3184,492 @@ function toggleEqPw(nome) {
   const maskEl = document.querySelector(`.eq-pw-mask[data-nome="${nome}"]`);
   if (maskEl) maskEl.textContent = eqPwState[nome] ? (getSenha(nome)||'—') : '••••••';
 }
+
+// ══════════════════════════════════════════════════════
+// DDP — Desempenho Diário de Penetração
+// ══════════════════════════════════════════════════════
+const DDP_CONFIG = {
+  operacoes: {
+    'Caldas Novas': ['Alta Vista', 'Atrium', 'Marina'],
+    'São Pedro':    ['SPTR'],
+    'Atibaia':      ['Atibaia'],
+  },
+  metaPenetracaoPool:  0.35,
+  metaPenetracaoGeral: 0.25,
+};
+
+// Estado da tela DDP
+let ddpState = {
+  operacao: 'Caldas Novas',
+  hotel:    'Alta Vista',
+};
+
+// Chave localStorage por hotel + data
+function ddpKey(hotel, dateISO) { return 'ddp_' + hotel.replace(/\s/g,'_') + '_' + dateISO; }
+function ddpKeyMes(hotel, anoMes) { return 'ddp_mes_' + hotel.replace(/\s/g,'_') + '_' + anoMes; }
+
+function ddpLoad(hotel, dateISO) {
+  try { return JSON.parse(localStorage.getItem(ddpKey(hotel, dateISO)) || 'null'); } catch(e) { return null; }
+}
+function ddpSave(hotel, dateISO, data) {
+  try { localStorage.setItem(ddpKey(hotel, dateISO), JSON.stringify(data)); } catch(e) {}
+}
+function ddpLoadHist(hotel) {
+  // retorna array dos últimos 30 registros salvos para o hotel
+  const entries = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('ddp_' + hotel.replace(/\s/g,'_') + '_') && !k.includes('_mes_')) {
+      try {
+        const v = JSON.parse(localStorage.getItem(k));
+        if (v && v.dateISO) entries.push(v);
+      } catch(e) {}
+    }
+  }
+  return entries.sort((a,b) => b.dateISO.localeCompare(a.dateISO)).slice(0, 30);
+}
+
+function ddpPctClass(val, meta) {
+  if (val >= meta)          return 'ddp-c-green';
+  if (val >= meta * 0.8)    return 'ddp-c-yellow';
+  return 'ddp-c-red';
+}
+function ddpFillClass(val, meta) {
+  if (val >= meta)          return 'ddp-fill-green';
+  if (val >= meta * 0.8)    return 'ddp-fill-yellow';
+  return 'ddp-fill-red';
+}
+function ddpPct(n, d) { return d > 0 ? Math.round(n / d * 100) : 0; }
+function fmtPct(v)    { return v + '%'; }
+
+function showDdp() {
+  hideAll(); show('screenDdp');
+  renderDdp();
+}
+
+function renderDdp() {
+  const wrap = document.getElementById('ddpWrap');
+  const hoje = todayISO();
+  const hojeStr = new Date().toLocaleDateString('pt-BR');
+  const op  = ddpState.operacao;
+  const hotel = ddpState.hotel;
+  const saved = ddpLoad(hotel, hoje) || {};
+
+  // Lê valores salvos ou usa 0
+  const ciPool    = saved.ciPool    || 0;
+  const ciCot     = saved.ciCot     || 0;
+  const ciTotal   = ciPool + ciCot;
+  const mc        = Math.round(ciPool * DDP_CONFIG.metaPenetracaoPool);
+
+  const salaPool  = saved.salaPool  || 0;
+  const salaCot   = saved.salaCot   || 0;
+  const salaConv  = saved.salaConv  || 0;
+  const salaTotal = salaPool + salaCot + salaConv;
+
+  const vendPool  = saved.vendPool  || 0;
+  const vendCot   = saved.vendCot   || 0;
+  const vendConv  = saved.vendConv  || 0;
+  const vendTotal = vendPool + vendCot + vendConv;
+
+  const penetPool  = ddpPct(salaPool + salaConv, ciPool);
+  const penetGeral = ddpPct(salaTotal, ciTotal);
+  const efic       = ddpPct(vendTotal, salaTotal);
+
+  const metaPool   = DDP_CONFIG.metaPenetracaoPool  * 100;
+  const metaGeral  = DDP_CONFIG.metaPenetracaoGeral * 100;
+
+  // Hotéis da operação selecionada
+  const hoteis = DDP_CONFIG.operacoes[op] || [];
+
+  // Histórico para este hotel
+  const hist = ddpLoadHist(hotel).filter(r => r.dateISO !== hoje).slice(0, 7);
+
+  // Acumulado do mês corrente para todos hotéis da operação
+  const anoMes = hoje.slice(0, 7);
+
+  function acHotel(h) {
+    const entries = ddpLoadHist(h).filter(r => r.dateISO.startsWith(anoMes));
+    const acc = { ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+    entries.forEach(e => {
+      acc.ciPool   += e.ciPool   || 0;
+      acc.ciCot    += e.ciCot    || 0;
+      acc.salaPool += e.salaPool || 0;
+      acc.salaCot  += e.salaCot  || 0;
+      acc.salaConv += e.salaConv || 0;
+      acc.vendPool += e.vendPool || 0;
+      acc.vendCot  += e.vendCot  || 0;
+      acc.vendConv += e.vendConv || 0;
+    });
+    acc.ciTotal   = acc.ciPool + acc.ciCot;
+    acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv;
+    acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv;
+    acc.mc        = Math.round(acc.ciPool * DDP_CONFIG.metaPenetracaoPool);
+    acc.penetPool  = ddpPct(acc.salaPool + acc.salaConv, acc.ciPool);
+    acc.penetGeral = ddpPct(acc.salaTotal, acc.ciTotal);
+    acc.efic       = ddpPct(acc.vendTotal, acc.salaTotal);
+    return acc;
+  }
+
+  // Build HTML
+  let html = `
+    <div class="ddp-hd">
+      <div class="ddp-hd-left">
+        <div class="ddp-title">🏨 DDP</div>
+        <div class="ddp-sub">Desempenho Diário de Penetração</div>
+      </div>
+      <div class="ddp-date-pill">${hojeStr}</div>
+    </div>
+    <div class="ddp-lock">🔒 Apenas lideranças</div>
+
+    <div class="ddp-sel-lbl">Operação</div>
+    <div class="ddp-op-chips">
+      ${Object.keys(DDP_CONFIG.operacoes).map(o =>
+        `<div class="ddp-chip${o===op?' active':''}" onclick="ddpSetOp('${o}')">${o}</div>`
+      ).join('')}
+    </div>
+
+    <div class="ddp-sel-lbl">Hotel</div>
+    <div class="ddp-hotel-chips">
+      ${hoteis.map(h =>
+        `<div class="ddp-chip${h===hotel?' active':''}" onclick="ddpSetHotel('${h}')">${h}</div>`
+      ).join('')}
+    </div>
+
+    <!-- CHECK-INS DE ONTEM -->
+    <div class="ddp-card">
+      <div class="ddp-card-title"><div class="ddp-dot" style="background:#4a9eff"></div>Check-ins de ontem</div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Check-ins Pool</strong><span>Clientes pool (não proprietários)</span></div>
+        <input class="ddp-num-in" id="ddp_ciPool" type="number" min="0" value="${ciPool}" oninput="ddpRecalc()"/>
+      </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Check-ins Cotistas</strong><span>Proprietários</span></div>
+        <input class="ddp-num-in" id="ddp_ciCot" type="number" min="0" value="${ciCot}" oninput="ddpRecalc()"/>
+      </div>
+      <div class="ddp-ir" style="background:rgba(241,214,145,.04);border-radius:8px;padding:8px 8px;border-bottom:none;margin-top:4px">
+        <div class="ddp-ir-lbl" style="display:flex;align-items:center;gap:8px">
+          <strong style="color:var(--gold)">Total Check-ins</strong>
+        </div>
+        <div class="ddp-num-calc" id="ddp_ciTotal">${ciTotal}</div>
+      </div>
+    </div>
+
+    <!-- CASAIS EM SALA -->
+    <div class="ddp-card">
+      <div class="ddp-card-title"><div class="ddp-dot" style="background:var(--gold)"></div>Casais em sala hoje</div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Casais Pool</strong><span>Clientes pool em apresentação</span></div>
+        <input class="ddp-num-in" id="ddp_salaPool" type="number" min="0" value="${salaPool}" oninput="ddpRecalc()"/>
+      </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Casais Cotistas</strong><span>Proprietários em apresentação</span></div>
+        <input class="ddp-num-in" id="ddp_salaCot" type="number" min="0" value="${salaCot}" oninput="ddpRecalc()"/>
+      </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Casais Convidados</strong><span>Convidados de proprietários</span></div>
+        <input class="ddp-num-in" id="ddp_salaConv" type="number" min="0" value="${salaConv}" oninput="ddpRecalc()"/>
+      </div>
+      <div class="ddp-ir" style="background:rgba(241,214,145,.04);border-radius:8px;padding:8px 8px;border-bottom:none;margin-top:4px">
+        <div class="ddp-ir-lbl" style="display:flex;align-items:center;gap:8px">
+          <strong style="color:var(--gold)">Total em sala</strong>
+          <span class="ddp-mc-pill">MC: <strong id="ddp_mc">${mc}</strong></span>
+        </div>
+        <div class="ddp-num-calc" id="ddp_salaTotal">${salaTotal}</div>
+      </div>
+    </div>
+
+    <!-- VENDAS -->
+    <div class="ddp-card">
+      <div class="ddp-card-title"><div class="ddp-dot" style="background:var(--green)"></div>Vendas do dia</div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Vendas Pool</strong><span>Fechamentos de clientes pool</span></div>
+        <input class="ddp-num-in" id="ddp_vendPool" type="number" min="0" value="${vendPool}" oninput="ddpRecalc()"/>
+      </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Vendas Cotistas</strong><span>Fechamentos de proprietários</span></div>
+        <input class="ddp-num-in" id="ddp_vendCot" type="number" min="0" value="${vendCot}" oninput="ddpRecalc()"/>
+      </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Vendas Convidados</strong><span>Fechamentos de convidados</span></div>
+        <input class="ddp-num-in" id="ddp_vendConv" type="number" min="0" value="${vendConv}" oninput="ddpRecalc()"/>
+      </div>
+      <div class="ddp-ir" style="background:rgba(46,204,113,.05);border-radius:8px;padding:8px 8px;border-bottom:none;margin-top:4px">
+        <div class="ddp-ir-lbl"><strong style="color:var(--green)">Total Vendas</strong></div>
+        <div class="ddp-num-calc green" id="ddp_vendTotal">${vendTotal}</div>
+      </div>
+    </div>
+
+    <!-- RESULTADO DO DIA -->
+    <div class="ddp-card" id="ddp_resultCard">
+      <div class="ddp-card-title"><div class="ddp-dot" style="background:#c47aff"></div>Resultado — ${hotel}</div>
+      <div class="ddp-res-row">
+        <div class="ddp-res-box gold">
+          <div class="ddp-res-val ddp-c-gold" id="ddp_rSala">${salaTotal}</div>
+          <div class="ddp-res-lbl">Em sala</div>
+        </div>
+        <div class="ddp-res-box gold">
+          <div class="ddp-res-val ddp-c-gold" id="ddp_rMc">${mc}</div>
+          <div class="ddp-res-lbl">MC (meta casais)</div>
+        </div>
+        <div class="ddp-res-box green">
+          <div class="ddp-res-val ddp-c-green" id="ddp_rVend">${vendTotal}</div>
+          <div class="ddp-res-lbl">Vendas</div>
+        </div>
+      </div>
+      ${ddpProgBar('Penetração Pool', penetPool, metaPool, 'pool')}
+      ${ddpProgBar('Penetração Geral', penetGeral, metaGeral, 'geral')}
+      ${ddpProgBarSim('Eficiência', efic, 'efic')}
+    </div>
+
+    <button class="btn btn-gold" onclick="ddpSalvarDia()" style="margin-bottom:16px">💾 Salvar registro do dia</button>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 16px"/>
+
+    <!-- ACUMULADO MÊS -->
+    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--muted)"></div>
+      Acumulado ${_mesLabel(anoMes)} — ${op}
+    </div>
+    <div class="ddp-card" style="padding:10px 12px">
+      <div style="overflow-x:auto">
+        <table class="ddp-ac-table">
+          <thead><tr>
+            <th>Hotel</th><th>CI<br>Total</th><th>CI<br>Pool</th>
+            <th>Sala</th><th>MC</th>
+            <th>Pen.<br>Pool</th><th>Pen.<br>Geral</th>
+            <th>Vendas</th><th>Efic.</th>
+          </tr></thead>
+          <tbody id="ddp_acBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO RECENTE -->
+    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 10px;display:flex;align-items:center;gap:6px">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--muted)"></div>
+      Histórico — ${hotel}
+    </div>
+    <div class="ddp-card" style="padding:8px 12px" id="ddp_histCard"></div>
+  `;
+
+  wrap.innerHTML = html;
+
+  // Renderiza acumulado e histórico após montar o DOM
+  _ddpRenderAc(hoteis, anoMes);
+  _ddpRenderHist(hist);
+}
+
+function _mesLabel(anoMes) {
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const [a, m] = anoMes.split('-');
+  return (meses[parseInt(m)-1]||m) + '/' + a;
+}
+
+function ddpProgBar(label, val, meta, id) {
+  const pClass = ddpPctClass(val/100, meta/100);
+  const fClass = ddpFillClass(val/100, meta/100);
+  const metaPct = Math.min(meta, 100);
+  return `
+    <div class="ddp-prog-wrap">
+      <div class="ddp-prog-top">
+        <span class="ddp-prog-lbl">${label}</span>
+        <span class="ddp-prog-pct ${pClass}" id="ddp_p${id}">${fmtPct(val)}</span>
+      </div>
+      <div class="ddp-prog-track">
+        <div class="ddp-prog-fill ${fClass}" id="ddp_f${id}" style="width:${Math.min(val,100)}%"></div>
+        <div class="ddp-meta-line" style="left:${metaPct}%"></div>
+      </div>
+      <div class="ddp-meta-tip">Meta: ${fmtPct(meta)}</div>
+    </div>`;
+}
+function ddpProgBarSim(label, val, id) {
+  const pClass = val >= 20 ? 'ddp-c-green' : val >= 10 ? 'ddp-c-yellow' : 'ddp-c-red';
+  const fClass = val >= 20 ? 'ddp-fill-green' : val >= 10 ? 'ddp-fill-yellow' : 'ddp-fill-red';
+  return `
+    <div class="ddp-prog-wrap">
+      <div class="ddp-prog-top">
+        <span class="ddp-prog-lbl">${label} <span style="font-size:9px;color:var(--border)">(vendas÷sala)</span></span>
+        <span class="ddp-prog-pct ${pClass}" id="ddp_p${id}">${fmtPct(val)}</span>
+      </div>
+      <div class="ddp-prog-track">
+        <div class="ddp-prog-fill ${fClass}" id="ddp_f${id}" style="width:${Math.min(val,100)}%"></div>
+      </div>
+    </div>`;
+}
+
+function _ddpRenderAc(hoteis, anoMes) {
+  const tbody = document.getElementById('ddp_acBody');
+  if (!tbody) return;
+  let totais = { ciPool:0, ciCot:0, ciTotal:0, salaTotal:0, mc:0, vendTotal:0 };
+  let rows = '';
+  hoteis.forEach(h => {
+    const a = acHotel(h);
+    totais.ciPool    += a.ciPool;
+    totais.ciCot     += a.ciCot;
+    totais.ciTotal   += a.ciTotal;
+    totais.salaTotal += a.salaTotal;
+    totais.mc        += a.mc;
+    totais.vendTotal += a.vendTotal;
+    const ppC = ddpPctClass(a.penetPool/100,  DDP_CONFIG.metaPenetracaoPool);
+    const pgC = ddpPctClass(a.penetGeral/100, DDP_CONFIG.metaPenetracaoGeral);
+    rows += `<tr>
+      <td>${h}</td><td>${a.ciTotal}</td><td>${a.ciPool}</td>
+      <td>${a.salaTotal}</td><td>${a.mc}</td>
+      <td class="${ppC}">${fmtPct(a.penetPool)}</td>
+      <td class="${pgC}">${fmtPct(a.penetGeral)}</td>
+      <td>${a.vendTotal}</td><td>${ddpPctClass(a.efic/100,0.2) === 'ddp-c-green' ? '<span class="ddp-c-green">'+fmtPct(a.efic)+'</span>' : fmtPct(a.efic)}</td>
+    </tr>`;
+  });
+  // Linha total
+  const tPP = ddpPct(totais.salaTotal, totais.ciPool); // simplificação — soma de pool+conv / ci pool não disponível sem detalhe
+  const tPG = ddpPct(totais.salaTotal, totais.ciTotal);
+  const tEf = ddpPct(totais.vendTotal, totais.salaTotal);
+  const ppC = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
+  const pgC = ddpPctClass(tPG/100, DDP_CONFIG.metaPenetracaoGeral);
+  rows += `<tr class="total-row">
+    <td>Total</td><td>${totais.ciTotal}</td><td>${totais.ciPool}</td>
+    <td>${totais.salaTotal}</td><td>${totais.mc}</td>
+    <td class="${ppC}">${fmtPct(tPP)}</td>
+    <td class="${pgC}">${fmtPct(tPG)}</td>
+    <td>${totais.vendTotal}</td><td>${fmtPct(tEf)}</td>
+  </tr>`;
+  tbody.innerHTML = rows;
+}
+
+function _ddpRenderHist(hist) {
+  const card = document.getElementById('ddp_histCard');
+  if (!card) return;
+  if (!hist.length) { card.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0">Nenhum registro ainda</div>'; return; }
+  let html = `<div class="ddp-hist-row">
+    <span style="flex:1;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">Data</span>
+    <span style="width:36px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">C.I.</span>
+    <span style="width:36px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">Sala</span>
+    <span style="width:36px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">Vend.</span>
+    <span style="width:44px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">Penet.</span>
+  </div>`;
+  hist.forEach(r => {
+    const ci   = (r.ciPool||0) + (r.ciCot||0);
+    const sala = (r.salaPool||0) + (r.salaCot||0) + (r.salaConv||0);
+    const vend = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
+    const pp   = ddpPct(r.salaPool + r.salaConv, r.ciPool);
+    const pC   = ddpPctClass(pp/100, DDP_CONFIG.metaPenetracaoPool);
+    const dateBR = r.dateISO ? r.dateISO.split('-').reverse().slice(0,2).join('/') : '—';
+    html += `<div class="ddp-hist-row">
+      <span style="flex:1;color:var(--muted)">${dateBR}</span>
+      <span style="width:36px;text-align:center;font-weight:700">${ci}</span>
+      <span style="width:36px;text-align:center;font-weight:700">${sala}</span>
+      <span style="width:36px;text-align:center;font-weight:700">${vend}</span>
+      <span style="width:44px;text-align:right;font-weight:800" class="${pC}">${fmtPct(pp)}</span>
+    </div>`;
+  });
+  card.innerHTML = html;
+}
+
+// Recalcula totais em tempo real sem regravar localStorage
+function ddpRecalc() {
+  const ciPool   = parseInt(document.getElementById('ddp_ciPool')?.value)   || 0;
+  const ciCot    = parseInt(document.getElementById('ddp_ciCot')?.value)    || 0;
+  const ciTotal  = ciPool + ciCot;
+  const mc       = Math.round(ciPool * DDP_CONFIG.metaPenetracaoPool);
+
+  const salaPool = parseInt(document.getElementById('ddp_salaPool')?.value) || 0;
+  const salaCot  = parseInt(document.getElementById('ddp_salaCot')?.value)  || 0;
+  const salaConv = parseInt(document.getElementById('ddp_salaConv')?.value) || 0;
+  const salaTotal= salaPool + salaCot + salaConv;
+
+  const vendPool = parseInt(document.getElementById('ddp_vendPool')?.value) || 0;
+  const vendCot  = parseInt(document.getElementById('ddp_vendCot')?.value)  || 0;
+  const vendConv = parseInt(document.getElementById('ddp_vendConv')?.value) || 0;
+  const vendTotal= vendPool + vendCot + vendConv;
+
+  const penetPool  = ddpPct(salaPool + salaConv, ciPool);
+  const penetGeral = ddpPct(salaTotal, ciTotal);
+  const efic       = ddpPct(vendTotal, salaTotal);
+  const metaPool   = DDP_CONFIG.metaPenetracaoPool  * 100;
+  const metaGeral  = DDP_CONFIG.metaPenetracaoGeral * 100;
+
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('ddp_ciTotal',   ciTotal);
+  set('ddp_salaTotal', salaTotal);
+  set('ddp_vendTotal', vendTotal);
+  set('ddp_mc',        mc);
+  set('ddp_rSala',     salaTotal);
+  set('ddp_rMc',       mc);
+  set('ddp_rVend',     vendTotal);
+  set('ddp_ppool',     fmtPct(penetPool));
+  set('ddp_pgeral',    fmtPct(penetGeral));
+  set('ddp_pefic',     fmtPct(efic));
+
+  const setBar = (fid, pid, val, meta, isSim) => {
+    const f = document.getElementById(fid);
+    const p = document.getElementById(pid);
+    if (f) { f.style.width = Math.min(val,100)+'%'; f.className = 'ddp-prog-fill ' + (isSim ? (val>=20?'ddp-fill-green':val>=10?'ddp-fill-yellow':'ddp-fill-red') : ddpFillClass(val/100, meta/100)); }
+    if (p) { p.className = 'ddp-prog-pct ' + (isSim ? (val>=20?'ddp-c-green':val>=10?'ddp-c-yellow':'ddp-c-red') : ddpPctClass(val/100, meta/100)); }
+  };
+  setBar('ddp_fpool',  'ddp_ppool',  penetPool,  metaPool,  false);
+  setBar('ddp_fgeral', 'ddp_pgeral', penetGeral, metaGeral, false);
+  setBar('ddp_fefic',  'ddp_pefic',  efic,       0,         true);
+}
+
+function ddpSalvarDia() {
+  const hotel   = ddpState.hotel;
+  const dateISO = todayISO();
+  const data = {
+    hotel, dateISO,
+    ciPool:   parseInt(document.getElementById('ddp_ciPool')?.value)   || 0,
+    ciCot:    parseInt(document.getElementById('ddp_ciCot')?.value)    || 0,
+    salaPool: parseInt(document.getElementById('ddp_salaPool')?.value) || 0,
+    salaCot:  parseInt(document.getElementById('ddp_salaCot')?.value)  || 0,
+    salaConv: parseInt(document.getElementById('ddp_salaConv')?.value) || 0,
+    vendPool: parseInt(document.getElementById('ddp_vendPool')?.value) || 0,
+    vendCot:  parseInt(document.getElementById('ddp_vendCot')?.value)  || 0,
+    vendConv: parseInt(document.getElementById('ddp_vendConv')?.value) || 0,
+  };
+  ddpSave(hotel, dateISO, data);
+  // Feedback visual
+  const btn = event.target;
+  btn.textContent = '✅ Salvo!';
+  btn.style.background = 'var(--green)';
+  setTimeout(() => { btn.textContent = '💾 Salvar registro do dia'; btn.style.background = ''; renderDdp(); }, 1200);
+}
+
+function ddpSetOp(op) {
+  ddpState.operacao = op;
+  const hoteis = DDP_CONFIG.operacoes[op] || [];
+  ddpState.hotel = hoteis[0] || '';
+  renderDdp();
+}
+function ddpSetHotel(h) {
+  ddpState.hotel = h;
+  renderDdp();
+}
+
+// Função acHotel precisa estar no escopo — reutilizada pelo renderDdp
+function acHotel(h) {
+  const anoMes = todayISO().slice(0, 7);
+  const entries = ddpLoadHist(h).filter(r => r.dateISO && r.dateISO.startsWith(anoMes));
+  const acc = { ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+  entries.forEach(e => {
+    acc.ciPool   += e.ciPool   || 0;
+    acc.ciCot    += e.ciCot    || 0;
+    acc.salaPool += e.salaPool || 0;
+    acc.salaCot  += e.salaCot  || 0;
+    acc.salaConv += e.salaConv || 0;
+    acc.vendPool += e.vendPool || 0;
+    acc.vendCot  += e.vendCot  || 0;
+    acc.vendConv += e.vendConv || 0;
+  });
+  acc.ciTotal   = acc.ciPool + acc.ciCot;
+  acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv;
+  acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv;
+  acc.mc        = Math.round(acc.ciPool * DDP_CONFIG.metaPenetracaoPool);
+  acc.penetPool  = ddpPct(acc.salaPool + acc.salaConv, acc.ciPool);
+  acc.penetGeral = ddpPct(acc.salaTotal, acc.ciTotal);
+  acc.efic       = ddpPct(acc.vendTotal, acc.salaTotal);
+  return acc;
+}
+
+// ── FIM DDP ──
 
 function showEquipe() {
   hideAll(); show('screenEquipe');
