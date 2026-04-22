@@ -2543,7 +2543,7 @@ function renderHistFiltros() {
   if (captador && captador.cargo === 'ceo') {
     const todasSalas = getTodasSalas();
     html += '<select class="filtro-select" onchange="setHistFiltro(\'sala\',this.value)">';
-    html += `<option value="todas"${histFiltro.sala==='todas'?' selected':''}>Sala</option>`;
+    html += `<option value="todas"${histFiltro.sala==='todas'?' selected':''}>Todos os pontos</option>`;
     todasSalas.forEach(s => {
       html += `<option value="${s.nome}"${histFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
     });
@@ -2904,7 +2904,7 @@ function renderCdpFiltros() {
   if (captador && temAcessoTotal(captador)) {
     const todasSalas = getTodasSalas();
     html += '<select class="filtro-select" onchange="setCdpFiltro(\'sala\',this.value)">';
-    html += `<option value="todas"${cdpFiltro.sala==='todas'?' selected':''}>Todas as salas</option>`;
+    html += `<option value="todas"${cdpFiltro.sala==='todas'?' selected':''}>Todos os pontos</option>`;
     todasSalas.forEach(s => {
       html += `<option value="${s.nome}"${cdpFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
     });
@@ -3203,7 +3203,7 @@ function renderTrFiltros() {
     html += '<div style="display:flex;gap:8px;margin-top:8px">';
     const todasSalas = getTodasSalas();
     html += '<select class="filtro-select" onchange="setTrFiltro(\'sala\',this.value)">';
-    html += `<option value="todas"${trFiltro.sala==='todas'?' selected':''}>Todas as salas</option>`;
+    html += `<option value="todas"${trFiltro.sala==='todas'?' selected':''}>Todos os pontos</option>`;
     todasSalas.forEach(s => {
       html += `<option value="${s.nome}"${trFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
     });
