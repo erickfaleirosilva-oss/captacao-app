@@ -3452,7 +3452,7 @@ function ddpLoadHist(hotel) {
       } catch(e) {}
     }
   }
-  return entries.sort((a,b) => b.dateISO.localeCompare(a.dateISO)).slice(0, 30);
+  return entries.sort((a,b) => b.dateISO.localeCompare(a.dateISO));
 }
 
 function ddpPctClass(val, meta) {
@@ -3528,7 +3528,7 @@ function renderDdp() {
   const hoteis = DDP_CONFIG.operacoes[op] || [];
 
   // Histórico para este hotel (exclui a data ativa para não duplicar)
-  const hist = ddpLoadHist(hotel).filter(r => r.dateISO !== dataAtiva).slice(0, 7);
+  const hist = ddpLoadHist(hotel).filter(r => r.dateISO !== dataAtiva);
 
   // Acumulado do mês da data ativa
   const anoMes = dataAtiva.slice(0, 7);
