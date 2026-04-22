@@ -3493,6 +3493,16 @@ function ddpSheetsLoad(hotel) {
     .then(r => r.json())
     .then(res => {
       if (res.ok && Array.isArray(res.rows)) {
+        // Normaliza dateISO — Sheets pode retornar objetos Date ou strings ISO com "T"
+        res.rows.forEach(row => {
+          if (row.dateISO) {
+            const s = String(row.dateISO).trim();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+              const d = new Date(row.dateISO);
+              row.dateISO = !isNaN(d) ? d.toISOString().slice(0, 10) : s.split('T')[0];
+            }
+          }
+        });
         _ddpRemoteCache[hotel] = res.rows;
         // Sincroniza no localStorage para acesso offline futuro
         res.rows.forEach(row => {
@@ -3959,9 +3969,23 @@ function _ddpRenderHist(hist) {
   if (!hist.length) { card.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0">Nenhum registro ainda</div>'; return; }
 
   const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  function normISO(v) {
+    // Converte qualquer formato de data para YYYY-MM-DD
+    if (!v) return '';
+    const s = String(v).trim();
+    // Já está no formato correto
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // Formato com T (ISO 8601): "2025-07-31T00:00:00.000Z"
+    if (s.includes('T')) return s.split('T')[0];
+    // Objeto Date serializado pelo Sheets (ex: "Wed Jul 31 2025 00:00:00 GMT...")
+    const d = new Date(v);
+    if (!isNaN(d)) return d.toISOString().slice(0, 10);
+    return s;
+  }
   function fmtData(dateISO) {
-    if (!dateISO) return '—';
-    const [yy, mm, dd] = dateISO.split('-');
+    const clean = normISO(dateISO);
+    if (!clean || clean.length < 10) return clean || '—';
+    const [yy, mm, dd] = clean.split('-');
     const isUltimoDia = new Date(Number(yy), Number(mm), 0).getDate() === Number(dd);
     return (dd === '01' || isUltimoDia)
       ? MESES[Number(mm)-1] + '/' + yy.slice(2)
