@@ -3970,7 +3970,17 @@ function _ddpRenderHist(hist) {
     const vend = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
     const pp   = ddpPct((r.salaPool||0) + (r.salaConv||0), r.ciPool);
     const pC   = ddpPctClass(pp/100, DDP_CONFIG.metaPenetracaoPool);
-    const dateBR = r.dateISO ? r.dateISO.split('-').reverse().slice(0,2).join('/') : '—';
+    // Se o registro é mensal consolidado (campo mensal=true ou dia=01 ou último do mês), exibe Mês/Ano
+    const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    let dateBR = '—';
+    if (r.dateISO) {
+      const [yy, mm, dd] = r.dateISO.split('-');
+      const isUltimoDia = new Date(Number(yy), Number(mm), 0).getDate() === Number(dd);
+      const isConsolidado = r.mensal || dd === '01' || isUltimoDia;
+      dateBR = isConsolidado
+        ? (MESES[Number(mm)-1] + '/' + yy.slice(2))   // ex: Jul/25
+        : dd + '/' + mm;                                // ex: 22/04
+    }
     html += `<div class="ddp-hist-row">
       <span style="flex:1;color:var(--muted)">${dateBR}</span>
       <span style="width:36px;text-align:center;font-weight:700">${ci}</span>
