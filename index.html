@@ -3192,7 +3192,6 @@ const DDP_CONFIG = {
   operacoes: {
     'Caldas Novas': ['Alta Vista', 'Atrium', 'Marina'],
     'São Pedro':    ['SPTR'],
-    'Atibaia':      ['Atibaia'],
   },
   metaPenetracaoPool:  0.35,
   metaPenetracaoGeral: 0.25,
@@ -3202,6 +3201,7 @@ const DDP_CONFIG = {
 let ddpState = {
   operacao: 'Caldas Novas',
   hotel:    'Alta Vista',
+  dateISO:  null, // null = hoje
 };
 
 // Chave localStorage por hotel + data
@@ -3250,10 +3250,12 @@ function showDdp() {
 function renderDdp() {
   const wrap = document.getElementById('ddpWrap');
   const hoje = todayISO();
-  const hojeStr = new Date().toLocaleDateString('pt-BR');
+  const dataAtiva = ddpState.dateISO || hoje;
+  const dataAtivaBR = dataAtiva.split('-').reverse().join('/');
+  const isHoje = dataAtiva === hoje;
   const op  = ddpState.operacao;
   const hotel = ddpState.hotel;
-  const saved = ddpLoad(hotel, hoje) || {};
+  const saved = ddpLoad(hotel, dataAtiva) || {};
 
   // Lê valores salvos ou usa 0
   const ciPool    = saved.ciPool    || 0;
@@ -3281,11 +3283,11 @@ function renderDdp() {
   // Hotéis da operação selecionada
   const hoteis = DDP_CONFIG.operacoes[op] || [];
 
-  // Histórico para este hotel
-  const hist = ddpLoadHist(hotel).filter(r => r.dateISO !== hoje).slice(0, 7);
+  // Histórico para este hotel (exclui a data ativa para não duplicar)
+  const hist = ddpLoadHist(hotel).filter(r => r.dateISO !== dataAtiva).slice(0, 7);
 
-  // Acumulado do mês corrente para todos hotéis da operação
-  const anoMes = hoje.slice(0, 7);
+  // Acumulado do mês da data ativa
+  const anoMes = dataAtiva.slice(0, 7);
 
   function acHotel(h) {
     const entries = ddpLoadHist(h).filter(r => r.dateISO.startsWith(anoMes));
@@ -3317,9 +3319,18 @@ function renderDdp() {
         <div class="ddp-title">🏨 DDP</div>
         <div class="ddp-sub">Desempenho Diário de Penetração</div>
       </div>
-      <div class="ddp-date-pill">${hojeStr}</div>
+      <div class="ddp-date-pill">${isHoje ? '📅 Hoje' : '📅 ' + dataAtivaBR}</div>
     </div>
     <div class="ddp-lock">🔒 Apenas lideranças</div>
+
+    <div class="ddp-sel-lbl">Data do registro</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <input type="date" id="ddp_datePicker"
+        value="${dataAtiva}" max="${hoje}"
+        style="background:var(--navy2);border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--text);flex:1"
+        onchange="ddpSetDate(this.value)"/>
+      ${!isHoje ? `<div class="ddp-mc-pill" style="white-space:nowrap">⚡ Retroativo</div>` : ''}
+    </div>
 
     <div class="ddp-sel-lbl">Operação</div>
     <div class="ddp-op-chips">
@@ -3335,9 +3346,9 @@ function renderDdp() {
       ).join('')}
     </div>
 
-    <!-- CHECK-INS DE ONTEM -->
+    <!-- CHECK-INS -->
     <div class="ddp-card">
-      <div class="ddp-card-title"><div class="ddp-dot" style="background:#4a9eff"></div>Check-ins de ontem</div>
+      <div class="ddp-card-title"><div class="ddp-dot" style="background:#4a9eff"></div>Check-ins${isHoje ? ' de ontem' : ' do dia ' + dataAtivaBR.slice(0,5)}</div>
       <div class="ddp-ir">
         <div class="ddp-ir-lbl"><strong>Check-ins Pool</strong><span>Clientes pool (não proprietários)</span></div>
         <input class="ddp-num-in" id="ddp_ciPool" type="number" min="0" value="${ciPool}" oninput="ddpRecalc()"/>
@@ -3356,7 +3367,7 @@ function renderDdp() {
 
     <!-- CASAIS EM SALA -->
     <div class="ddp-card">
-      <div class="ddp-card-title"><div class="ddp-dot" style="background:var(--gold)"></div>Casais em sala hoje</div>
+      <div class="ddp-card-title"><div class="ddp-dot" style="background:var(--gold)"></div>Casais em sala${isHoje ? ' hoje' : ' em ' + dataAtivaBR.slice(0,5)}</div>
       <div class="ddp-ir">
         <div class="ddp-ir-lbl"><strong>Casais Pool</strong><span>Clientes pool em apresentação</span></div>
         <input class="ddp-num-in" id="ddp_salaPool" type="number" min="0" value="${salaPool}" oninput="ddpRecalc()"/>
@@ -3500,39 +3511,46 @@ function ddpProgBarSim(label, val, id) {
 function _ddpRenderAc(hoteis, anoMes) {
   const tbody = document.getElementById('ddp_acBody');
   if (!tbody) return;
-  let totais = { ciPool:0, ciCot:0, ciTotal:0, salaTotal:0, mc:0, vendTotal:0 };
+  // totais inclui salaPool e salaConv separados para penetração pool correta
+  let totais = { ciPool:0, ciCot:0, ciTotal:0, salaPool:0, salaConv:0, salaTotal:0, mc:0, vendTotal:0 };
   let rows = '';
   hoteis.forEach(h => {
     const a = acHotel(h);
     totais.ciPool    += a.ciPool;
     totais.ciCot     += a.ciCot;
     totais.ciTotal   += a.ciTotal;
+    totais.salaPool  += a.salaPool  || 0;
+    totais.salaConv  += a.salaConv  || 0;
     totais.salaTotal += a.salaTotal;
     totais.mc        += a.mc;
     totais.vendTotal += a.vendTotal;
     const ppC = ddpPctClass(a.penetPool/100,  DDP_CONFIG.metaPenetracaoPool);
     const pgC = ddpPctClass(a.penetGeral/100, DDP_CONFIG.metaPenetracaoGeral);
+    const efC = a.efic >= 20 ? 'ddp-c-green' : a.efic >= 10 ? 'ddp-c-yellow' : 'ddp-c-red';
     rows += `<tr>
       <td>${h}</td><td>${a.ciTotal}</td><td>${a.ciPool}</td>
       <td>${a.salaTotal}</td><td>${a.mc}</td>
       <td class="${ppC}">${fmtPct(a.penetPool)}</td>
       <td class="${pgC}">${fmtPct(a.penetGeral)}</td>
-      <td>${a.vendTotal}</td><td>${ddpPctClass(a.efic/100,0.2) === 'ddp-c-green' ? '<span class="ddp-c-green">'+fmtPct(a.efic)+'</span>' : fmtPct(a.efic)}</td>
+      <td>${a.vendTotal}</td><td class="${efC}">${fmtPct(a.efic)}</td>
     </tr>`;
   });
-  // Linha total
-  const tPP = ddpPct(totais.salaTotal, totais.ciPool); // simplificação — soma de pool+conv / ci pool não disponível sem detalhe
-  const tPG = ddpPct(totais.salaTotal, totais.ciTotal);
-  const tEf = ddpPct(totais.vendTotal, totais.salaTotal);
-  const ppC = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
-  const pgC = ddpPctClass(tPG/100, DDP_CONFIG.metaPenetracaoGeral);
-  rows += `<tr class="total-row">
-    <td>Total</td><td>${totais.ciTotal}</td><td>${totais.ciPool}</td>
-    <td>${totais.salaTotal}</td><td>${totais.mc}</td>
-    <td class="${ppC}">${fmtPct(tPP)}</td>
-    <td class="${pgC}">${fmtPct(tPG)}</td>
-    <td>${totais.vendTotal}</td><td>${fmtPct(tEf)}</td>
-  </tr>`;
+  // Linha Total (só mostra se há mais de 1 hotel)
+  if (hoteis.length > 1) {
+    const tPP = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool);
+    const tPG = ddpPct(totais.salaTotal, totais.ciTotal);
+    const tEf = ddpPct(totais.vendTotal, totais.salaTotal);
+    const ppC = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
+    const pgC = ddpPctClass(tPG/100, DDP_CONFIG.metaPenetracaoGeral);
+    const efC = tEf >= 20 ? 'ddp-c-green' : tEf >= 10 ? 'ddp-c-yellow' : 'ddp-c-red';
+    rows += `<tr class="total-row">
+      <td>Total CN</td><td>${totais.ciTotal}</td><td>${totais.ciPool}</td>
+      <td>${totais.salaTotal}</td><td>${totais.mc}</td>
+      <td class="${ppC}">${fmtPct(tPP)}</td>
+      <td class="${pgC}">${fmtPct(tPG)}</td>
+      <td>${totais.vendTotal}</td><td class="${efC}">${fmtPct(tEf)}</td>
+    </tr>`;
+  }
   tbody.innerHTML = rows;
 }
 
@@ -3613,7 +3631,7 @@ function ddpRecalc() {
 
 function ddpSalvarDia() {
   const hotel   = ddpState.hotel;
-  const dateISO = todayISO();
+  const dateISO = ddpState.dateISO || todayISO();
   const data = {
     hotel, dateISO,
     ciPool:   parseInt(document.getElementById('ddp_ciPool')?.value)   || 0,
@@ -3633,6 +3651,10 @@ function ddpSalvarDia() {
   setTimeout(() => { btn.textContent = '💾 Salvar registro do dia'; btn.style.background = ''; renderDdp(); }, 1200);
 }
 
+function ddpSetDate(iso) {
+  ddpState.dateISO = iso || null;
+  renderDdp();
+}
 function ddpSetOp(op) {
   ddpState.operacao = op;
   const hoteis = DDP_CONFIG.operacoes[op] || [];
