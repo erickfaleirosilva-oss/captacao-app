@@ -1197,13 +1197,28 @@ const API = {
   }
 };
 
+// Mapa de normalização: nomes antigos de sala → nomes atuais
+// Definido aqui (antes de leads) para poder ser usado no carregamento inicial
+const SALA_ALIAS = {
+  'São Pedro Resort': 'SPTR',
+  'Thermas São Pedro': 'Thermas SP',
+  'THERMAS SÃO PEDRO': 'Thermas SP',
+  'THERMAS SÃO PEDRO - HOTEL': 'SPTR',
+  'Thermas - UH AP': 'Thermas SP',
+  'SP Resort': 'SPTR',
+};
+function normalizarSala(sala) {
+  if (!sala) return sala;
+  return SALA_ALIAS[sala] || sala;
+}
+
 // ESTADO
 let mode     = 'low';
 let step     = 0;
 let ans      = {};
 let captador = null;
 let salaAtual = null;
-let leads    = JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]');
+let leads    = (JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]')).map(l => ({ ...l, sala: normalizarSala(l.sala) }));
 let loginSelectedNome = null;
 let histFiltro = { periodo: 'hoje', captador: 'todos', sala: 'todas', de: '', ate: '' };
 let cdpFiltro  = { periodo: 'hoje', sala: 'todas', captador: 'todos', de: '', ate: '' };
@@ -1221,10 +1236,16 @@ function setSenha(nome, pw) {
 function temAcessoTotal(c) {
   return c && ['sublider','lider','ceo'].includes(c.cargo);
 }
-// CEO vê tudo; lider/sublider vê só a sua sala; captador vê só o próprio
+// Retorna as salas da operação do líder (para filtro quando não tem sala fixa)
+function getSalasDeOperacao(operacao) {
+  if (!operacao) return [];
+  return CONFIG.salas.filter(s => s.operacao === operacao).map(s => s.nome);
+}
+// CEO vê tudo; lider/sublider com sala fixa vê só sua sala;
+// lider/sublider com operacao (sem sala fixa) vê todas as salas da operação
 function getSalaDoLider(c) {
   if (!c) return null;
-  if (c.cargo === 'ceo') return null; // null = sem filtro de sala
+  if (c.cargo === 'ceo') return null;
   if (c.sala) return c.sala;
   return null;
 }
@@ -1232,8 +1253,12 @@ function filtrarPorAcesso(lista) {
   if (!captador) return [];
   if (captador.cargo === 'ceo') return lista;
   if (['lider','sublider'].includes(captador.cargo)) {
-    const sala = getSalaDoLider(captador);
-    return sala ? lista.filter(l => l.sala === sala) : lista;
+    if (captador.sala) return lista.filter(l => l.sala === captador.sala);
+    if (captador.operacao) {
+      const salas = getSalasDeOperacao(captador.operacao);
+      return salas.length ? lista.filter(l => salas.includes(l.sala)) : lista;
+    }
+    return lista;
   }
   return lista.filter(l => l.captador === captador.nome);
 }
@@ -1242,8 +1267,12 @@ function filtrarPorAcessoPI(lista) {
   if (!captador) return [];
   if (captador.cargo === 'ceo') return lista;
   if (['lider','sublider'].includes(captador.cargo)) {
-    const sala = getSalaDoLider(captador);
-    return sala ? lista.filter(p => p.sala === sala) : lista;
+    if (captador.sala) return lista.filter(p => p.sala === captador.sala);
+    if (captador.operacao) {
+      const salas = getSalasDeOperacao(captador.operacao);
+      return salas.length ? lista.filter(p => salas.includes(p.sala)) : lista;
+    }
+    return lista;
   }
   return lista.filter(p => p.captador === captador.nome);
 }
@@ -2806,6 +2835,7 @@ function mergeRemoto(remoto) {
   remoto.forEach(r => {
     r.date = normalizarDate(r.date, r.id);
     r.time = normalizarTime(r.time, r.id);
+    r.sala = normalizarSala(r.sala); // translada nomes antigos → atuais
     if (!r.dateISO || r.dateISO === '') {
       const p = r.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       r.dateISO = p ? p[3] + '-' + p[2] + '-' + p[1] : '';
