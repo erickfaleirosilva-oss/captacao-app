@@ -1125,6 +1125,7 @@ const CONFIG = {
     { id: 'alta-vista', nome: 'Alta Vista',  cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Alta Vista',  operacao: 'Caldas Novas', ddpHotel: 'Alta Vista' },
     { id: 'atrium',     nome: 'Atrium',      cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Atrium',      operacao: 'Caldas Novas', ddpHotel: 'Atrium'     },
     { id: 'marina',     nome: 'Marina',      cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Marina',      operacao: 'Caldas Novas', ddpHotel: 'Marina'     },
+    { id: 'externo-cn', nome: 'Externo',     cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Externo CN',  operacao: 'Caldas Novas', ddpHotel: null         },
     { id: 'thermas-sp', nome: 'Thermas SP',  cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'Thermas SP',  operacao: 'São Pedro',    ddpHotel: null         },
     { id: 'sptr',       nome: 'SPTR',        cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'São Pedro',   operacao: 'São Pedro',    ddpHotel: 'SPTR'       },
     { id: 'atibaia',    nome: 'Atibaia',     cidade: 'Atibaia',      modos: [],                   sheetName: 'Atibaia',     operacao: null,           ddpHotel: null         },
@@ -1133,8 +1134,8 @@ const CONFIG = {
   salasDdpAuto: ['Alta Vista', 'Atrium', 'Marina', 'SPTR'],
   // Salas onde aparece apenas 🤝 venda (sem chips de tipo)
   salasDdpVenda: ['Atibaia', 'Thermas SP'],
-  // Hotéis de Caldas Novas (captadores escolhem ao iniciar)
-  salasCaldas: ['Alta Vista', 'Atrium', 'Marina'],
+  // Pontos de Caldas Novas (captadores escolhem ao iniciar)
+  salasCaldas: ['Alta Vista', 'Atrium', 'Marina', 'Externo'],
   // Operações de São Pedro (captadores escolhem a sala ao iniciar)
   salasSaoPedro: ['Thermas SP', 'SPTR'],
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
@@ -2081,14 +2082,14 @@ function startQuiz() {
   hideAll(); show('screenSala');
 }
 
-// Tela específica de seleção de hotel para captadores de Caldas Novas
+// Tela específica de seleção de ponto para captadores de Caldas Novas
 function renderSalaCnScreen() {
   const chips = document.getElementById('salaChips');
-  const salas = CONFIG.salasCaldas; // ['Alta Vista', 'Atrium', 'Marina']
-  const icons = { 'Alta Vista': '🏔️', 'Atrium': '🏩', 'Marina': '⛵' };
-  const descs = { 'Alta Vista': 'Hotel Alta Vista Resort', 'Atrium': 'Hotel Atrium Thermas Resort', 'Marina': 'Marina Thermas Resort' };
+  const salas = CONFIG.salasCaldas; // ['Alta Vista', 'Atrium', 'Marina', 'Externo']
+  const icons = { 'Alta Vista': '🏔️', 'Atrium': '🏩', 'Marina': '⛵', 'Externo': '🚶' };
+  const descs = { 'Alta Vista': 'Hotel Alta Vista Resort', 'Atrium': 'Hotel Atrium Thermas Resort', 'Marina': 'Marina Thermas Resort', 'Externo': 'Captação de rua — fora dos hotéis' };
   chips.innerHTML = salas.map(nome => {
-    const cfg = CONFIG.salas.find(s => s.nome === nome);
+    const cfg = CONFIG.salas.find(s => s.nome === nome && s.operacao === 'Caldas Novas');
     return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nome}')">
       <div class="sala-chip-icon">${icons[nome] || '🏢'}</div>
       <div class="sala-chip-label">${nome}</div>
@@ -2098,9 +2099,9 @@ function renderSalaCnScreen() {
   document.getElementById('fieldOutraSala').value = '';
   document.getElementById('btnIniciarQuiz').disabled = true;
   const title = document.getElementById('salaTitulo');
-  if (title) title.textContent = '📍 Qual hotel hoje?';
+  if (title) title.textContent = '📍 Qual ponto você está hoje?';
   const sub = document.getElementById('salaSub');
-  if (sub) sub.textContent = 'Selecione o hotel onde você está prospectando agora';
+  if (sub) sub.textContent = 'Selecione onde você está prospectando agora';
 }
 
 // Tela específica de seleção de sala para captadores de São Pedro
