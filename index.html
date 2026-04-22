@@ -3399,6 +3399,7 @@ const DDP_CONFIG = {
   },
   metaPenetracaoPool:  0.35,
   metaPenetracaoGeral: 0.25,
+  sheetsUrl: 'https://script.google.com/macros/s/AKfycbzeRsnRciLbesVlgKAjNGNu7T5BqzcerAlBnz8e2gWxEg3lqYVXYAIvgZeiJPw-QYFk7g/exec',
 };
 
 // Calcula casais em sala e vendas automaticamente a partir dos leads do dia
@@ -3440,19 +3441,76 @@ function ddpLoad(hotel, dateISO) {
 function ddpSave(hotel, dateISO, data) {
   try { localStorage.setItem(ddpKey(hotel, dateISO), JSON.stringify(data)); } catch(e) {}
 }
+
+// Cache de dados remotos por hotel (carregados uma vez ao abrir o DDP)
+const _ddpRemoteCache = {};
+
+// Carrega dados do Google Sheets para um hotel e armazena em _ddpRemoteCache
+// Re-renderiza o DDP quando os dados chegam
+function ddpSheetsLoad(hotel) {
+  if (!DDP_CONFIG.sheetsUrl) return;
+  const hotelEnc = encodeURIComponent(hotel);
+  fetch(DDP_CONFIG.sheetsUrl + '?hotel=' + hotelEnc)
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok && Array.isArray(res.rows)) {
+        _ddpRemoteCache[hotel] = res.rows;
+        // Sincroniza no localStorage para acesso offline futuro
+        res.rows.forEach(row => {
+          if (row.hotel && row.dateISO) {
+            const existing = ddpLoad(row.hotel, row.dateISO);
+            // Só sobrescreve se não tiver dados locais (remoto é fonte de verdade para histórico)
+            if (!existing) ddpSave(row.hotel, row.dateISO, row);
+          }
+        });
+        // Re-renderiza para refletir os dados recém-chegados
+        if (document.getElementById('screenDdp') && !document.getElementById('screenDdp').classList.contains('hidden')) {
+          renderDdp();
+        }
+      }
+    })
+    .catch(() => {}); // Offline — usa só localStorage
+}
+
+// Grava uma entrada no Google Sheets (fire-and-forget com retry silencioso)
+function ddpSheetsSave(entry) {
+  if (!DDP_CONFIG.sheetsUrl) return;
+  // Atualiza o cache local imediatamente
+  if (!_ddpRemoteCache[entry.hotel]) _ddpRemoteCache[entry.hotel] = [];
+  const idx = _ddpRemoteCache[entry.hotel].findIndex(r => r.dateISO === entry.dateISO);
+  if (idx >= 0) _ddpRemoteCache[entry.hotel][idx] = entry;
+  else _ddpRemoteCache[entry.hotel].push(entry);
+
+  fetch(DDP_CONFIG.sheetsUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(entry),
+  }).catch(() => {}); // Falha silenciosa — dado já está no localStorage
+}
+
 function ddpLoadHist(hotel) {
-  // retorna array dos últimos 30 registros salvos para o hotel
-  const entries = [];
+  // Mescla dados remotos (cache) com localStorage — remote tem prioridade por dateISO
+  const byDate = {};
+
+  // 1. Carrega dados do localStorage
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
     if (k && k.startsWith('ddp_' + hotel.replace(/\s/g,'_') + '_') && !k.includes('_mes_')) {
       try {
         const v = JSON.parse(localStorage.getItem(k));
-        if (v && v.dateISO) entries.push(v);
+        if (v && v.dateISO) byDate[v.dateISO] = v;
       } catch(e) {}
     }
   }
-  return entries.sort((a,b) => b.dateISO.localeCompare(a.dateISO));
+
+  // 2. Dados remotos sobrescrevem (mais atualizados)
+  if (_ddpRemoteCache[hotel]) {
+    _ddpRemoteCache[hotel].forEach(row => {
+      if (row && row.dateISO) byDate[row.dateISO] = row;
+    });
+  }
+
+  return Object.values(byDate).sort((a,b) => b.dateISO.localeCompare(a.dateISO));
 }
 
 function ddpPctClass(val, meta) {
@@ -3486,6 +3544,10 @@ function showDdp() {
   }
   hideAll(); show('screenDdp');
   renderDdp();
+  // Carrega dados de todos os hotéis visíveis do Sheets (async — re-renderiza ao chegar)
+  opcoes.forEach(op => {
+    (DDP_CONFIG.operacoes[op] || []).forEach(h => ddpSheetsLoad(h));
+  });
 }
 
 function renderDdp() {
@@ -4067,7 +4129,8 @@ function ddpSalvarDia() {
     vendCot:  _ddpVal('ddp_vendCot'),
     vendConv: _ddpVal('ddp_vendConv'),
   };
-  ddpSave(hotel, dateISO, data);
+  ddpSave(hotel, dateISO, data);   // localStorage (sempre, inclusive offline)
+  ddpSheetsSave(data);             // Google Sheets (fire-and-forget)
   // Feedback visual
   const btn = event.target;
   btn.textContent = '✅ Salvo!';
@@ -4088,6 +4151,8 @@ function ddpSetOp(op) {
 function ddpSetHotel(h) {
   ddpState.hotel = h;
   renderDdp();
+  // Carrega do Sheets se ainda não tiver em cache
+  if (!_ddpRemoteCache[h]) ddpSheetsLoad(h);
 }
 
 // Função acHotel precisa estar no escopo — reutilizada pelo renderDdp
