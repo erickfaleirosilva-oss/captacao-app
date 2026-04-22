@@ -217,6 +217,7 @@
     .sala-chip.selected { border-color: var(--gold); background: rgba(201,168,76,.1); }
     .sala-chip-icon { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; }
     .sala-chip-label { font-size: 14px; font-weight: 600; color: var(--text); }
+    .sala-chip-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .sala-chip.selected .sala-chip-label { color: var(--gold2); }
     .progress-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 18px; overflow: hidden; }
     .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold3)); border-radius: 2px; transition: width .3s ease; }
@@ -378,6 +379,26 @@
     .hc-sala-btn { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 2px; border-radius:6px; transition:transform .15s; line-height:1; flex-shrink:0; opacity:.75; }
     .hc-sala-btn:active { transform:scale(.85); }
     .hc-sala-btn.marcado { opacity:1; }
+    /* ── tipo + venda no card histórico ── */
+    .hc-actions { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .hc-actions-lbl { font-size:9px; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.08em; width:100%; margin-bottom:1px; }
+    .hc-tipo-chip {
+      padding:4px 11px; border-radius:16px; font-size:11px; font-weight:700;
+      border:1.5px solid var(--border); color:var(--muted);
+      background:transparent; cursor:pointer; transition:all .13s;
+    }
+    .hc-tipo-chip:active { transform:scale(.92); }
+    .hc-tipo-chip.pool    { border-color:#3b82f6; background:rgba(59,130,246,.15); color:#60a5fa; }
+    .hc-tipo-chip.cotista { border-color:#a78bfa; background:rgba(167,139,250,.15); color:#c4b5fd; }
+    .hc-tipo-chip.conv    { border-color:#f59e0b; background:rgba(245,158,11,.15);  color:#fbbf24; }
+    .hc-venda-btn {
+      margin-left:auto; background:none; border:1.5px solid var(--border);
+      border-radius:50%; width:32px; height:32px; font-size:15px;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      color:var(--muted); transition:all .13s; flex-shrink:0;
+    }
+    .hc-venda-btn:active { transform:scale(.88); }
+    .hc-venda-btn.vendeu { border-color:var(--gold); background:rgba(241,214,145,.12); color:var(--gold); }
     .cdp-m-num.sala { color: #64a0ff; }
     .cdp-m-num.sala-nq { color: var(--red); }
     .cdp-m-num.conv { color: var(--gold2); }
@@ -592,6 +613,12 @@
       color:#4a9eff; font-size:10px; font-weight:700;
       border-radius:6px; padding:2px 8px;
     }
+    .ddp-auto-badge {
+      display:inline-flex; align-items:center;
+      background:rgba(74,222,128,.1); border:1px solid rgba(74,222,128,.25);
+      color:#4ade80; font-size:9px; font-weight:700;
+      border-radius:5px; padding:1px 6px; margin-left:6px;
+    }
     .ddp-res-row  { display:flex; gap:8px; margin-bottom:10px; }
     .ddp-res-box  {
       flex:1; background:var(--navy3); border:1px solid var(--border);
@@ -614,6 +641,55 @@
     .ddp-c-yellow{ color:var(--yellow);}
     .ddp-c-red   { color:var(--red);   }
     .ddp-c-gold  { color:var(--gold);  }
+    /* ── Card WhatsApp DDP ── */
+    .ddp-wpp-wrap { margin-top:20px; }
+    .ddp-wpp-sec-lbl { font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px; }
+    .ddp-wpp-card {
+      background:#1e2d4a; border-radius:6px; overflow:hidden;
+      box-shadow:0 4px 16px rgba(0,0,0,.5); font-family:'Segoe UI',Arial,sans-serif;
+    }
+    .ddp-wpp-top {
+      display:grid; grid-template-columns:1fr 2fr;
+      border-bottom:1px solid #3a4d6a;
+    }
+    .ddp-wpp-date {
+      background:#3d4f6e; padding:10px 12px;
+      font-size:13px; font-weight:700; color:#f0efe8;
+      display:flex; align-items:center;
+    }
+    .ddp-wpp-title {
+      background:#3d4f6e; padding:10px 12px;
+      font-size:10px; font-weight:700; color:#f0efe8;
+      text-align:center; text-transform:uppercase; letter-spacing:.05em;
+      display:flex; align-items:center; justify-content:center;
+      border-left:1px solid #3a4d6a;
+    }
+    .ddp-wpp-col-hd {
+      display:grid; border-bottom:1px solid #3a4d6a;
+    }
+    .ddp-wpp-col-hd span {
+      background:#3d4f6e; color:#c8d4e8;
+      font-size:9px; font-weight:700; padding:6px 7px;
+      text-align:center; border-right:1px solid #3a4d6a;
+    }
+    .ddp-wpp-col-hd span:first-child { text-align:left; padding-left:10px; }
+    .ddp-wpp-col-hd span:last-child  { border-right:none; }
+    .ddp-wpp-row { display:grid; border-bottom:1px solid #3a4d6a; }
+    .ddp-wpp-row:last-child { border-bottom:none; }
+    .ddp-wpp-row span {
+      background:#d0d4dc; color:#1a2340;
+      font-size:11px; font-weight:700; padding:7px 7px;
+      text-align:center; border-right:1px solid #b0b4bc;
+    }
+    .ddp-wpp-row span:first-child {
+      background:#3d4f6e; color:#f0efe8; font-weight:700;
+      text-align:left; padding-left:10px; border-right:1px solid #3a4d6a;
+    }
+    .ddp-wpp-row span:last-child { border-right:none; }
+    .ddp-wpp-row span.wpp-mc { color:#1a4aa0; font-weight:900; }
+    .ddp-wpp-row.wpp-ac span { background:#f5e642; color:#1a2340; }
+    .ddp-wpp-row.wpp-ac span:first-child { background:#3d4f6e; color:#f0efe8; border-right:1px solid #3a4d6a; }
+    .ddp-wpp-btn { margin-top:10px; }
     .ddp-fill-green  { background:linear-gradient(90deg,#1a8a4a,var(--green)); }
     .ddp-fill-yellow { background:linear-gradient(90deg,#b07000,var(--yellow));}
     .ddp-fill-red    { background:linear-gradient(90deg,#8a1a1a,var(--red));   }
@@ -754,8 +830,8 @@
   <div class="screen" id="screenSala">
     <div style="margin-bottom:24px">
       <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">🏢 Sala do dia</div>
-      <div style="font-size:20px;font-weight:800;line-height:1.3;color:var(--text);margin-bottom:6px">Em qual sala você está captando?</div>
-      <div style="font-size:13px;color:var(--muted)">Selecione a sala ou digite uma nova.</div>
+      <div style="font-size:20px;font-weight:800;line-height:1.3;color:var(--text);margin-bottom:6px" id="salaTitulo">Em qual sala você está captando?</div>
+      <div style="font-size:13px;color:var(--muted)" id="salaSub">Selecione a sala ou digite uma nova.</div>
     </div>
     <div class="sala-chips" id="salaChips"></div>
     <div class="sala-outra-wrap">
@@ -999,30 +1075,33 @@
 const CONFIG = {
   captadores: [
     // — São Pedro Resort —
-    { nome: 'Alayne Helena Guisini Rosa',        cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'alayne123'    },
-    { nome: 'Andrey Mansur de Andrade',          cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'andrey123'    },
-    { nome: 'Antony Alex dos Santos',            cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'antony123'    },
-    { nome: 'Bruno Moisés',                      cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'brunobruno'   },
-    { nome: 'Murilo Henrique',                   cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'murilo123'    },
-    { nome: 'Flavio Henrique Marcondes',         cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'flavio123'    },
-    { nome: 'Glaucilene Barbosa Ribeiro',        cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'glauci123'    },
-    { nome: 'Ivan Gabriel Botão as Silva',       cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'ivan123'      },
-    { nome: 'João Mario Dias Silva',             cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'joaomario123' },
-    { nome: 'João Pedro de Matos Saia',          cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'joaopedro123' },
-    { nome: 'João Victor Ferreira Rodrigues',    cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'joaovictor123'},
-    { nome: 'Julia Eyer da Cunha',               cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'julia123'     },
-    { nome: 'José Heraldo',                      cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'josejose'     },
-    { nome: 'Lucas de Souza Miranda',            cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'lucas123'     },
-    { nome: 'Matheus Henrique Franca Silva',     cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'matheus123'   },
-    { nome: 'Mayara Teixeira da Silva',          cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'mayara123'    },
-    { nome: 'Mayra Teixeira',                    cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'mayramayra'   },
-    { nome: 'Patrick Henrique Faria',            cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'patrick123'   },
-    { nome: 'Raphael Luiz Ramos Milano',         cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'raphael123'   },
-    { nome: 'Romenik Cardoso de Jesus',          cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'romenik123'   },
-    { nome: 'Tiago Batista Santos',              cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'tiago123'     },
-    { nome: 'Vinicius Alves Brilho',             cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'vinicius123'  },
-    { nome: 'Vinicius Eduardo Alves de Lima',    cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'viniciuse123' },
-    { nome: 'Walasson de Jesus Alves',           cargo: 'captador', sala: 'São Pedro Resort', senhaDefault: 'walasson123'  },
+    // São Pedro — captadores escolhem a sala ao iniciar (Thermas SP ou SPTR)
+    // Bruno Moisés, José Heraldo e Mayra Teixeira → SPTR fixo
+    // Demais → sem sala fixa (escolhem ao qualificar)
+    { nome: 'Alayne Helena Guisini Rosa',        cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'alayne123'    },
+    { nome: 'Andrey Mansur de Andrade',          cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'andrey123'    },
+    { nome: 'Antony Alex dos Santos',            cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'antony123'    },
+    { nome: 'Bruno Moisés',                      cargo: 'captador', operacao: 'São Pedro', sala: 'SPTR', senhaDefault: 'brunobruno'   },
+    { nome: 'Murilo Henrique',                   cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'murilo123'    },
+    { nome: 'Flavio Henrique Marcondes',         cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'flavio123'    },
+    { nome: 'Glaucilene Barbosa Ribeiro',        cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'glauci123'    },
+    { nome: 'Ivan Gabriel Botão as Silva',       cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'ivan123'      },
+    { nome: 'João Mario Dias Silva',             cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'joaomario123' },
+    { nome: 'João Pedro de Matos Saia',          cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'joaopedro123' },
+    { nome: 'João Victor Ferreira Rodrigues',    cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'joaovictor123'},
+    { nome: 'Julia Eyer da Cunha',               cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'julia123'     },
+    { nome: 'José Heraldo',                      cargo: 'captador', operacao: 'São Pedro', sala: 'SPTR', senhaDefault: 'josejose'     },
+    { nome: 'Lucas de Souza Miranda',            cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'lucas123'     },
+    { nome: 'Matheus Henrique Franca Silva',     cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'matheus123'   },
+    { nome: 'Mayara Teixeira da Silva',          cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'mayara123'    },
+    { nome: 'Mayra Teixeira',                    cargo: 'captador', operacao: 'São Pedro', sala: 'SPTR', senhaDefault: 'mayramayra'   },
+    { nome: 'Patrick Henrique Faria',            cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'patrick123'   },
+    { nome: 'Raphael Luiz Ramos Milano',         cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'raphael123'   },
+    { nome: 'Romenik Cardoso de Jesus',          cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'romenik123'   },
+    { nome: 'Tiago Batista Santos',              cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'tiago123'     },
+    { nome: 'Vinicius Alves Brilho',             cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'vinicius123'  },
+    { nome: 'Vinicius Eduardo Alves de Lima',    cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'viniciuse123' },
+    { nome: 'Walasson de Jesus Alves',           cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'walasson123'  },
     // — Alta Vista (Caldas Novas) —
     { nome: 'Vanessa Silva',      cargo: 'captador', sala: 'Alta Vista', senhaDefault: 'vanessa123'   },
     { nome: 'Natur Calixto',      cargo: 'captador', sala: 'Alta Vista', senhaDefault: 'natur123'     },
@@ -1034,18 +1113,23 @@ const CONFIG = {
     { nome: 'Evelyn Mirella Bueno Ramos',          cargo: 'captador', sala: 'Atibaia', senhaDefault: 'evelyn123'   },
     { nome: 'Pablo César Sánchez Montealegre',     cargo: 'captador', sala: 'Atibaia', senhaDefault: 'pablo123'    },
     // — Lideranças —
-    { nome: 'Lucas Marotti',         cargo: 'sublider', sala: 'São Pedro Resort', senhaDefault: 'lucaslucas'        },
+    { nome: 'Lucas Marotti',         cargo: 'sublider', operacao: 'São Pedro', senhaDefault: 'lucaslucas'        },
     { nome: 'Bruno Teixeira',         cargo: 'lider',    sala: 'Alta Vista',       senhaDefault: 'brunoteixeira'    },
     { nome: 'Gustavo Viana',          cargo: 'sublider', sala: 'Alta Vista',       senhaDefault: 'gustavo123'       },
-    { nome: 'Rogerio Medeiros',       cargo: 'lider',    sala: 'São Pedro Resort', senhaDefault: 'rogeriorogerio'   },
+    { nome: 'Rogerio Medeiros',       cargo: 'lider',    operacao: 'São Pedro', senhaDefault: 'rogeriorogerio'   },
     { nome: 'André Luis Neves Fontes',cargo: 'sublider', sala: 'Atibaia',          senhaDefault: 'andreneves123'    },
     { nome: 'Erick Faleiro',          cargo: 'ceo',      senhaDefault: 'erickerick'     },
   ],
   salas: [
-    { id: 'alta-vista', nome: 'Alta Vista',       cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Alta Vista'  },
-    { id: 'sao-pedro',  nome: 'São Pedro Resort', cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'São Pedro'   },
-    { id: 'atibaia',    nome: 'Atibaia',           cidade: 'Atibaia',      modos: [],                   sheetName: 'Atibaia'     },
+    { id: 'alta-vista', nome: 'Alta Vista',  cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Alta Vista',  operacao: 'Caldas Novas', ddpHotel: 'Alta Vista' },
+    { id: 'thermas-sp', nome: 'Thermas SP',  cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'Thermas SP',  operacao: 'São Pedro',    ddpHotel: null         },
+    { id: 'sptr',       nome: 'SPTR',        cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'São Pedro',   operacao: 'São Pedro',    ddpHotel: 'SPTR'       },
+    { id: 'atibaia',    nome: 'Atibaia',     cidade: 'Atibaia',      modos: [],                   sheetName: 'Atibaia',     operacao: null,           ddpHotel: null         },
   ],
+  // Salas que alimentam o DDP automaticamente (captadores marcam tipo+venda no histórico)
+  salasDdpAuto: ['Alta Vista', 'SPTR'],
+  // Operações de São Pedro (captadores escolhem a sala ao iniciar)
+  salasSaoPedro: ['Thermas SP', 'SPTR'],
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
   faixasRenda: [
     { value: 'abaixo6k',  label: 'Abaixo de R$ 6.000',    num: 0     },
@@ -1955,6 +2039,12 @@ function atualizarModoBadge() {
 }
 
 function startQuiz() {
+  // Captadores de São Pedro sem sala fixa → mostram tela de escolha de sala (Thermas SP / SPTR)
+  if (captador && captador.operacao === 'São Pedro' && !captador.sala) {
+    renderSalaSpScreen();
+    hideAll(); show('screenSala');
+    return;
+  }
   // Se captador tem sala fixa cadastrada, pula a tela de seleção de sala
   if (captador && captador.sala) {
     const salaCfg = CONFIG.salas.find(s => s.nome === captador.sala || s.id === captador.sala);
@@ -1976,6 +2066,29 @@ function startQuiz() {
   }
   renderSalaScreen();
   hideAll(); show('screenSala');
+}
+
+// Tela específica de seleção de sala para captadores de São Pedro
+function renderSalaSpScreen() {
+  const chips = document.getElementById('salaChips');
+  const salas = CONFIG.salasSaoPedro; // ['Thermas SP', 'SPTR']
+  chips.innerHTML = salas.map(nome => {
+    const cfg = CONFIG.salas.find(s => s.nome === nome);
+    const icon = nome === 'SPTR' ? '🏨' : '🏊';
+    const desc = nome === 'SPTR' ? 'Hotel São Pedro Thermas Resort' : 'Área de banhos — clientes pool';
+    return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nome}')">
+      <div class="sala-chip-icon">${icon}</div>
+      <div class="sala-chip-label">${nome}</div>
+      <div class="sala-chip-sub">${desc}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('fieldOutraSala').value = '';
+  document.getElementById('btnIniciarQuiz').disabled = true;
+  // Atualiza título da tela
+  const title = document.getElementById('salaTitulo');
+  if (title) title.textContent = '📍 Qual sala hoje?';
+  const sub = document.getElementById('salaSub');
+  if (sub) sub.textContent = 'Selecione a sala onde você está prospectando agora';
 }
 
 function renderSalaScreen() {
@@ -2432,6 +2545,17 @@ function renderHistList() {
       const resumoHtml = chips.length
         ? `<div class="hc-resumo">${chips.map(ch=>`<span class="hc-chip ${ch.c}">${ch.t}</span>`).join('')}</div>`
         : '';
+      // Verifica se a sala deste lead alimenta DDP (Alta Vista ou SPTR)
+      const salaAlimentaDdp = CONFIG.salasDdpAuto.includes(h.sala);
+      // Ações de tipo + venda só aparecem se está em sala E a sala alimenta o DDP
+      const actionsHtml = (h.emSala && salaAlimentaDdp) ? `
+        <div class="hc-actions">
+          <div class="hc-actions-lbl">Tipo do casal</div>
+          <button class="hc-tipo-chip${h.tipoSala==='pool'?' pool':''}"    onclick="setTipoSala('${h.id}','pool')"    >Pool</button>
+          <button class="hc-tipo-chip${h.tipoSala==='cotista'?' cotista':''}" onclick="setTipoSala('${h.id}','cotista')" >Cotista</button>
+          <button class="hc-tipo-chip${h.tipoSala==='conv'?' conv':''}"    onclick="setTipoSala('${h.id}','conv')"    >Convidado</button>
+          <button class="hc-venda-btn${h.venda?' vendeu':''}" onclick="toggleVenda('${h.id}')" title="${h.venda?'Desmarcar venda':'Marcar venda'}">🤝</button>
+        </div>` : '';
       return `
       <div class="hist-card" style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -2440,6 +2564,7 @@ function renderHistList() {
           ${h.tel!=='—'?`<div class="hc-phone">📞 ${h.tel}</div>`:''}
           <div class="hc-meta">${h.captador||'—'} · ${h.time} · ${h.mode} · ${rendaStr(h.renda)}${h.sala && h.sala!=='—'?' · '+h.sala:''}</div>
           ${resumoHtml}
+          ${actionsHtml}
         </div>
         <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Clique para desmarcar sala':'Clique para marcar que entrou em sala'}">${h.emSala?'🟢':'🔴'}</button>
       </div>`;
@@ -2450,15 +2575,40 @@ function toggleSala(leadId) {
   const idx = leads.findIndex(l => String(l.id) === String(leadId));
   if (idx === -1) return;
   leads[idx].emSala = !leads[idx].emSala;
-  try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-  try { sessionStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-  // sincroniza flag no Sheets se online
+  // Ao desmarcar sala, limpa tipo e venda
+  if (!leads[idx].emSala) {
+    delete leads[idx].tipoSala;
+    delete leads[idx].venda;
+  }
+  _salvarLeads();
   if (navigator.onLine && API.ok()) {
     API.post({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala })
       .catch(() => offlineEnqueue({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala }));
   }
   renderHistList();
   atualizarCdp();
+}
+
+function setTipoSala(leadId, tipo) {
+  const idx = leads.findIndex(l => String(l.id) === String(leadId));
+  if (idx === -1) return;
+  // Toggle: se já está selecionado, desmarca
+  leads[idx].tipoSala = leads[idx].tipoSala === tipo ? null : tipo;
+  _salvarLeads();
+  renderHistList();
+}
+
+function toggleVenda(leadId) {
+  const idx = leads.findIndex(l => String(l.id) === String(leadId));
+  if (idx === -1) return;
+  leads[idx].venda = !leads[idx].venda;
+  _salvarLeads();
+  renderHistList();
+}
+
+function _salvarLeads() {
+  try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
+  try { sessionStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
 }
 
 function clearHist() {
@@ -3193,9 +3343,38 @@ const DDP_CONFIG = {
     'Caldas Novas': ['Alta Vista', 'Atrium', 'Marina'],
     'São Pedro':    ['SPTR'],
   },
+  // Mapeamento sala do captador/líder → operação DDP
+  salaParaOperacao: {
+    'Alta Vista': 'Caldas Novas',
+    'Atrium':     'Caldas Novas',
+    'Marina':     'Caldas Novas',
+    'SPTR':       'São Pedro',
+    'Thermas SP': 'São Pedro',
+  },
   metaPenetracaoPool:  0.35,
   metaPenetracaoGeral: 0.25,
 };
+
+// Calcula casais em sala e vendas automaticamente a partir dos leads do dia
+// Apenas para salas que alimentam DDP (CONFIG.salasDdpAuto)
+function ddpAutoFromLeads(hotelNome, dateISO) {
+  const acc = { salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+  if (!CONFIG.salasDdpAuto.includes(hotelNome)) return acc;
+  const dataBR = dateISO.split('-').reverse().join('/');
+  // Filtra leads do dia nesta sala com emSala=true
+  leads.filter(l => l.sala === hotelNome && l.emSala && (l.date === dataBR || l.dateISO === dateISO)).forEach(l => {
+    const tipo = l.tipoSala || 'pool'; // padrão pool se não definido
+    if (tipo === 'pool')    { acc.salaPool++; if (l.venda) acc.vendPool++; }
+    if (tipo === 'cotista') { acc.salaCot++;  if (l.venda) acc.vendCot++;  }
+    if (tipo === 'conv')    { acc.salaConv++; if (l.venda) acc.vendConv++; }
+  });
+  return acc;
+}
+
+// Verifica se um hotel usa feed automático
+function ddpIsAuto(hotelNome) {
+  return CONFIG.salasDdpAuto.includes(hotelNome);
+}
 
 // Estado da tela DDP
 let ddpState = {
@@ -3242,7 +3421,22 @@ function ddpFillClass(val, meta) {
 function ddpPct(n, d) { return d > 0 ? Math.round(n / d * 100) : 0; }
 function fmtPct(v)    { return v + '%'; }
 
+// Retorna as operações que o líder logado pode ver
+function ddpOpcoesLider() {
+  if (!captador || captador.cargo === 'ceo') return Object.keys(DDP_CONFIG.operacoes);
+  // Lider/sublider: opera baseado na operacao do seu cadastro, ou pelo mapeamento de sala
+  const op = captador.operacao
+    || (captador.sala ? DDP_CONFIG.salaParaOperacao[captador.sala] : null);
+  return op && DDP_CONFIG.operacoes[op] ? [op] : Object.keys(DDP_CONFIG.operacoes);
+}
+
 function showDdp() {
+  // Define operação inicial baseado no líder (se ainda não foi definido ou não é permitida)
+  const opcoes = ddpOpcoesLider();
+  if (!opcoes.includes(ddpState.operacao)) {
+    ddpState.operacao = opcoes[0];
+    ddpState.hotel    = (DDP_CONFIG.operacoes[ddpState.operacao] || [])[0] || '';
+  }
   hideAll(); show('screenDdp');
   renderDdp();
 }
@@ -3256,6 +3450,7 @@ function renderDdp() {
   const op  = ddpState.operacao;
   const hotel = ddpState.hotel;
   const saved = ddpLoad(hotel, dataAtiva) || {};
+  const isAuto = ddpIsAuto(hotel);
 
   // Lê valores salvos ou usa 0
   const ciPool    = saved.ciPool    || 0;
@@ -3263,14 +3458,16 @@ function renderDdp() {
   const ciTotal   = ciPool + ciCot;
   const mc        = Math.round(ciPool * DDP_CONFIG.metaPenetracaoPool);
 
-  const salaPool  = saved.salaPool  || 0;
-  const salaCot   = saved.salaCot   || 0;
-  const salaConv  = saved.salaConv  || 0;
+  // Salas auto: casais em sala e vendas vêm dos leads; salas manuais: vêm do saved
+  const autoVals  = isAuto ? ddpAutoFromLeads(hotel, dataAtiva) : {};
+  const salaPool  = isAuto ? (autoVals.salaPool || 0) : (saved.salaPool || 0);
+  const salaCot   = isAuto ? (autoVals.salaCot  || 0) : (saved.salaCot  || 0);
+  const salaConv  = isAuto ? (autoVals.salaConv || 0) : (saved.salaConv || 0);
   const salaTotal = salaPool + salaCot + salaConv;
 
-  const vendPool  = saved.vendPool  || 0;
-  const vendCot   = saved.vendCot   || 0;
-  const vendConv  = saved.vendConv  || 0;
+  const vendPool  = isAuto ? (autoVals.vendPool || 0) : (saved.vendPool || 0);
+  const vendCot   = isAuto ? (autoVals.vendCot  || 0) : (saved.vendCot  || 0);
+  const vendConv  = isAuto ? (autoVals.vendConv || 0) : (saved.vendConv || 0);
   const vendTotal = vendPool + vendCot + vendConv;
 
   const penetPool  = ddpPct(salaPool + salaConv, ciPool);
@@ -3290,11 +3487,14 @@ function renderDdp() {
   const anoMes = dataAtiva.slice(0, 7);
 
   function acHotel(h) {
+    // Dias salvos no localStorage para este hotel no mês
     const entries = ddpLoadHist(h).filter(r => r.dateISO.startsWith(anoMes));
     const acc = { ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
     entries.forEach(e => {
       acc.ciPool   += e.ciPool   || 0;
       acc.ciCot    += e.ciCot    || 0;
+      // Hotéis auto: sala/venda do dia atual vêm dos leads (já incluídos na data ativa se salvo)
+      // Para datas passadas, somam do que foi salvo
       acc.salaPool += e.salaPool || 0;
       acc.salaCot  += e.salaCot  || 0;
       acc.salaConv += e.salaConv || 0;
@@ -3302,6 +3502,27 @@ function renderDdp() {
       acc.vendCot  += e.vendCot  || 0;
       acc.vendConv += e.vendConv || 0;
     });
+    // Para hotéis auto: adicionar os dados de hoje dos leads (que não estão no localStorage ainda)
+    if (ddpIsAuto(h)) {
+      // Itera cada dia do mês e verifica se há dados nos leads para aquele dia
+      const diasDoMes = new Set(
+        leads.filter(l => l.sala === h && l.emSala && (l.dateISO || '').startsWith(anoMes))
+             .map(l => l.dateISO)
+      );
+      diasDoMes.forEach(d => {
+        // Só soma se esse dia ainda NÃO foi salvo no localStorage (evita duplicar)
+        const jaSalvo = entries.some(e => e.dateISO === d);
+        if (!jaSalvo) {
+          const av = ddpAutoFromLeads(h, d);
+          acc.salaPool += av.salaPool;
+          acc.salaCot  += av.salaCot;
+          acc.salaConv += av.salaConv;
+          acc.vendPool += av.vendPool;
+          acc.vendCot  += av.vendCot;
+          acc.vendConv += av.vendConv;
+        }
+      });
+    }
     acc.ciTotal   = acc.ciPool + acc.ciCot;
     acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv;
     acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv;
@@ -3332,12 +3553,13 @@ function renderDdp() {
       ${!isHoje ? `<div class="ddp-mc-pill" style="white-space:nowrap">⚡ Retroativo</div>` : ''}
     </div>
 
+    ${ddpOpcoesLider().length > 1 ? `
     <div class="ddp-sel-lbl">Operação</div>
     <div class="ddp-op-chips">
-      ${Object.keys(DDP_CONFIG.operacoes).map(o =>
+      ${ddpOpcoesLider().map(o =>
         `<div class="ddp-chip${o===op?' active':''}" onclick="ddpSetOp('${o}')">${o}</div>`
       ).join('')}
-    </div>
+    </div>` : ''}
 
     <div class="ddp-sel-lbl">Hotel</div>
     <div class="ddp-hotel-chips">
@@ -3367,18 +3589,28 @@ function renderDdp() {
 
     <!-- CASAIS EM SALA -->
     <div class="ddp-card">
-      <div class="ddp-card-title"><div class="ddp-dot" style="background:var(--gold)"></div>Casais em sala${isHoje ? ' hoje' : ' em ' + dataAtivaBR.slice(0,5)}</div>
+      <div class="ddp-card-title">
+        <div class="ddp-dot" style="background:var(--gold)"></div>
+        Casais em sala${isHoje ? ' hoje' : ' em ' + dataAtivaBR.slice(0,5)}
+        ${isAuto ? '<span class="ddp-auto-badge">⚡ Auto</span>' : ''}
+      </div>
       <div class="ddp-ir">
         <div class="ddp-ir-lbl"><strong>Casais Pool</strong><span>Clientes pool em apresentação</span></div>
-        <input class="ddp-num-in" id="ddp_salaPool" type="number" min="0" value="${salaPool}" oninput="ddpRecalc()"/>
+        ${isAuto
+          ? `<div class="ddp-num-calc" id="ddp_salaPool">${salaPool}</div>`
+          : `<input class="ddp-num-in" id="ddp_salaPool" type="number" min="0" value="${salaPool}" oninput="ddpRecalc()"/>`}
       </div>
       <div class="ddp-ir">
         <div class="ddp-ir-lbl"><strong>Casais Cotistas</strong><span>Proprietários em apresentação</span></div>
-        <input class="ddp-num-in" id="ddp_salaCot" type="number" min="0" value="${salaCot}" oninput="ddpRecalc()"/>
+        ${isAuto
+          ? `<div class="ddp-num-calc" id="ddp_salaCot">${salaCot}</div>`
+          : `<input class="ddp-num-in" id="ddp_salaCot" type="number" min="0" value="${salaCot}" oninput="ddpRecalc()"/>`}
       </div>
       <div class="ddp-ir">
         <div class="ddp-ir-lbl"><strong>Casais Convidados</strong><span>Convidados de proprietários</span></div>
-        <input class="ddp-num-in" id="ddp_salaConv" type="number" min="0" value="${salaConv}" oninput="ddpRecalc()"/>
+        ${isAuto
+          ? `<div class="ddp-num-calc" id="ddp_salaConv">${salaConv}</div>`
+          : `<input class="ddp-num-in" id="ddp_salaConv" type="number" min="0" value="${salaConv}" oninput="ddpRecalc()"/>`}
       </div>
       <div class="ddp-ir" style="background:rgba(241,214,145,.04);border-radius:8px;padding:8px 8px;border-bottom:none;margin-top:4px">
         <div class="ddp-ir-lbl" style="display:flex;align-items:center;gap:8px">
@@ -3391,18 +3623,28 @@ function renderDdp() {
 
     <!-- VENDAS -->
     <div class="ddp-card">
-      <div class="ddp-card-title"><div class="ddp-dot" style="background:var(--green)"></div>Vendas do dia</div>
+      <div class="ddp-card-title">
+        <div class="ddp-dot" style="background:var(--green)"></div>
+        Vendas do dia
+        ${isAuto ? '<span class="ddp-auto-badge">⚡ Auto</span>' : ''}
+      </div>
       <div class="ddp-ir">
         <div class="ddp-ir-lbl"><strong>Vendas Pool</strong><span>Fechamentos de clientes pool</span></div>
-        <input class="ddp-num-in" id="ddp_vendPool" type="number" min="0" value="${vendPool}" oninput="ddpRecalc()"/>
+        ${isAuto
+          ? `<div class="ddp-num-calc" id="ddp_vendPool">${vendPool}</div>`
+          : `<input class="ddp-num-in" id="ddp_vendPool" type="number" min="0" value="${vendPool}" oninput="ddpRecalc()"/>`}
       </div>
       <div class="ddp-ir">
         <div class="ddp-ir-lbl"><strong>Vendas Cotistas</strong><span>Fechamentos de proprietários</span></div>
-        <input class="ddp-num-in" id="ddp_vendCot" type="number" min="0" value="${vendCot}" oninput="ddpRecalc()"/>
+        ${isAuto
+          ? `<div class="ddp-num-calc" id="ddp_vendCot">${vendCot}</div>`
+          : `<input class="ddp-num-in" id="ddp_vendCot" type="number" min="0" value="${vendCot}" oninput="ddpRecalc()"/>`}
       </div>
       <div class="ddp-ir">
         <div class="ddp-ir-lbl"><strong>Vendas Convidados</strong><span>Fechamentos de convidados</span></div>
-        <input class="ddp-num-in" id="ddp_vendConv" type="number" min="0" value="${vendConv}" oninput="ddpRecalc()"/>
+        ${isAuto
+          ? `<div class="ddp-num-calc" id="ddp_vendConv">${vendConv}</div>`
+          : `<input class="ddp-num-in" id="ddp_vendConv" type="number" min="0" value="${vendConv}" oninput="ddpRecalc()"/>`}
       </div>
       <div class="ddp-ir" style="background:rgba(46,204,113,.05);border-radius:8px;padding:8px 8px;border-bottom:none;margin-top:4px">
         <div class="ddp-ir-lbl"><strong style="color:var(--green)">Total Vendas</strong></div>
@@ -3461,13 +3703,26 @@ function renderDdp() {
       Histórico — ${hotel}
     </div>
     <div class="ddp-card" style="padding:8px 12px" id="ddp_histCard"></div>
+
+    <!-- RESUMO WHATSAPP -->
+    <div class="ddp-wpp-wrap">
+      <div class="ddp-wpp-sec-lbl">
+        <div style="width:6px;height:6px;border-radius:50%;background:#25d366"></div>
+        Resumo para WhatsApp
+      </div>
+      <div id="ddp_wppCard"></div>
+      <button class="btn" style="margin-top:10px;background:#25d366;color:#fff;font-weight:800;border:none;padding:11px 20px;border-radius:10px;width:100%;font-size:13px" onclick="ddpCopyCard()">
+        📋 Copiar resumo em texto
+      </button>
+    </div>
   `;
 
   wrap.innerHTML = html;
 
-  // Renderiza acumulado e histórico após montar o DOM
+  // Renderiza acumulado, histórico e card WhatsApp após montar o DOM
   _ddpRenderAc(hoteis, anoMes);
   _ddpRenderHist(hist);
+  _ddpRenderCard(hoteis, op, anoMes, dataAtiva);
 }
 
 function _mesLabel(anoMes) {
@@ -3583,21 +3838,147 @@ function _ddpRenderHist(hist) {
   card.innerHTML = html;
 }
 
+// ── Card Resumo WhatsApp ──
+function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
+  const el = document.getElementById('ddp_wppCard');
+  if (!el) return;
+
+  // Data de ontem (D-1 em relação à dataAtiva ou hoje)
+  const refDate = dataAtiva; // data selecionada = "hoje" do líder (dados são de ontem)
+  const refBR   = refDate.split('-').reverse().join('/');
+
+  // Determina se é operação com múltiplos hotéis
+  const multi = hoteis.length > 1;
+
+  // Colunas e larguras
+  // SP: Hotel | CI Total | CI Pool | CI Cotistas | MC
+  // CN: Hotel | CI Total | CI Pool | CI Cotistas | MC | Em sala | Pen. Pool
+  const cols = multi
+    ? ['Hotel','CI Total','CI Pool','CI Cotistas','MC','Em sala','Pen. Pool']
+    : ['Hotel','CI Total','CI Pool','CI Cotistas','MC'];
+  const colsGrid = multi ? '100px 1fr 1fr 1fr 1fr 1fr 1fr' : '90px 1fr 1fr 1fr 1fr';
+
+  // Acumulado mensal por hotel
+  let totais = { ciTotal:0, ciPool:0, ciCot:0, mc:0, salaTotal:0, salaPool:0, salaConv:0 };
+
+  let rowsHtml = '';
+  hoteis.forEach(h => {
+    const a   = acHotel(h);
+    const mcH = Math.round(a.ciPool * DDP_CONFIG.metaPenetracaoPool);
+    const pp  = ddpPct(a.salaPool + (a.salaConv||0), a.ciPool);
+    totais.ciTotal   += a.ciTotal;
+    totais.ciPool    += a.ciPool;
+    totais.ciCot     += a.ciCot;
+    totais.mc        += mcH;
+    totais.salaTotal += a.salaTotal;
+    totais.salaPool  += a.salaPool  || 0;
+    totais.salaConv  += a.salaConv  || 0;
+    rowsHtml += `<div class="ddp-wpp-row" style="grid-template-columns:${colsGrid}">
+      <span>${h}</span>
+      <span>${a.ciTotal}</span><span>${a.ciPool}</span><span>${a.ciCot}</span>
+      <span class="wpp-mc">${mcH}</span>
+      ${multi ? `<span>${a.salaTotal}</span><span>${fmtPct(pp)}</span>` : ''}
+    </div>`;
+  });
+
+  // Linha acumulado (Total CN se multi, "Acumulado" se single)
+  const acLabel = multi ? 'Total ' + op.split(' ')[0] : 'Acumulado';
+  const acMC    = Math.round(totais.ciPool * DDP_CONFIG.metaPenetracaoPool);
+  const acPP    = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool);
+  rowsHtml += `<div class="ddp-wpp-row wpp-ac" style="grid-template-columns:${colsGrid}">
+    <span>${acLabel}</span>
+    <span>${totais.ciTotal}</span><span>${totais.ciPool}</span><span>${totais.ciCot}</span>
+    <span class="wpp-mc">${acMC}</span>
+    ${multi ? `<span>${totais.salaTotal}</span><span>${fmtPct(acPP)}</span>` : ''}
+  </div>`;
+
+  // Cabeçalho de colunas
+  const colHdHtml = cols.map((c,i) =>
+    `<span>${c}</span>`
+  ).join('');
+
+  el.innerHTML = `
+    <div class="ddp-wpp-card">
+      <div class="ddp-wpp-top">
+        <div class="ddp-wpp-date">${refBR}</div>
+        <div class="ddp-wpp-title">DDP — Check-ins ${multi ? op : hoteis[0]}</div>
+      </div>
+      <div class="ddp-wpp-col-hd" style="grid-template-columns:${colsGrid}">${colHdHtml}</div>
+      ${rowsHtml}
+    </div>`;
+}
+
+function ddpCopyCard() {
+  const op    = ddpState.operacao;
+  const hoteis = DDP_CONFIG.operacoes[op] || [];
+  const multi = hoteis.length > 1;
+  const hoje  = todayISO();
+  const dataAtiva = ddpState.dateISO || hoje;
+  const refBR = dataAtiva.split('-').reverse().join('/');
+
+  let lines = [];
+  lines.push(`📊 *DDP — ${op}* — ${refBR}`);
+  lines.push('');
+
+  hoteis.forEach(h => {
+    const a  = acHotel(h);
+    const mc = Math.round(a.ciPool * DDP_CONFIG.metaPenetracaoPool);
+    const pp = ddpPct(a.salaPool + (a.salaConv||0), a.ciPool);
+    lines.push(`*${h}*`);
+    lines.push(`  CI Total: ${a.ciTotal} | Pool: ${a.ciPool} | Cotistas: ${a.ciCot}`);
+    lines.push(`  MC: ${mc}${multi ? ` | Em sala: ${a.salaTotal} | Pen. Pool: ${fmtPct(pp)}` : ''}`);
+  });
+
+  if (multi) {
+    let tot = { ciTotal:0, ciPool:0, ciCot:0, salaTotal:0, salaPool:0, salaConv:0 };
+    hoteis.forEach(h => {
+      const a = acHotel(h);
+      tot.ciTotal   += a.ciTotal;
+      tot.ciPool    += a.ciPool;
+      tot.ciCot     += a.ciCot;
+      tot.salaTotal += a.salaTotal;
+      tot.salaPool  += a.salaPool  || 0;
+      tot.salaConv  += a.salaConv  || 0;
+    });
+    const mc = Math.round(tot.ciPool * DDP_CONFIG.metaPenetracaoPool);
+    const pp = ddpPct(tot.salaPool + tot.salaConv, tot.ciPool);
+    lines.push('');
+    lines.push(`*Total ${op}*`);
+    lines.push(`  CI Total: ${tot.ciTotal} | Pool: ${tot.ciPool} | Cotistas: ${tot.ciCot}`);
+    lines.push(`  MC: ${mc} | Em sala: ${tot.salaTotal} | Pen. Pool: ${fmtPct(pp)}`);
+  }
+
+  const txt = lines.join('\n');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(txt).then(() => {
+      const btn = document.querySelector('[onclick="ddpCopyCard()"]');
+      if (btn) { btn.textContent = '✅ Copiado!'; setTimeout(() => { btn.textContent = '📋 Copiar resumo em texto'; }, 1800); }
+    });
+  }
+}
+
 // Recalcula totais em tempo real sem regravar localStorage
+// Lê campo DDP: aceita tanto <input> quanto <div class="ddp-num-calc">
+function _ddpVal(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  return parseInt(el.value !== undefined ? el.value : el.textContent) || 0;
+}
+
 function ddpRecalc() {
-  const ciPool   = parseInt(document.getElementById('ddp_ciPool')?.value)   || 0;
-  const ciCot    = parseInt(document.getElementById('ddp_ciCot')?.value)    || 0;
+  const ciPool   = _ddpVal('ddp_ciPool');
+  const ciCot    = _ddpVal('ddp_ciCot');
   const ciTotal  = ciPool + ciCot;
   const mc       = Math.round(ciPool * DDP_CONFIG.metaPenetracaoPool);
 
-  const salaPool = parseInt(document.getElementById('ddp_salaPool')?.value) || 0;
-  const salaCot  = parseInt(document.getElementById('ddp_salaCot')?.value)  || 0;
-  const salaConv = parseInt(document.getElementById('ddp_salaConv')?.value) || 0;
+  const salaPool = _ddpVal('ddp_salaPool');
+  const salaCot  = _ddpVal('ddp_salaCot');
+  const salaConv = _ddpVal('ddp_salaConv');
   const salaTotal= salaPool + salaCot + salaConv;
 
-  const vendPool = parseInt(document.getElementById('ddp_vendPool')?.value) || 0;
-  const vendCot  = parseInt(document.getElementById('ddp_vendCot')?.value)  || 0;
-  const vendConv = parseInt(document.getElementById('ddp_vendConv')?.value) || 0;
+  const vendPool = _ddpVal('ddp_vendPool');
+  const vendCot  = _ddpVal('ddp_vendCot');
+  const vendConv = _ddpVal('ddp_vendConv');
   const vendTotal= vendPool + vendCot + vendConv;
 
   const penetPool  = ddpPct(salaPool + salaConv, ciPool);
@@ -3634,14 +4015,14 @@ function ddpSalvarDia() {
   const dateISO = ddpState.dateISO || todayISO();
   const data = {
     hotel, dateISO,
-    ciPool:   parseInt(document.getElementById('ddp_ciPool')?.value)   || 0,
-    ciCot:    parseInt(document.getElementById('ddp_ciCot')?.value)    || 0,
-    salaPool: parseInt(document.getElementById('ddp_salaPool')?.value) || 0,
-    salaCot:  parseInt(document.getElementById('ddp_salaCot')?.value)  || 0,
-    salaConv: parseInt(document.getElementById('ddp_salaConv')?.value) || 0,
-    vendPool: parseInt(document.getElementById('ddp_vendPool')?.value) || 0,
-    vendCot:  parseInt(document.getElementById('ddp_vendCot')?.value)  || 0,
-    vendConv: parseInt(document.getElementById('ddp_vendConv')?.value) || 0,
+    ciPool:   _ddpVal('ddp_ciPool'),
+    ciCot:    _ddpVal('ddp_ciCot'),
+    salaPool: _ddpVal('ddp_salaPool'),
+    salaCot:  _ddpVal('ddp_salaCot'),
+    salaConv: _ddpVal('ddp_salaConv'),
+    vendPool: _ddpVal('ddp_vendPool'),
+    vendCot:  _ddpVal('ddp_vendCot'),
+    vendConv: _ddpVal('ddp_vendConv'),
   };
   ddpSave(hotel, dateISO, data);
   // Feedback visual
