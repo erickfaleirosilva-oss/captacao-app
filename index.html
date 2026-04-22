@@ -391,6 +391,7 @@
     .hc-tipo-chip.pool    { border-color:#3b82f6; background:rgba(59,130,246,.15); color:#60a5fa; }
     .hc-tipo-chip.cotista { border-color:#a78bfa; background:rgba(167,139,250,.15); color:#c4b5fd; }
     .hc-tipo-chip.conv    { border-color:#f59e0b; background:rgba(245,158,11,.15);  color:#fbbf24; }
+    .hc-tipo-chip.externo { border-color:#f472b6; background:rgba(244,114,182,.15); color:#f9a8d4; }
     .hc-venda-btn {
       margin-left:auto; background:none; border:1.5px solid var(--border);
       border-radius:50%; width:32px; height:32px; font-size:15px;
@@ -1128,6 +1129,8 @@ const CONFIG = {
   ],
   // Salas que alimentam o DDP automaticamente (captadores marcam tipo+venda no histórico)
   salasDdpAuto: ['Alta Vista', 'SPTR'],
+  // Salas onde aparece apenas 🤝 venda (sem chips de tipo)
+  salasDdpVenda: ['Atibaia', 'Thermas SP'],
   // Operações de São Pedro (captadores escolhem a sala ao iniciar)
   salasSaoPedro: ['Thermas SP', 'SPTR'],
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
@@ -2547,15 +2550,25 @@ function renderHistList() {
         : '';
       // Verifica se a sala deste lead alimenta DDP (Alta Vista ou SPTR)
       const salaAlimentaDdp = CONFIG.salasDdpAuto.includes(h.sala);
-      // Ações de tipo + venda só aparecem se está em sala E a sala alimenta o DDP
-      const actionsHtml = (h.emSala && salaAlimentaDdp) ? `
+      // Salas com apenas 🤝 venda (sem chips de tipo): Atibaia, Thermas SP
+      const salaApenasVenda = CONFIG.salasDdpVenda.includes(h.sala);
+      // Ações: tipo+venda para salas auto, só venda para salas venda-only
+      const actionsHtml = h.emSala ? (
+        salaAlimentaDdp ? `
         <div class="hc-actions">
           <div class="hc-actions-lbl">Tipo do casal</div>
-          <button class="hc-tipo-chip${h.tipoSala==='pool'?' pool':''}"    onclick="setTipoSala('${h.id}','pool')"    >Pool</button>
+          <button class="hc-tipo-chip${h.tipoSala==='pool'?' pool':''}"     onclick="setTipoSala('${h.id}','pool')"    >Pool</button>
           <button class="hc-tipo-chip${h.tipoSala==='cotista'?' cotista':''}" onclick="setTipoSala('${h.id}','cotista')" >Cotista</button>
-          <button class="hc-tipo-chip${h.tipoSala==='conv'?' conv':''}"    onclick="setTipoSala('${h.id}','conv')"    >Convidado</button>
+          <button class="hc-tipo-chip${h.tipoSala==='conv'?' conv':''}"     onclick="setTipoSala('${h.id}','conv')"    >Convidado</button>
+          <button class="hc-tipo-chip${h.tipoSala==='externo'?' externo':''}" onclick="setTipoSala('${h.id}','externo')">Externo</button>
           <button class="hc-venda-btn${h.venda?' vendeu':''}" onclick="toggleVenda('${h.id}')" title="${h.venda?'Desmarcar venda':'Marcar venda'}">🤝</button>
-        </div>` : '';
+        </div>` :
+        salaApenasVenda ? `
+        <div class="hc-actions">
+          <button class="hc-venda-btn${h.venda?' vendeu':''}" onclick="toggleVenda('${h.id}')" title="${h.venda?'Desmarcar venda':'Marcar venda'}" style="margin-left:0">🤝</button>
+          <span style="font-size:11px;color:var(--muted);margin-left:6px">${h.venda?'Venda marcada':'Marcar venda'}</span>
+        </div>` : ''
+      ) : '';
       return `
       <div class="hist-card" style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0">
@@ -3358,7 +3371,7 @@ const DDP_CONFIG = {
 // Calcula casais em sala e vendas automaticamente a partir dos leads do dia
 // Apenas para salas que alimentam DDP (CONFIG.salasDdpAuto)
 function ddpAutoFromLeads(hotelNome, dateISO) {
-  const acc = { salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+  const acc = { salaPool:0, salaCot:0, salaConv:0, salaExt:0, vendPool:0, vendCot:0, vendConv:0, vendExt:0 };
   if (!CONFIG.salasDdpAuto.includes(hotelNome)) return acc;
   const dataBR = dateISO.split('-').reverse().join('/');
   // Filtra leads do dia nesta sala com emSala=true
@@ -3367,6 +3380,7 @@ function ddpAutoFromLeads(hotelNome, dateISO) {
     if (tipo === 'pool')    { acc.salaPool++; if (l.venda) acc.vendPool++; }
     if (tipo === 'cotista') { acc.salaCot++;  if (l.venda) acc.vendCot++;  }
     if (tipo === 'conv')    { acc.salaConv++; if (l.venda) acc.vendConv++; }
+    if (tipo === 'externo') { acc.salaExt++;  if (l.venda) acc.vendExt++;  }
   });
   return acc;
 }
@@ -3463,14 +3477,16 @@ function renderDdp() {
   const salaPool  = isAuto ? (autoVals.salaPool || 0) : (saved.salaPool || 0);
   const salaCot   = isAuto ? (autoVals.salaCot  || 0) : (saved.salaCot  || 0);
   const salaConv  = isAuto ? (autoVals.salaConv || 0) : (saved.salaConv || 0);
-  const salaTotal = salaPool + salaCot + salaConv;
+  const salaExt   = isAuto ? (autoVals.salaExt  || 0) : (saved.salaExt  || 0);
+  const salaTotal = salaPool + salaCot + salaConv + salaExt;
 
   const vendPool  = isAuto ? (autoVals.vendPool || 0) : (saved.vendPool || 0);
   const vendCot   = isAuto ? (autoVals.vendCot  || 0) : (saved.vendCot  || 0);
   const vendConv  = isAuto ? (autoVals.vendConv || 0) : (saved.vendConv || 0);
-  const vendTotal = vendPool + vendCot + vendConv;
+  const vendExt   = isAuto ? (autoVals.vendExt  || 0) : (saved.vendExt  || 0);
+  const vendTotal = vendPool + vendCot + vendConv + vendExt;
 
-  const penetPool  = ddpPct(salaPool + salaConv, ciPool);
+  const penetPool  = ddpPct(salaPool + salaConv + salaExt, ciPool);
   const penetGeral = ddpPct(salaTotal, ciTotal);
   const efic       = ddpPct(vendTotal, salaTotal);
 
@@ -3489,7 +3505,7 @@ function renderDdp() {
   function acHotel(h) {
     // Dias salvos no localStorage para este hotel no mês
     const entries = ddpLoadHist(h).filter(r => r.dateISO.startsWith(anoMes));
-    const acc = { ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+    const acc = { ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, salaExt:0, vendPool:0, vendCot:0, vendConv:0, vendExt:0 };
     entries.forEach(e => {
       acc.ciPool   += e.ciPool   || 0;
       acc.ciCot    += e.ciCot    || 0;
@@ -3498,9 +3514,11 @@ function renderDdp() {
       acc.salaPool += e.salaPool || 0;
       acc.salaCot  += e.salaCot  || 0;
       acc.salaConv += e.salaConv || 0;
+      acc.salaExt  += e.salaExt  || 0;
       acc.vendPool += e.vendPool || 0;
       acc.vendCot  += e.vendCot  || 0;
       acc.vendConv += e.vendConv || 0;
+      acc.vendExt  += e.vendExt  || 0;
     });
     // Para hotéis auto: adicionar os dados de hoje dos leads (que não estão no localStorage ainda)
     if (ddpIsAuto(h)) {
@@ -3517,17 +3535,19 @@ function renderDdp() {
           acc.salaPool += av.salaPool;
           acc.salaCot  += av.salaCot;
           acc.salaConv += av.salaConv;
+          acc.salaExt  += av.salaExt;
           acc.vendPool += av.vendPool;
           acc.vendCot  += av.vendCot;
           acc.vendConv += av.vendConv;
+          acc.vendExt  += av.vendExt;
         }
       });
     }
     acc.ciTotal   = acc.ciPool + acc.ciCot;
-    acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv;
-    acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv;
+    acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv + acc.salaExt;
+    acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv + acc.vendExt;
     acc.mc        = Math.round(acc.ciPool * DDP_CONFIG.metaPenetracaoPool);
-    acc.penetPool  = ddpPct(acc.salaPool + acc.salaConv, acc.ciPool);
+    acc.penetPool  = ddpPct(acc.salaPool + acc.salaConv + acc.salaExt, acc.ciPool);
     acc.penetGeral = ddpPct(acc.salaTotal, acc.ciTotal);
     acc.efic       = ddpPct(acc.vendTotal, acc.salaTotal);
     return acc;
@@ -3612,6 +3632,12 @@ function renderDdp() {
           ? `<div class="ddp-num-calc" id="ddp_salaConv">${salaConv}</div>`
           : `<input class="ddp-num-in" id="ddp_salaConv" type="number" min="0" value="${salaConv}" oninput="ddpRecalc()"/>`}
       </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Casais Externos</strong><span>Captados fora do hotel</span></div>
+        ${isAuto
+          ? `<div class="ddp-num-calc" id="ddp_salaExt">${salaExt}</div>`
+          : `<input class="ddp-num-in" id="ddp_salaExt" type="number" min="0" value="${salaExt}" oninput="ddpRecalc()"/>`}
+      </div>
       <div class="ddp-ir" style="background:rgba(241,214,145,.04);border-radius:8px;padding:8px 8px;border-bottom:none;margin-top:4px">
         <div class="ddp-ir-lbl" style="display:flex;align-items:center;gap:8px">
           <strong style="color:var(--gold)">Total em sala</strong>
@@ -3645,6 +3671,12 @@ function renderDdp() {
         ${isAuto
           ? `<div class="ddp-num-calc" id="ddp_vendConv">${vendConv}</div>`
           : `<input class="ddp-num-in" id="ddp_vendConv" type="number" min="0" value="${vendConv}" oninput="ddpRecalc()"/>`}
+      </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Vendas Externos</strong><span>Fechamentos de externos</span></div>
+        ${isAuto
+          ? `<div class="ddp-num-calc" id="ddp_vendExt">${vendExt}</div>`
+          : `<input class="ddp-num-in" id="ddp_vendExt" type="number" min="0" value="${vendExt}" oninput="ddpRecalc()"/>`}
       </div>
       <div class="ddp-ir" style="background:rgba(46,204,113,.05);border-radius:8px;padding:8px 8px;border-bottom:none;margin-top:4px">
         <div class="ddp-ir-lbl"><strong style="color:var(--green)">Total Vendas</strong></div>
@@ -3767,7 +3799,7 @@ function _ddpRenderAc(hoteis, anoMes) {
   const tbody = document.getElementById('ddp_acBody');
   if (!tbody) return;
   // totais inclui salaPool e salaConv separados para penetração pool correta
-  let totais = { ciPool:0, ciCot:0, ciTotal:0, salaPool:0, salaConv:0, salaTotal:0, mc:0, vendTotal:0 };
+  let totais = { ciPool:0, ciCot:0, ciTotal:0, salaPool:0, salaConv:0, salaExt:0, salaTotal:0, mc:0, vendTotal:0 };
   let rows = '';
   hoteis.forEach(h => {
     const a = acHotel(h);
@@ -3776,6 +3808,7 @@ function _ddpRenderAc(hoteis, anoMes) {
     totais.ciTotal   += a.ciTotal;
     totais.salaPool  += a.salaPool  || 0;
     totais.salaConv  += a.salaConv  || 0;
+    totais.salaExt   += a.salaExt   || 0;
     totais.salaTotal += a.salaTotal;
     totais.mc        += a.mc;
     totais.vendTotal += a.vendTotal;
@@ -3792,7 +3825,7 @@ function _ddpRenderAc(hoteis, anoMes) {
   });
   // Linha Total (só mostra se há mais de 1 hotel)
   if (hoteis.length > 1) {
-    const tPP = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool);
+    const tPP = ddpPct(totais.salaPool + totais.salaConv + totais.salaExt, totais.ciPool);
     const tPG = ddpPct(totais.salaTotal, totais.ciTotal);
     const tEf = ddpPct(totais.vendTotal, totais.salaTotal);
     const ppC = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
@@ -3822,9 +3855,9 @@ function _ddpRenderHist(hist) {
   </div>`;
   hist.forEach(r => {
     const ci   = (r.ciPool||0) + (r.ciCot||0);
-    const sala = (r.salaPool||0) + (r.salaCot||0) + (r.salaConv||0);
-    const vend = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
-    const pp   = ddpPct(r.salaPool + r.salaConv, r.ciPool);
+    const sala = (r.salaPool||0) + (r.salaCot||0) + (r.salaConv||0) + (r.salaExt||0);
+    const vend = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0) + (r.vendExt||0);
+    const pp   = ddpPct((r.salaPool||0) + (r.salaConv||0) + (r.salaExt||0), r.ciPool);
     const pC   = ddpPctClass(pp/100, DDP_CONFIG.metaPenetracaoPool);
     const dateBR = r.dateISO ? r.dateISO.split('-').reverse().slice(0,2).join('/') : '—';
     html += `<div class="ddp-hist-row">
@@ -3859,13 +3892,13 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
   const colsGrid = multi ? '100px 1fr 1fr 1fr 1fr 1fr 1fr' : '90px 1fr 1fr 1fr 1fr';
 
   // Acumulado mensal por hotel
-  let totais = { ciTotal:0, ciPool:0, ciCot:0, mc:0, salaTotal:0, salaPool:0, salaConv:0 };
+  let totais = { ciTotal:0, ciPool:0, ciCot:0, mc:0, salaTotal:0, salaPool:0, salaConv:0, salaExt:0 };
 
   let rowsHtml = '';
   hoteis.forEach(h => {
     const a   = acHotel(h);
     const mcH = Math.round(a.ciPool * DDP_CONFIG.metaPenetracaoPool);
-    const pp  = ddpPct(a.salaPool + (a.salaConv||0), a.ciPool);
+    const pp  = ddpPct(a.salaPool + (a.salaConv||0) + (a.salaExt||0), a.ciPool);
     totais.ciTotal   += a.ciTotal;
     totais.ciPool    += a.ciPool;
     totais.ciCot     += a.ciCot;
@@ -3873,6 +3906,7 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
     totais.salaTotal += a.salaTotal;
     totais.salaPool  += a.salaPool  || 0;
     totais.salaConv  += a.salaConv  || 0;
+    totais.salaExt   += a.salaExt   || 0;
     rowsHtml += `<div class="ddp-wpp-row" style="grid-template-columns:${colsGrid}">
       <span>${h}</span>
       <span>${a.ciTotal}</span><span>${a.ciPool}</span><span>${a.ciCot}</span>
@@ -3884,7 +3918,7 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
   // Linha acumulado (Total CN se multi, "Acumulado" se single)
   const acLabel = multi ? 'Total ' + op.split(' ')[0] : 'Acumulado';
   const acMC    = Math.round(totais.ciPool * DDP_CONFIG.metaPenetracaoPool);
-  const acPP    = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool);
+  const acPP    = ddpPct(totais.salaPool + totais.salaConv + totais.salaExt, totais.ciPool);
   rowsHtml += `<div class="ddp-wpp-row wpp-ac" style="grid-template-columns:${colsGrid}">
     <span>${acLabel}</span>
     <span>${totais.ciTotal}</span><span>${totais.ciPool}</span><span>${totais.ciCot}</span>
@@ -3923,14 +3957,14 @@ function ddpCopyCard() {
   hoteis.forEach(h => {
     const a  = acHotel(h);
     const mc = Math.round(a.ciPool * DDP_CONFIG.metaPenetracaoPool);
-    const pp = ddpPct(a.salaPool + (a.salaConv||0), a.ciPool);
+    const pp = ddpPct(a.salaPool + (a.salaConv||0) + (a.salaExt||0), a.ciPool);
     lines.push(`*${h}*`);
     lines.push(`  CI Total: ${a.ciTotal} | Pool: ${a.ciPool} | Cotistas: ${a.ciCot}`);
     lines.push(`  MC: ${mc}${multi ? ` | Em sala: ${a.salaTotal} | Pen. Pool: ${fmtPct(pp)}` : ''}`);
   });
 
   if (multi) {
-    let tot = { ciTotal:0, ciPool:0, ciCot:0, salaTotal:0, salaPool:0, salaConv:0 };
+    let tot = { ciTotal:0, ciPool:0, ciCot:0, salaTotal:0, salaPool:0, salaConv:0, salaExt:0 };
     hoteis.forEach(h => {
       const a = acHotel(h);
       tot.ciTotal   += a.ciTotal;
@@ -3939,9 +3973,10 @@ function ddpCopyCard() {
       tot.salaTotal += a.salaTotal;
       tot.salaPool  += a.salaPool  || 0;
       tot.salaConv  += a.salaConv  || 0;
+      tot.salaExt   += a.salaExt   || 0;
     });
     const mc = Math.round(tot.ciPool * DDP_CONFIG.metaPenetracaoPool);
-    const pp = ddpPct(tot.salaPool + tot.salaConv, tot.ciPool);
+    const pp = ddpPct(tot.salaPool + tot.salaConv + tot.salaExt, tot.ciPool);
     lines.push('');
     lines.push(`*Total ${op}*`);
     lines.push(`  CI Total: ${tot.ciTotal} | Pool: ${tot.ciPool} | Cotistas: ${tot.ciCot}`);
@@ -3974,14 +4009,16 @@ function ddpRecalc() {
   const salaPool = _ddpVal('ddp_salaPool');
   const salaCot  = _ddpVal('ddp_salaCot');
   const salaConv = _ddpVal('ddp_salaConv');
-  const salaTotal= salaPool + salaCot + salaConv;
+  const salaExt  = _ddpVal('ddp_salaExt');
+  const salaTotal= salaPool + salaCot + salaConv + salaExt;
 
   const vendPool = _ddpVal('ddp_vendPool');
   const vendCot  = _ddpVal('ddp_vendCot');
   const vendConv = _ddpVal('ddp_vendConv');
-  const vendTotal= vendPool + vendCot + vendConv;
+  const vendExt  = _ddpVal('ddp_vendExt');
+  const vendTotal= vendPool + vendCot + vendConv + vendExt;
 
-  const penetPool  = ddpPct(salaPool + salaConv, ciPool);
+  const penetPool  = ddpPct(salaPool + salaConv + salaExt, ciPool);
   const penetGeral = ddpPct(salaTotal, ciTotal);
   const efic       = ddpPct(vendTotal, salaTotal);
   const metaPool   = DDP_CONFIG.metaPenetracaoPool  * 100;
@@ -4020,9 +4057,11 @@ function ddpSalvarDia() {
     salaPool: _ddpVal('ddp_salaPool'),
     salaCot:  _ddpVal('ddp_salaCot'),
     salaConv: _ddpVal('ddp_salaConv'),
+    salaExt:  _ddpVal('ddp_salaExt'),
     vendPool: _ddpVal('ddp_vendPool'),
     vendCot:  _ddpVal('ddp_vendCot'),
     vendConv: _ddpVal('ddp_vendConv'),
+    vendExt:  _ddpVal('ddp_vendExt'),
   };
   ddpSave(hotel, dateISO, data);
   // Feedback visual
@@ -4051,22 +4090,24 @@ function ddpSetHotel(h) {
 function acHotel(h) {
   const anoMes = todayISO().slice(0, 7);
   const entries = ddpLoadHist(h).filter(r => r.dateISO && r.dateISO.startsWith(anoMes));
-  const acc = { ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+  const acc = { ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, salaExt:0, vendPool:0, vendCot:0, vendConv:0, vendExt:0 };
   entries.forEach(e => {
     acc.ciPool   += e.ciPool   || 0;
     acc.ciCot    += e.ciCot    || 0;
     acc.salaPool += e.salaPool || 0;
     acc.salaCot  += e.salaCot  || 0;
     acc.salaConv += e.salaConv || 0;
+    acc.salaExt  += e.salaExt  || 0;
     acc.vendPool += e.vendPool || 0;
     acc.vendCot  += e.vendCot  || 0;
     acc.vendConv += e.vendConv || 0;
+    acc.vendExt  += e.vendExt  || 0;
   });
   acc.ciTotal   = acc.ciPool + acc.ciCot;
-  acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv;
-  acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv;
+  acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv + acc.salaExt;
+  acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv + acc.vendExt;
   acc.mc        = Math.round(acc.ciPool * DDP_CONFIG.metaPenetracaoPool);
-  acc.penetPool  = ddpPct(acc.salaPool + acc.salaConv, acc.ciPool);
+  acc.penetPool  = ddpPct(acc.salaPool + acc.salaConv + acc.salaExt, acc.ciPool);
   acc.penetGeral = ddpPct(acc.salaTotal, acc.ciTotal);
   acc.efic       = ddpPct(acc.vendTotal, acc.salaTotal);
   return acc;
