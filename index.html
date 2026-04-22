@@ -946,10 +946,11 @@ const CONFIG = {
     { value: '20k',       label: 'R$ 20.000 ou mais',     num: 20000 },
   ],
   faixasCarro: [
-    { value: 'sem',       label: 'Não tem carro',        anoMin: 0    },
-    { value: 'ate2009',   label: 'Até 2009',             anoMin: 0    },
-    { value: '2010a2013', label: '2010 a 2013',           anoMin: 2010 },
-    { value: '2014mais',  label: '2014 ou mais recente',  anoMin: 2014 },
+    { value: 'sem',       label: 'Não tem carro',   anoMin: 0    },
+    { value: 'ate2009',   label: 'Até 2009',         anoMin: 0    },
+    { value: '2010a2013', label: '2010 a 2013',      anoMin: 2010 },
+    { value: '2014a2020', label: '2014 a 2020',      anoMin: 2014 },
+    { value: '2021mais',  label: '2021 ou acima',    anoMin: 2021 },
   ],
   // Regras São Pedro (mantidas como antes)
   spBaixo: {
@@ -1310,10 +1311,11 @@ const QS = [
     id:'carro', type:'chips',
     text:'Qual o ano do carro do cliente?',
     opts:[
-      { icon:'⚠️', label:'Não tem carro',          sub:'', value:'sem'       },
-      { icon:'⚠️', label:'Até 2009',               sub:'', value:'ate2009'   },
-      { icon:'✅', label:'2010 a 2013',             sub:'', value:'2010a2013' },
-      { icon:'✅', label:'2014 ou mais recente',    sub:'', value:'2014mais'  },
+      { icon:'⚠️', label:'Não tem carro',   sub:'', value:'sem'       },
+      { icon:'⚠️', label:'Até 2009',        sub:'', value:'ate2009'   },
+      { icon:'✅', label:'2010 a 2013',     sub:'', value:'2010a2013' },
+      { icon:'✅', label:'2014 a 2020',     sub:'', value:'2014a2020' },
+      { icon:'✅', label:'2021 ou acima',   sub:'', value:'2021mais'  },
     ]
   },
   {
@@ -1336,7 +1338,7 @@ const QS = [
   },
   {
     id:'renda', type:'chips',
-    text:'Qual a renda mensal declarada?',
+    text:'Qual a renda mensal do casal?',
     opts:[
       { icon:'⚠️', label:'Abaixo de R$ 6.000',    sub:'', value:'abaixo6k' },
       { icon:'✅', label:'R$ 6.000 – R$ 7.999',   sub:'', value:'6k'       },
@@ -1368,7 +1370,7 @@ function rendaStr(v) {
   return m[v] || v;
 }
 function carroAno(v) {
-  const m = { sem:0, ate2009:2009, '2010a2013':2013, '2014mais':2016 };
+  const m = { sem:0, ate2009:2009, '2010a2013':2013, '2014a2020':2018, '2021mais':2023, '2014mais':2018 };
   return m[v] ?? 0;
 }
 function idadeOk(v) { return v === '30a65'; }
@@ -2082,7 +2084,7 @@ function showResult() {
   // Bloco de respostas completas para print/WhatsApp
   const TIPO_LABEL = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos/Namorados', solteiro:'Solteiro/Divorciado' };
   const RENDA_LABEL = { abaixo6k:'Abaixo de R$ 6.000', '6k':'R$ 6.000 – R$ 7.999', '8k':'R$ 8.000 – R$ 9.999', '10k':'R$ 10.000 – R$ 11.999', '12k':'R$ 12.000 – R$ 14.999', '15k':'R$ 15.000 – R$ 19.999', '20k':'R$ 20.000 ou mais' };
-  const CARRO_LABEL = { sem:'Sem carro', ate2009:'Até 2009', '2010a2013':'2010 a 2013', '2014mais':'2014 ou mais recente' };
+  const CARRO_LABEL = { sem:'Sem carro', ate2009:'Até 2009', '2010a2013':'2010 a 2013', '2014a2020':'2014 a 2020', '2021mais':'2021 ou acima', '2014mais':'2014 ou mais recente' };
   const IDADE_LABEL = { menor30:'Abaixo de 30 anos', '30a65':'30 a 65 anos', acima65:'Acima de 65 anos' };
   const TEMPO_LABEL = { menos1ano:'Menos de 1 ano', '1anoMais':'1 ano ou mais' };
   const telFmt = (t) => t ? t.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3') : '—';
@@ -2289,7 +2291,7 @@ function renderHistList() {
     </div>
     ${visíveis.map(h=>{
       const a = h._ans || {};
-      const CARRO_LABEL   = { sem:'Sem carro', ate2009:'Carro até 2009', '2010a2013':'Carro 2010–2013', '2014mais':'Carro 2014+' };
+      const CARRO_LABEL   = { sem:'Sem carro', ate2009:'Carro até 2009', '2010a2013':'Carro 2010–2013', '2014a2020':'Carro 2014–2020', '2021mais':'Carro 2021+', '2014mais':'Carro 2014+' };
       const IDADE_LABEL   = { menor30:'< 30 anos', '30a65':'30–65 anos', acima65:'> 65 anos' };
       const VIAGENS_LABEL = { '1x':'1x/ano', '2x':'2x/ano', '3x':'3x/ano', '4x':'4x+/ano' };
       const PROF_LABEL    = { empresario:'🏢 Empresário', autonomo:'🔧 Autônomo', educacao:'📚 Educação', do_lar:'🏠 Do lar', servidor:'🏛️ Servidor', aposentado:'👴 Aposentado', saude_liberal:'🩺 Saúde Liberal', saude_tecnico:'💉 Saúde Técnico', transporte:'🚛 Transporte', comercio:'🛒 Comércio', industria:'⚙️ Indústria', adm_gestao:'📊 Adm/Gestão', outros:'❓ Outros' };
