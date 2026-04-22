@@ -3957,39 +3957,72 @@ function _ddpRenderHist(hist) {
   const card = document.getElementById('ddp_histCard');
   if (!card) return;
   if (!hist.length) { card.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0">Nenhum registro ainda</div>'; return; }
-  let html = `<div class="ddp-hist-row">
-    <span style="flex:1;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">Data</span>
-    <span style="width:36px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">C.I.</span>
-    <span style="width:36px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">Sala</span>
-    <span style="width:36px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">Vend.</span>
-    <span style="width:44px;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted)">Penet.</span>
-  </div>`;
-  hist.forEach(r => {
-    const ci   = (r.ciPool||0) + (r.ciCot||0);
-    const sala = (r.salaPool||0) + (r.salaCot||0) + (r.salaConv||0);
-    const vend = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
-    const pp   = ddpPct((r.salaPool||0) + (r.salaConv||0), r.ciPool);
-    const pC   = ddpPctClass(pp/100, DDP_CONFIG.metaPenetracaoPool);
-    // Se o registro é mensal consolidado (campo mensal=true ou dia=01 ou último do mês), exibe Mês/Ano
-    const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    let dateBR = '—';
-    if (r.dateISO) {
-      const [yy, mm, dd] = r.dateISO.split('-');
-      const isUltimoDia = new Date(Number(yy), Number(mm), 0).getDate() === Number(dd);
-      const isConsolidado = r.mensal || dd === '01' || isUltimoDia;
-      dateBR = isConsolidado
-        ? (MESES[Number(mm)-1] + '/' + yy.slice(2))   // ex: Jul/25
-        : dd + '/' + mm;                                // ex: 22/04
-    }
-    html += `<div class="ddp-hist-row">
-      <span style="flex:1;color:var(--muted)">${dateBR}</span>
-      <span style="width:36px;text-align:center;font-weight:700">${ci}</span>
-      <span style="width:36px;text-align:center;font-weight:700">${sala}</span>
-      <span style="width:36px;text-align:center;font-weight:700">${vend}</span>
-      <span style="width:44px;text-align:right;font-weight:800" class="${pC}">${fmtPct(pp)}</span>
-    </div>`;
-  });
-  card.innerHTML = html;
+
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  function fmtData(dateISO) {
+    if (!dateISO) return '—';
+    const [yy, mm, dd] = dateISO.split('-');
+    const isUltimoDia = new Date(Number(yy), Number(mm), 0).getDate() === Number(dd);
+    return (dd === '01' || isUltimoDia)
+      ? MESES[Number(mm)-1] + '/' + yy.slice(2)
+      : dd + '/' + mm;
+  }
+
+  // Acumula totais
+  let tCI = 0, tPool = 0, tSala = 0, tVend = 0, tSalaPool = 0, tSalaConv = 0;
+  const rows = hist.map(r => {
+    const ci      = (r.ciPool||0) + (r.ciCot||0);
+    const sala    = (r.salaPool||0) + (r.salaCot||0) + (r.salaConv||0);
+    const vend    = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
+    const pp      = ddpPct((r.salaPool||0) + (r.salaConv||0), r.ciPool);
+    const pC      = ddpPctClass(pp/100, DDP_CONFIG.metaPenetracaoPool);
+    tCI      += ci; tPool += (r.ciPool||0); tSala += sala; tVend += vend;
+    tSalaPool += (r.salaPool||0); tSalaConv += (r.salaConv||0);
+    return `<tr>
+      <td>${fmtData(r.dateISO)}</td>
+      <td>${ci}</td>
+      <td>${r.ciPool||0}</td>
+      <td>${sala}</td>
+      <td>${vend}</td>
+      <td class="${pC}">${fmtPct(pp)}</td>
+    </tr>`;
+  }).join('');
+
+  const tPP  = ddpPct(tSalaPool + tSalaConv, tPool);
+  const tPPC = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
+
+  card.innerHTML = `
+  <style>
+    .ddp-hist-tbl { width:100%; border-collapse:collapse; font-size:11px; }
+    .ddp-hist-tbl th { padding:6px 6px; text-align:right; font-size:9px; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.4px; white-space:nowrap; border-bottom:1px solid var(--border); }
+    .ddp-hist-tbl th:first-child { text-align:left; padding-left:10px; }
+    .ddp-hist-tbl td { padding:7px 6px; text-align:right; font-weight:600; color:var(--text); border-bottom:1px solid rgba(37,64,96,.35); }
+    .ddp-hist-tbl td:first-child { text-align:left; padding-left:10px; font-weight:700; color:var(--gold); }
+    .ddp-hist-tbl tr:last-child td { border-bottom:none; }
+    .ddp-hist-tbl tr.ddp-total td { background:rgba(241,214,145,.06); border-top:1px solid rgba(241,214,145,.2); font-weight:800; border-bottom:none; }
+    .ddp-hist-tbl tr.ddp-total td:first-child { color:var(--gold); }
+  </style>
+  <table class="ddp-hist-tbl">
+    <thead><tr>
+      <th>Mês</th>
+      <th>C.I.<br>Total</th>
+      <th>C.I.<br>Pool</th>
+      <th>Em<br>Sala</th>
+      <th>Vendas</th>
+      <th>Penet.<br>Pool</th>
+    </tr></thead>
+    <tbody>
+      ${rows}
+      <tr class="ddp-total">
+        <td>Total</td>
+        <td>${tCI}</td>
+        <td>${tPool}</td>
+        <td>${tSala}</td>
+        <td>${tVend}</td>
+        <td class="${tPPC}">${fmtPct(tPP)}</td>
+      </tr>
+    </tbody>
+  </table>`;
 }
 
 // ── Card Resumo WhatsApp ──
