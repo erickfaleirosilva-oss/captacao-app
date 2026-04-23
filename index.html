@@ -4229,13 +4229,19 @@ function _ddpRenderHist(hist) {
     const [yy, mm] = clean.split('-');
     const chave = yy + '-' + mm;
     if (chave === anoMesAtual) return; // mês corrente: tratado abaixo via diasMes
-    if (!r.mensal) return; // meses anteriores: só registros consolidados (mensal=true)
-    // Registro mensal consolidado — usa diretamente (não soma, apenas substitui se mais recente)
+    // Acumula todos os registros do mês (diários ou consolidados)
     if (!byMes[chave]) {
-      byMes[chave] = { dateISO: yy+'-'+mm+'-01', ciPool: Number(r.ciPool)||0, ciCot: Number(r.ciCot)||0,
-        salaPool: Number(r.salaPool)||0, salaCot: Number(r.salaCot)||0, salaConv: Number(r.salaConv)||0,
-        vendPool: Number(r.vendPool)||0, vendCot: Number(r.vendCot)||0, vendConv: Number(r.vendConv)||0 };
+      byMes[chave] = { dateISO: yy+'-'+mm+'-01', ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
     }
+    const m = byMes[chave];
+    m.ciPool   += Number(r.ciPool)   || 0;
+    m.ciCot    += Number(r.ciCot)    || 0;
+    m.salaPool += Number(r.salaPool) || 0;
+    m.salaCot  += Number(r.salaCot)  || 0;
+    m.salaConv += Number(r.salaConv) || 0;
+    m.vendPool += Number(r.vendPool) || 0;
+    m.vendCot  += Number(r.vendCot)  || 0;
+    m.vendConv += Number(r.vendConv) || 0;
   });
   // Mês corrente: soma completa de diasMes
   if (diasMes.length) {
