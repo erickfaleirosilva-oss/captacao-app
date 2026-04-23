@@ -3505,16 +3505,18 @@ function ddpSheetsLoad(hotel) {
     .then(r => r.json())
     .then(res => {
       if (res.ok && Array.isArray(res.rows)) {
-        // Normaliza dateISO — Sheets pode retornar objetos Date ou strings ISO com "T"
-        res.rows.forEach(row => {
-          if (row.dateISO) {
-            const s = String(row.dateISO).trim();
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-              const d = new Date(row.dateISO);
-              row.dateISO = !isNaN(d) ? d.toISOString().slice(0, 10) : s.split('T')[0];
-            }
-          }
-        });
+        // Normaliza dateISO — Sheets pode retornar objetos Date ou strings truncadas "GM..."
+        const _MON={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+        function _normDt(v){
+          if(!v) return '';
+          const s=String(v).trim();
+          if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+          if(s.includes('T')) return s.split('T')[0];
+          const m=s.match(/^\w{3}\s+(\w{3})\s+(\d{1,2})\s+(\d{4})/);
+          if(m){const mo=_MON[m[1]];if(mo) return m[3]+'-'+mo+'-'+String(m[2]).padStart(2,'0');}
+          const d=new Date(v); return !isNaN(d)?d.toISOString().slice(0,10):s;
+        }
+        res.rows.forEach(row => { if (row.dateISO) row.dateISO = _normDt(row.dateISO); });
         _ddpRemoteCache[hotel] = res.rows;
         // Sincroniza no localStorage para acesso offline futuro
         res.rows.forEach(row => {
@@ -3989,7 +3991,12 @@ function _ddpRenderHist(hist) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     // Formato com T (ISO 8601): "2025-07-31T00:00:00.000Z"
     if (s.includes('T')) return s.split('T')[0];
-    // Objeto Date serializado pelo Sheets (ex: "Wed Jul 31 2025 00:00:00 GMT...")
+    // Sheets trunca timezone: "Wed Jul 31 2025 00:00:00 GM..." — new Date() falha, usar regex
+    const mDdd = s.match(/^\w{3}\s+(\w{3})\s+(\d{1,2})\s+(\d{4})/);
+    if (mDdd) {
+      const MON={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+      const mon=MON[mDdd[1]]; if(mon) return mDdd[3]+'-'+mon+'-'+String(mDdd[2]).padStart(2,'0');
+    }
     const d = new Date(v);
     if (!isNaN(d)) return d.toISOString().slice(0, 10);
     return s;
