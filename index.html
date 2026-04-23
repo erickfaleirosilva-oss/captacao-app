@@ -4091,11 +4091,28 @@ function _ddpRenderHist(hist) {
   const hoje = todayISO();
   const anoMesAtual = hoje.slice(0, 7);
 
-  // Todos os dias do mês corrente com dados
-  const diasMes = hist
+  // Deduplicar por dateISO: somar campos numéricos de linhas com mesma data
+  const diaMapMes = {};
+  hist
     .map(r => ({ ...r, dateISO: normISO(r.dateISO) }))
     .filter(r => r.dateISO && r.dateISO.startsWith(anoMesAtual))
-    .sort((a, b) => b.dateISO.localeCompare(a.dateISO));
+    .forEach(r => {
+      if (!diaMapMes[r.dateISO]) {
+        diaMapMes[r.dateISO] = { ...r };
+      } else {
+        const a = diaMapMes[r.dateISO];
+        a.ciPool  = (a.ciPool||0)  + (r.ciPool||0);
+        a.ciCot   = (a.ciCot||0)   + (r.ciCot||0);
+        a.salaPool= (a.salaPool||0)+ (r.salaPool||0);
+        a.salaCot = (a.salaCot||0) + (r.salaCot||0);
+        a.salaConv= (a.salaConv||0)+ (r.salaConv||0);
+        a.vendPool= (a.vendPool||0)+ (r.vendPool||0);
+        a.vendCot = (a.vendCot||0) + (r.vendCot||0);
+        a.vendConv= (a.vendConv||0)+ (r.vendConv||0);
+      }
+    });
+  // Ordena Seg→Dom dentro de cada semana (crescente por data)
+  const diasMes = Object.values(diaMapMes).sort((a, b) => a.dateISO.localeCompare(b.dateISO));
 
   // Agrupa dias por semana (chave = ISO da segunda)
   const semanas = {};
@@ -4141,7 +4158,7 @@ function _ddpRenderHist(hist) {
     </div>`;
 
     semanasOrdenadas.forEach((sk, idx) => {
-      const dias = semanas[sk].sort((a,b) => b.dateISO.localeCompare(a.dateISO));
+      const dias = semanas[sk].sort((a,b) => a.dateISO.localeCompare(b.dateISO)); // Seg→Dom
       const ac = accumStats(dias);
       const ppC = ddpPctClass(ac.pp/100, DDP_CONFIG.metaPenetracaoPool);
       const semId = 'ddp_sem_' + sk.replace(/-/g,'');
