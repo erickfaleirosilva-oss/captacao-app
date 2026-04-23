@@ -3648,9 +3648,13 @@ function ddpLoadHist(hotel) {
   }
 
   // 2. Dados remotos sobrescrevem (mais atualizados)
+  // Normaliza prefixo DDP_ antes de indexar, para garantir que sobrescreve a chave correta do localStorage
   if (_ddpRemoteCache[hotel]) {
     _ddpRemoteCache[hotel].forEach(row => {
-      if (row && row.dateISO) byDate[row.dateISO] = row;
+      if (row && row.dateISO) {
+        const key = row.dateISO.startsWith('DDP_') ? row.dateISO.slice(4) : row.dateISO;
+        byDate[key] = Object.assign({}, row, { dateISO: key });
+      }
     });
   }
 
@@ -3677,6 +3681,27 @@ function ddpOpcoesLider() {
   const op = captador.operacao
     || (captador.sala ? DDP_CONFIG.salaParaOperacao[captador.sala] : null);
   return op && DDP_CONFIG.operacoes[op] ? [op] : Object.keys(DDP_CONFIG.operacoes);
+}
+
+function ddpResetarMes(anoMes) {
+  // Limpa todas as entradas de localStorage do DDP para o mês indicado (ex: "2026-04")
+  // e força reload do Sheets — útil para corrigir dados locais corrompidos
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('ddp_') && !k.includes('_mes_') && k.includes(anoMes.replace('-','-'))) {
+      keysToRemove.push(k);
+    }
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+  // Limpa o cache remoto para forçar reload
+  Object.keys(_ddpRemoteCache).forEach(h => { delete _ddpRemoteCache[h]; });
+  // Reload do Sheets
+  const opcoes = ddpOpcoesLider();
+  opcoes.forEach(op => {
+    (DDP_CONFIG.operacoes[op] || []).forEach(h => ddpSheetsLoad(h));
+  });
+  alert('Cache de ' + anoMes + ' limpo! Os dados serão recarregados do servidor.');
 }
 
 function showDdp() {
@@ -4186,17 +4211,41 @@ function _ddpRenderHist(hist) {
   });
   const semanasOrdenadas = Object.keys(semanas).sort((a,b) => b.localeCompare(a));
 
-  // ── Histórico mensal (meses anteriores + mês corrente consolidado) ──
+  // ── Histórico mensal: soma todos os dias diários por mês ──
+  // Mês corrente: usa diasMes (já agregado acima) para somatorio completo
+  // Meses anteriores: agrega todos os registros diários encontrados no hist
   const byMes = {};
+  // Primeiro: agrega todos os registros do hist (todos os meses)
   hist.forEach(r => {
     const clean = normISO(r.dateISO);
     if (!clean || clean.length < 10) return;
-    const [yy, mm, dd] = clean.split('-');
-    const isUltimoDia = new Date(Number(yy), Number(mm), 0).getDate() === Number(dd);
-    if (dd !== '01' && !isUltimoDia && !r.mensal) return;
+    const [yy, mm] = clean.split('-');
     const chave = yy + '-' + mm;
-    if (!byMes[chave]) byMes[chave] = { ...r, dateISO: clean };
+    if (!byMes[chave]) byMes[chave] = { dateISO: yy+'-'+mm+'-01', ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+    byMes[chave].ciPool   += Number(r.ciPool)   || 0;
+    byMes[chave].ciCot    += Number(r.ciCot)    || 0;
+    byMes[chave].salaPool += Number(r.salaPool) || 0;
+    byMes[chave].salaCot  += Number(r.salaCot)  || 0;
+    byMes[chave].salaConv += Number(r.salaConv) || 0;
+    byMes[chave].vendPool += Number(r.vendPool) || 0;
+    byMes[chave].vendCot  += Number(r.vendCot)  || 0;
+    byMes[chave].vendConv += Number(r.vendConv) || 0;
   });
+  // Sobrescreve o mês corrente com a soma completa de diasMes (mais precisa — evita duplicatas do hist)
+  if (diasMes.length) {
+    const mesAcc = { dateISO: anoMesAtual+'-01', ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+    diasMes.forEach(r => {
+      mesAcc.ciPool   += Number(r.ciPool)   || 0;
+      mesAcc.ciCot    += Number(r.ciCot)    || 0;
+      mesAcc.salaPool += Number(r.salaPool) || 0;
+      mesAcc.salaCot  += Number(r.salaCot)  || 0;
+      mesAcc.salaConv += Number(r.salaConv) || 0;
+      mesAcc.vendPool += Number(r.vendPool) || 0;
+      mesAcc.vendCot  += Number(r.vendCot)  || 0;
+      mesAcc.vendConv += Number(r.vendConv) || 0;
+    });
+    byMes[anoMesAtual] = mesAcc;
+  }
   const histMensal = Object.values(byMes).sort((a, b) => b.dateISO.localeCompare(a.dateISO));
 
   // ── Monta HTML ──
@@ -4204,10 +4253,14 @@ function _ddpRenderHist(hist) {
 
   // Seção semanas do mês corrente
   if (semanasOrdenadas.length) {
+    const resetBtn = (captador && captador.cargo === 'ceo')
+      ? `<button onclick="ddpResetarMes('${anoMesAtual}');renderDdp()" style="margin-left:auto;font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid rgba(241,214,145,.3);background:transparent;color:var(--muted);cursor:pointer">↺ Resetar cache</button>`
+      : '';
     html += `<div class="ddp-semanas">
       <div class="ddp-hist-sec-lbl" style="margin-top:4px">
         <div style="width:6px;height:6px;border-radius:50%;background:var(--gold)"></div>
         ${MESES[Number(anoMesAtual.split('-')[1])-1]}/${anoMesAtual.split('-')[0].slice(2)} — por semana
+        ${resetBtn}
       </div>`;
 
     // Mini-header para colunas das semanas
