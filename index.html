@@ -4215,27 +4215,25 @@ function _ddpRenderHist(hist) {
   });
   const semanasOrdenadas = Object.keys(semanas).sort((a,b) => b.localeCompare(a));
 
-  // ── Histórico mensal: soma todos os dias diários por mês ──
-  // Mês corrente: usa diasMes (já agregado acima) para somatorio completo
-  // Meses anteriores: agrega todos os registros diários encontrados no hist
+  // ── Histórico mensal ──
+  // Meses anteriores: usa SOMENTE registros com mensal=true (consolidados no Sheets)
+  // Mês corrente: soma diasMes (registros diários do mês atual)
   const byMes = {};
-  // Primeiro: agrega todos os registros do hist (todos os meses)
   hist.forEach(r => {
     const clean = normISO(r.dateISO);
     if (!clean || clean.length < 10) return;
     const [yy, mm] = clean.split('-');
     const chave = yy + '-' + mm;
-    if (!byMes[chave]) byMes[chave] = { dateISO: yy+'-'+mm+'-01', ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
-    byMes[chave].ciPool   += Number(r.ciPool)   || 0;
-    byMes[chave].ciCot    += Number(r.ciCot)    || 0;
-    byMes[chave].salaPool += Number(r.salaPool) || 0;
-    byMes[chave].salaCot  += Number(r.salaCot)  || 0;
-    byMes[chave].salaConv += Number(r.salaConv) || 0;
-    byMes[chave].vendPool += Number(r.vendPool) || 0;
-    byMes[chave].vendCot  += Number(r.vendCot)  || 0;
-    byMes[chave].vendConv += Number(r.vendConv) || 0;
+    if (chave === anoMesAtual) return; // mês corrente: tratado abaixo via diasMes
+    if (!r.mensal) return; // meses anteriores: só registros consolidados (mensal=true)
+    // Registro mensal consolidado — usa diretamente (não soma, apenas substitui se mais recente)
+    if (!byMes[chave]) {
+      byMes[chave] = { dateISO: yy+'-'+mm+'-01', ciPool: Number(r.ciPool)||0, ciCot: Number(r.ciCot)||0,
+        salaPool: Number(r.salaPool)||0, salaCot: Number(r.salaCot)||0, salaConv: Number(r.salaConv)||0,
+        vendPool: Number(r.vendPool)||0, vendCot: Number(r.vendCot)||0, vendConv: Number(r.vendConv)||0 };
+    }
   });
-  // Sobrescreve o mês corrente com a soma completa de diasMes (mais precisa — evita duplicatas do hist)
+  // Mês corrente: soma completa de diasMes
   if (diasMes.length) {
     const mesAcc = { dateISO: anoMesAtual+'-01', ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
     diasMes.forEach(r => {
