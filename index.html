@@ -3021,7 +3021,7 @@ function setCdpFiltroDate(chave, valor) {
 }
 function cdpLeadsFiltrados() {
   const base = filtrarPorAcesso(leads);
-  return filtrarLeads(base, { periodo: cdpFiltro.periodo, sala: cdpFiltro.sala, captador: cdpFiltro.captador, de: cdpFiltro.de, ate: cdpFiltro.ate });
+  return filtrarLeads(base, cdpFiltro);
 }
 function cdpSubTexto(lista) {
   const salaLider = getSalaDoLider(captador);
