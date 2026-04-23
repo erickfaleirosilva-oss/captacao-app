@@ -3992,9 +3992,28 @@ function _ddpRenderHist(hist) {
       : dd + '/' + mm;
   }
 
+  // Filtra apenas registros mensais consolidados (dia 01 ou último dia do mês)
+  // e deduplica por mês (YYYY-MM) — prioriza o registro mais recente
+  const byMes = {};
+  hist.forEach(r => {
+    const clean = normISO(r.dateISO);
+    if (!clean || clean.length < 10) return;
+    const [yy, mm, dd] = clean.split('-');
+    const isUltimoDia = new Date(Number(yy), Number(mm), 0).getDate() === Number(dd);
+    if (dd !== '01' && !isUltimoDia && !r.mensal) return; // ignora registros diários
+    const chave = yy + '-' + mm;
+    if (!byMes[chave]) byMes[chave] = { ...r, dateISO: clean };
+  });
+  const histMensal = Object.values(byMes).sort((a, b) => b.dateISO.localeCompare(a.dateISO));
+
+  if (!histMensal.length) {
+    card.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0">Nenhum registro mensal ainda</div>';
+    return;
+  }
+
   // Acumula totais
   let tCI = 0, tPool = 0, tSala = 0, tVend = 0, tSalaPool = 0, tSalaConv = 0;
-  const rows = hist.map(r => {
+  const rows = histMensal.map(r => {
     const ci      = (r.ciPool||0) + (r.ciCot||0);
     const sala    = (r.salaPool||0) + (r.salaCot||0) + (r.salaConv||0);
     const vend    = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
