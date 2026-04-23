@@ -1681,7 +1681,11 @@ function idadeOkCasal(a) {
 function calcResult() {
   const salaId = salaAtual ? salaAtual.id : null;
   if (salaId === 'alta-vista') return calcAltaVista();
-  if (salaId === 'sao-pedro')  return calcSaoPedro();
+  if (salaId === 'atrium')     return calcAltaVista();
+  if (salaId === 'marina')     return calcAltaVista();
+  if (salaId === 'sptr')       return calcSaoPedro();
+  if (salaId === 'thermas-sp') return calcSaoPedro();
+  if (salaId === 'sao-pedro')  return calcSaoPedro(); // legado
   if (salaId === 'atibaia')    return calcAtibaia();
   return { verdict:'NQ', rows:[{i:'⚠️', l:'Sala', v:'Sala não reconhecida'}], rule:null, perfil:null };
 }
