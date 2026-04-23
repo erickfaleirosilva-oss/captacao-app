@@ -3597,6 +3597,14 @@ function ddpSheetsLoad(hotel) {
         }
         res.rows.forEach(row => { if (row.dateISO) row.dateISO = _normDt(row.dateISO); });
         _ddpRemoteCache[hotel] = res.rows;
+        // Limpa localStorage antigo deste hotel antes de sincronizar (remoto é fonte de verdade)
+        const _hotelKey = hotel.replace(/\s/g,'_');
+        for (let _i = localStorage.length - 1; _i >= 0; _i--) {
+          const _k = localStorage.key(_i);
+          if (_k && _k.startsWith('ddp_' + _hotelKey + '_') && !_k.includes('_mes_')) {
+            localStorage.removeItem(_k);
+          }
+        }
         // Sincroniza no localStorage — remoto é sempre fonte de verdade para dias passados
         res.rows.forEach(row => {
           if (row.hotel && row.dateISO) {
