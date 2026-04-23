@@ -1259,8 +1259,8 @@ let captador = null;
 let salaAtual = null;
 let leads    = (JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]')).map(l => ({ ...l, sala: normalizarSala(l.sala, l.captador) }));
 let loginSelectedNome = null;
-let histFiltro = { periodo: 'hoje', captador: 'todos', sala: 'todas', de: '', ate: '' };
-let cdpFiltro  = { periodo: 'hoje', sala: 'todas', captador: 'todos', de: '', ate: '' };
+let histFiltro = { periodo: 'hoje', captador: 'todos', operacao: 'todas', sala: 'todas', de: '', ate: '' };
+let cdpFiltro  = { periodo: 'hoje', operacao: 'todas', sala: 'todas', captador: 'todos', de: '', ate: '' };
 
 function getSenha(nome) {
   const stored = localStorage.getItem('yv_pw_' + nome);
@@ -1318,6 +1318,27 @@ function filtrarPorAcessoPI(lista) {
 function getTodasSalas() {
   const extras = JSON.parse(localStorage.getItem('yv_salas_extras') || '[]');
   return [...CONFIG.salas, ...extras];
+}
+const OPERACOES = ['Caldas Novas', 'São Pedro', 'Atibaia'];
+const SALAS_POR_OPERACAO = {
+  'Caldas Novas': ['Alta Vista', 'Marina', 'Atrium', 'Externo'],
+  'São Pedro':    ['Thermas SP', 'SPTR'],
+  'Atibaia':      ['Atibaia'],
+};
+// Retorna salas filtradas pela operação selecionada (considera operação do login também)
+function getSalasVisiveis(operacaoFiltro) {
+  const todas = getTodasSalas();
+  // Lider/sublider com operação fixada: só vê salas da sua operação
+  if (captador && captador.operacao && captador.cargo !== 'ceo') {
+    const permitidas = SALAS_POR_OPERACAO[captador.operacao] || [];
+    return todas.filter(s => permitidas.includes(s.nome));
+  }
+  // CEO com filtro de operação ativo
+  if (operacaoFiltro && operacaoFiltro !== 'todas') {
+    const permitidas = SALAS_POR_OPERACAO[operacaoFiltro] || [];
+    return todas.filter(s => permitidas.includes(s.nome));
+  }
+  return todas;
 }
 function getSalasExtras() {
   return JSON.parse(localStorage.getItem('yv_salas_extras') || '[]');
@@ -2508,6 +2529,10 @@ function filtrarLeads(fonte, filtro) {
   if (filtro.captador && filtro.captador !== 'todos') {
     filtered = filtered.filter(l => l.captador === filtro.captador);
   }
+  if (filtro.operacao && filtro.operacao !== 'todas') {
+    const salasOp = SALAS_POR_OPERACAO[filtro.operacao] || [];
+    filtered = filtered.filter(l => salasOp.includes(l.sala));
+  }
   if (filtro.sala && filtro.sala !== 'todas') {
     filtered = filtered.filter(l => l.sala === filtro.sala);
   }
@@ -2569,12 +2594,21 @@ function renderHistFiltros() {
     html += '</select>';
   }
 
-  // Select de sala (apenas CEO vê todas as salas)
+  // Select de Operação (apenas CEO)
   if (captador && captador.cargo === 'ceo') {
-    const todasSalas = getTodasSalas();
+    html += '<select class="filtro-select" onchange="setHistFiltro(\'operacao\',this.value)">';
+    html += `<option value="todas"${histFiltro.operacao==='todas'?' selected':''}>Operação</option>`;
+    OPERACOES.forEach(op => {
+      html += `<option value="${op}"${histFiltro.operacao===op?' selected':''}>${op}</option>`;
+    });
+    html += '</select>';
+  }
+  // Select de Ponto de captação (CEO e lider/sublider com acesso total)
+  if (captador && temAcessoTotal(captador)) {
+    const salasFiltradas = getSalasVisiveis(histFiltro.operacao);
     html += '<select class="filtro-select" onchange="setHistFiltro(\'sala\',this.value)">';
-    html += `<option value="todas"${histFiltro.sala==='todas'?' selected':''}>Todos os pontos</option>`;
-    todasSalas.forEach(s => {
+    html += `<option value="todas"${histFiltro.sala==='todas'?' selected':''}>Ponto de captação</option>`;
+    salasFiltradas.forEach(s => {
       html += `<option value="${s.nome}"${histFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
     });
     html += '</select>';
@@ -2598,6 +2632,7 @@ function renderHistFiltros() {
 }
 
 function setHistFiltro(chave, valor) {
+  if (chave === 'operacao') histFiltro.sala = 'todas'; // reset ponto ao trocar operação
   histFiltro[chave] = valor;
   renderHistFiltros();
   renderHistList();
@@ -2930,12 +2965,21 @@ function renderCdpFiltros() {
     html += `<div class="filtro-chip${cdpFiltro.periodo===p.v?' active':''}" onclick="setCdpFiltro('periodo','${p.v}')">${p.l}</div>`;
   });
   html += '</div><div class="filtros-wrap" style="margin-top:6px">';
-  // Select de sala — lider/CEO
+  // Select de Operação — apenas CEO
+  if (captador && captador.cargo === 'ceo') {
+    html += '<select class="filtro-select" onchange="setCdpFiltro(\'operacao\',this.value)">';
+    html += `<option value="todas"${cdpFiltro.operacao==='todas'?' selected':''}>Operação</option>`;
+    OPERACOES.forEach(op => {
+      html += `<option value="${op}"${cdpFiltro.operacao===op?' selected':''}>${op}</option>`;
+    });
+    html += '</select>';
+  }
+  // Select de Ponto de captação — lider/CEO
   if (captador && temAcessoTotal(captador)) {
-    const todasSalas = getTodasSalas();
+    const salasFiltradas = getSalasVisiveis(cdpFiltro.operacao);
     html += '<select class="filtro-select" onchange="setCdpFiltro(\'sala\',this.value)">';
-    html += `<option value="todas"${cdpFiltro.sala==='todas'?' selected':''}>Todos os pontos</option>`;
-    todasSalas.forEach(s => {
+    html += `<option value="todas"${cdpFiltro.sala==='todas'?' selected':''}>Ponto de captação</option>`;
+    salasFiltradas.forEach(s => {
       html += `<option value="${s.nome}"${cdpFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
     });
     html += '</select>';
@@ -2966,6 +3010,7 @@ function renderCdpFiltros() {
 }
 function setCdpFiltro(chave, valor) {
   if (chave === 'periodo' && valor !== 'livre') { cdpFiltro.de = ''; cdpFiltro.ate = ''; }
+  if (chave === 'operacao') cdpFiltro.sala = 'todas'; // reset ponto ao trocar operação
   cdpFiltro[chave] = valor;
   renderCdpFiltros();
   atualizarCdp();
@@ -3203,7 +3248,7 @@ function renderCdp(leadsHoje) {
 // ─────────────────────────────────────────────
 // TIME RANGE
 // ─────────────────────────────────────────────
-let trFiltro = { periodo: 'hoje', sala: 'todas', captador: 'todos', de: '', ate: '' };
+let trFiltro = { periodo: 'hoje', operacao: 'todas', sala: 'todas', captador: 'todos', de: '', ate: '' };
 
 function showTimeRange() {
   hideAll(); show('screenTimeRange');
@@ -3230,11 +3275,21 @@ function renderTrFiltros() {
     </div>`;
   }
   if (captador && temAcessoTotal(captador)) {
-    html += '<div style="display:flex;gap:8px;margin-top:8px">';
-    const todasSalas = getTodasSalas();
+    html += '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">';
+    // Select de Operação — apenas CEO
+    if (captador.cargo === 'ceo') {
+      html += '<select class="filtro-select" onchange="setTrFiltro(\'operacao\',this.value)">';
+      html += `<option value="todas"${trFiltro.operacao==='todas'?' selected':''}>Operação</option>`;
+      OPERACOES.forEach(op => {
+        html += `<option value="${op}"${trFiltro.operacao===op?' selected':''}>${op}</option>`;
+      });
+      html += '</select>';
+    }
+    // Select de Ponto de captação
+    const salasFiltradas = getSalasVisiveis(trFiltro.operacao);
     html += '<select class="filtro-select" onchange="setTrFiltro(\'sala\',this.value)">';
-    html += `<option value="todas"${trFiltro.sala==='todas'?' selected':''}>Todos os pontos</option>`;
-    todasSalas.forEach(s => {
+    html += `<option value="todas"${trFiltro.sala==='todas'?' selected':''}>Ponto de captação</option>`;
+    salasFiltradas.forEach(s => {
       html += `<option value="${s.nome}"${trFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
     });
     html += '</select>';
@@ -3253,6 +3308,7 @@ function renderTrFiltros() {
 }
 
 function setTrFiltro(k, v) {
+  if (k === 'operacao') trFiltro.sala = 'todas'; // reset ponto ao trocar operação
   trFiltro[k] = v;
   renderTrFiltros();
   atualizarTimeRange();
