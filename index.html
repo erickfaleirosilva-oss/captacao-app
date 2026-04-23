@@ -3528,7 +3528,7 @@ const DDP_CONFIG = {
   },
   metaPenetracaoPool:  0.35,
   metaPenetracaoGeral: 0.25,
-  sheetsUrl: 'https://script.google.com/macros/s/AKfycbzeRsnRciLbesVlgKAjNGNu7T5BqzcerAlBnz8e2gWxEg3lqYVXYAIvgZeiJPw-QYFk7g/exec',
+  sheetsUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
 };
 
 // Calcula casais em sala e vendas automaticamente a partir dos leads do dia
@@ -3579,7 +3579,7 @@ const _ddpRemoteCache = {};
 function ddpSheetsLoad(hotel) {
   if (!DDP_CONFIG.sheetsUrl) return;
   const hotelEnc = encodeURIComponent(hotel);
-  fetch(DDP_CONFIG.sheetsUrl + '?hotel=' + hotelEnc)
+  fetch(DDP_CONFIG.sheetsUrl + '?action=getDDP&hotel=' + hotelEnc)
     .then(r => r.json())
     .then(res => {
       if (res.ok && Array.isArray(res.rows)) {
@@ -3623,11 +3623,7 @@ function ddpSheetsSave(entry) {
 
   // Prefixo DDP_ evita que o Sheets converta a string ISO para Date nativo
   // (o que causaria dateISO="" ao retornar via getDDP)
-  const payload = Object.assign({}, entry, {
-    dateISO: entry.dateISO && !entry.dateISO.startsWith('DDP_')
-      ? 'DDP_' + entry.dateISO
-      : entry.dateISO
-  });
+  const payload = Object.assign({ action: 'saveDDP' }, entry);
 
   fetch(DDP_CONFIG.sheetsUrl, {
     method: 'POST',

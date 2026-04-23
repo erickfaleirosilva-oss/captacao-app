@@ -70,9 +70,106 @@ function savePIs(arr) {
   PropertiesService.getScriptProperties().setProperty('pi_store', JSON.stringify(arr));
 }
 
+// ── DDP — armazenado na aba "DDP" do Sheets ──
+const DDP_SHEET_NAME = 'DDP';
+const DDP_COLS = ['hotel','dateISO','ciPool','ciCot','salaPool','salaCot','salaConv','vendPool','vendCot','vendConv'];
+
+function getDDPSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(DDP_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(DDP_SHEET_NAME);
+    const header = sheet.getRange(1, 1, 1, DDP_COLS.length);
+    header.setValues([DDP_COLS]);
+    header.setBackground('#1a2340');
+    header.setFontColor('#c9a84c');
+    header.setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 160); // hotel
+    sheet.setColumnWidth(2, 120); // dateISO
+    for (let c = 3; c <= DDP_COLS.length; c++) sheet.setColumnWidth(c, 90);
+  }
+  return sheet;
+}
+
+function getDDPStore() {
+  const sheet = getDDPSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  const rows = sheet.getRange(2, 1, lastRow - 1, DDP_COLS.length).getValues();
+  return rows
+    .filter(r => r[0] && r[1]) // hotel e dateISO preenchidos
+    .map(r => {
+      const obj = {};
+      DDP_COLS.forEach((col, i) => {
+        obj[col] = (i >= 2) ? (Number(r[i]) || 0) : String(r[i] || '').trim();
+      });
+      // Remove prefixo DDP_ se vier da planilha
+      if (obj.dateISO.startsWith('DDP_')) obj.dateISO = obj.dateISO.slice(4);
+      return obj;
+    });
+}
+
+function saveDDPEntry(entry) {
+  const sheet = getDDPSheet();
+  const lastRow = sheet.getLastRow();
+  // Busca linha existente com mesmo hotel+dateISO
+  let targetRow = -1;
+  if (lastRow >= 2) {
+    const hotelCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().map(String);
+    const dateCol  = sheet.getRange(2, 2, lastRow - 1, 1).getValues().flat().map(String);
+    for (let i = 0; i < hotelCol.length; i++) {
+      if (hotelCol[i] === entry.hotel && dateCol[i] === entry.dateISO) {
+        targetRow = i + 2;
+        break;
+      }
+    }
+  }
+  const rowData = DDP_COLS.map(col => entry[col] !== undefined ? entry[col] : 0);
+  if (targetRow > 0) {
+    sheet.getRange(targetRow, 1, 1, DDP_COLS.length).setValues([rowData]);
+  } else {
+    sheet.appendRow(rowData);
+  }
+}
+
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
+
+    // saveDDP: salva/atualiza registro de DDP na aba DDP do Sheets
+    if (data.action === 'saveDDP') {
+      let dateISO = data.dateISO || '';
+      if (dateISO.startsWith('DDP_')) dateISO = dateISO.slice(4);
+      const hotel = data.hotel || '';
+      if (!hotel || !dateISO) return jsonResponse({ status: 'error', message: 'hotel e dateISO obrigatórios' });
+      const entry = {
+        hotel, dateISO,
+        ciPool:   Number(data.ciPool)   || 0,
+        ciCot:    Number(data.ciCot)    || 0,
+        salaPool: Number(data.salaPool) || 0,
+        salaCot:  Number(data.salaCot)  || 0,
+        salaConv: Number(data.salaConv) || 0,
+        vendPool: Number(data.vendPool) || 0,
+        vendCot:  Number(data.vendCot)  || 0,
+        vendConv: Number(data.vendConv) || 0,
+      };
+      saveDDPEntry(entry);
+      return jsonResponse({ status: 'ok' });
+    }
+
+    // getDDP via POST (alternativa ao GET)
+    if (data.action === 'getDDP') {
+      const hotel = data.hotel || '';
+      const store = getDDPStore();
+      const rows = hotel ? store.filter(r => r.hotel === hotel) : store;
+      return jsonResponse({ status: 'ok', rows });
+    }
+
+    // dedup: não mais necessário (Sheets já garante upsert por hotel+dateISO), mantido por compatibilidade
+    if (data.action === 'dedup') {
+      return jsonResponse({ status: 'ok', removed: 0, message: 'DDP agora usa aba no Sheets — dedup automático no upsert' });
+    }
 
     // update_sala: atualiza coluna EmSala de um lead existente
     if (data._action === 'update_sala') {
@@ -153,6 +250,14 @@ function doGet(e) {
       return jsonResponse({ status: 'ok', pis: getPIs() });
     }
 
+    // ?action=getDDP&hotel=SPTR — retorna registros DDP
+    if (params.action === 'getDDP') {
+      const hotel = params.hotel || '';
+      const store = getDDPStore();
+      const rows = hotel ? store.filter(r => r.hotel === hotel) : store;
+      return jsonResponse({ status: 'ok', rows });
+    }
+
     const sheetsAlvo = salaFiltro
       ? [ss.getSheetByName(SALA_SHEETS[salaFiltro] || salaFiltro)].filter(Boolean)
       : Object.values(SALA_SHEETS).map(n => ss.getSheetByName(n)).filter(Boolean);
@@ -188,6 +293,26 @@ function doGet(e) {
 function migrarTodasAsAbas() {
   Object.values(SALA_SHEETS).forEach(nome => getOrCreateSheetByName(nome));
   Logger.log('Migração concluída.');
+}
+
+// ── Migra dados do PropertiesService (ddp_store antigo) para a aba DDP ──
+// Rodar UMA VEZ manualmente no Apps Script após implantar nova versão
+function migrarDDPParaSheets() {
+  const raw = PropertiesService.getScriptProperties().getProperty('ddp_store');
+  if (!raw) { Logger.log('Nada para migrar — ddp_store vazio.'); return; }
+  const store = JSON.parse(raw);
+  if (!store || !store.length) { Logger.log('Nada para migrar — lista vazia.'); return; }
+  getDDPSheet(); // garante que a aba existe
+  let migrados = 0;
+  store.forEach(entry => {
+    if (!entry.hotel || !entry.dateISO) return;
+    let d = entry.dateISO;
+    if (d.startsWith('DDP_')) d = d.slice(4);
+    saveDDPEntry(Object.assign({}, entry, { dateISO: d }));
+    migrados++;
+  });
+  Logger.log('Migração DDP concluída: ' + migrados + ' registros transferidos para a aba DDP.');
+  // NÃO apaga o ddp_store antigo automaticamente — confirme visualmente na planilha antes de limpar
 }
 
 // Reaplica cores em todas as linhas existentes (rodar uma vez manualmente)
