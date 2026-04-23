@@ -4145,32 +4145,37 @@ function _ddpRenderHist(hist) {
 
   function rowStats(r) {
     const ci      = (r.ciPool||0) + (r.ciCot||0);
+    const ciCot   = (r.ciCot||0);
+    const ciPool  = (r.ciPool||0);
     const sala    = (r.salaPool||0) + (r.salaCot||0) + (r.salaConv||0);
-    const vend    = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
-    const salaPool = (r.salaPool||0) + (r.salaConv||0); // pool + convidados
     const salaCot  = (r.salaCot||0);
-    const pp      = ddpPct(salaPool, r.ciPool); // penetração pool = sala pool ÷ CI pool
-    return { ci, sala, vend, pp, ciPool: r.ciPool||0, salaPool, salaCot, salaConv: r.salaConv||0 };
+    const salaConv = (r.salaConv||0);
+    const salaPool = (r.salaPool||0);
+    const vend    = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
+    const pp      = ddpPct(salaPool, ciPool); // penetração pool = sala pool ÷ CI pool
+    return { ci, ciCot, ciPool, sala, salaCot, salaConv, salaPool, vend, pp };
   }
 
   function accumStats(arr) {
-    let ci=0,ciPool=0,sala=0,vend=0,salaPool=0,salaCot=0,salaConv=0;
+    let ci=0,ciCot=0,ciPool=0,sala=0,vend=0,salaPool=0,salaCot=0,salaConv=0;
     arr.forEach(r => {
       const s = rowStats(r);
-      ci+=s.ci; ciPool+=s.ciPool; sala+=s.sala; vend+=s.vend;
+      ci+=s.ci; ciCot+=s.ciCot; ciPool+=s.ciPool; sala+=s.sala; vend+=s.vend;
       salaPool+=s.salaPool; salaCot+=s.salaCot; salaConv+=s.salaConv;
     });
-    const pp = ddpPct(salaPool, ciPool); // pool ÷ CI pool
-    return { ci, ciPool, sala, vend, salaPool, salaCot, pp };
+    const pp = ddpPct(salaPool, ciPool);
+    return { ci, ciCot, ciPool, sala, vend, salaPool, salaCot, salaConv, pp };
   }
 
   function tblHeader() {
     return `<thead><tr>
       <th>Data</th>
       <th>C.I.<br>Total</th>
+      <th>C.I.<br>Cot.</th>
       <th>C.I.<br>Pool</th>
-      <th>Sala<br>Pool</th>
       <th>Sala<br>Cot.</th>
+      <th>Sala<br>Conv.</th>
+      <th>Sala<br>Pool</th>
       <th>Vendas</th>
       <th>Penet.<br>Pool</th>
     </tr></thead>`;
@@ -4182,8 +4187,9 @@ function _ddpRenderHist(hist) {
     const dow = DIAS_SEMANA[new Date(r.dateISO + 'T12:00:00').getDay()];
     return `<tr>
       <td>${fmtDia(r.dateISO)} <span style="font-size:9px;color:var(--muted)">${dow}</span></td>
-      <td>${s.ci}</td><td>${s.ciPool}</td><td>${s.salaPool}</td><td>${s.salaCot}</td><td>${s.vend}</td>
-      <td class="${pC}">${fmtPct(s.pp)}</td>
+      <td>${s.ci}</td><td>${s.ciCot}</td><td>${s.ciPool}</td>
+      <td>${s.salaCot}</td><td>${s.salaConv}</td><td>${s.salaPool}</td>
+      <td>${s.vend}</td><td class="${pC}">${fmtPct(s.pp)}</td>
     </tr>`;
   }
 
@@ -4310,9 +4316,9 @@ function _ddpRenderHist(hist) {
             <tbody>
               ${dias.map(renderDiaRow).join('')}
               ${dias.length > 1 ? `<tr class="ddp-total">
-                <td>Semana</td><td>${ac.ci}</td><td>${ac.ciPool}</td>
-                <td>${ac.salaPool}</td><td>${ac.salaCot}</td><td>${ac.vend}</td>
-                <td class="${ppC}">${fmtPct(ac.pp)}</td>
+                <td>Semana</td><td>${ac.ci}</td><td>${ac.ciCot}</td><td>${ac.ciPool}</td>
+                <td>${ac.salaCot}</td><td>${ac.salaConv}</td><td>${ac.salaPool}</td>
+                <td>${ac.vend}</td><td class="${ppC}">${fmtPct(ac.pp)}</td>
               </tr>` : ''}
             </tbody>
           </table>
@@ -4324,15 +4330,17 @@ function _ddpRenderHist(hist) {
 
   // Seção histórico mensal
   if (histMensal.length) {
-    let tCI=0, tPool=0, tSalaPool=0, tSalaCot=0, tVend=0;
+    let tCI=0, tCiCot=0, tPool=0, tSalaPool=0, tSalaCot=0, tSalaConv=0, tVend=0;
     const mesRows = histMensal.map(r => {
       const s  = rowStats(r);
       const pC = ddpPctClass(s.pp/100, DDP_CONFIG.metaPenetracaoPool);
-      tCI += s.ci; tPool += s.ciPool; tSalaPool += s.salaPool; tSalaCot += s.salaCot; tVend += s.vend;
+      tCI += s.ci; tCiCot += s.ciCot; tPool += s.ciPool;
+      tSalaPool += s.salaPool; tSalaCot += s.salaCot; tSalaConv += s.salaConv; tVend += s.vend;
       return `<tr>
         <td>${fmtMes(r.dateISO)}</td>
-        <td>${s.ci}</td><td>${s.ciPool}</td><td>${s.salaPool}</td><td>${s.salaCot}</td><td>${s.vend}</td>
-        <td class="${pC}">${fmtPct(s.pp)}</td>
+        <td>${s.ci}</td><td>${s.ciCot}</td><td>${s.ciPool}</td>
+        <td>${s.salaCot}</td><td>${s.salaConv}</td><td>${s.salaPool}</td>
+        <td>${s.vend}</td><td class="${pC}">${fmtPct(s.pp)}</td>
       </tr>`;
     }).join('');
     const tPP  = ddpPct(tSalaPool, tPool);
@@ -4348,9 +4356,9 @@ function _ddpRenderHist(hist) {
       <tbody>
         ${mesRows}
         <tr class="ddp-total">
-          <td>Total</td><td>${tCI}</td><td>${tPool}</td>
-          <td>${tSalaPool}</td><td>${tSalaCot}</td><td>${tVend}</td>
-          <td class="${tPPC}">${fmtPct(tPP)}</td>
+          <td>Total</td><td>${tCI}</td><td>${tCiCot}</td><td>${tPool}</td>
+          <td>${tSalaCot}</td><td>${tSalaConv}</td><td>${tSalaPool}</td>
+          <td>${tVend}</td><td class="${tPPC}">${fmtPct(tPP)}</td>
         </tr>
       </tbody>
     </table>`;
