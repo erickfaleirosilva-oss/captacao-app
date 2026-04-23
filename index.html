@@ -3617,10 +3617,18 @@ function ddpSheetsSave(entry) {
   if (idx >= 0) _ddpRemoteCache[entry.hotel][idx] = entry;
   else _ddpRemoteCache[entry.hotel].push(entry);
 
+  // Prefixo DDP_ evita que o Sheets converta a string ISO para Date nativo
+  // (o que causaria dateISO="" ao retornar via getDDP)
+  const payload = Object.assign({}, entry, {
+    dateISO: entry.dateISO && !entry.dateISO.startsWith('DDP_')
+      ? 'DDP_' + entry.dateISO
+      : entry.dateISO
+  });
+
   fetch(DDP_CONFIG.sheetsUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(entry),
+    body: JSON.stringify(payload),
   }).catch(() => {}); // Falha silenciosa — dado já está no localStorage
 }
 
