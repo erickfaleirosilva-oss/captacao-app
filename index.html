@@ -4252,7 +4252,7 @@ function _ddpRenderHist(hist) {
   // Seção semanas do mês corrente
   if (semanasOrdenadas.length) {
     const resetBtn = (captador && captador.cargo === 'ceo')
-      ? `<button onclick="ddpResetarMes('${anoMesAtual}');renderDdp()" style="margin-left:auto;font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid rgba(241,214,145,.3);background:transparent;color:var(--muted);cursor:pointer">↺ Resetar cache</button>`
+      ? `<button onclick="ddpResetarMes('${anoMesAtual}')" style="margin-left:auto;font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid rgba(241,214,145,.3);background:transparent;color:var(--muted);cursor:pointer">↺ Resetar cache</button>`
       : '';
     html += `<div class="ddp-semanas">
       <div class="ddp-hist-sec-lbl" style="margin-top:4px">
