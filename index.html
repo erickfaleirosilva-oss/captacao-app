@@ -3593,12 +3593,10 @@ function ddpSheetsLoad(hotel) {
         }
         res.rows.forEach(row => { if (row.dateISO) row.dateISO = _normDt(row.dateISO); });
         _ddpRemoteCache[hotel] = res.rows;
-        // Sincroniza no localStorage para acesso offline futuro
+        // Sincroniza no localStorage — remoto é sempre fonte de verdade para dias passados
         res.rows.forEach(row => {
           if (row.hotel && row.dateISO) {
-            const existing = ddpLoad(row.hotel, row.dateISO);
-            // Só sobrescreve se não tiver dados locais (remoto é fonte de verdade para histórico)
-            if (!existing) ddpSave(row.hotel, row.dateISO, row);
+            ddpSave(row.hotel, row.dateISO, row);
           }
         });
         // Re-renderiza para refletir os dados recém-chegados
