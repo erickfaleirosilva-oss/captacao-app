@@ -654,6 +654,24 @@
     .ddp-hist-tbl tr:last-child td { border-bottom:none; }
     .ddp-hist-tbl tr.ddp-total td { background:rgba(241,214,145,.06); border-top:1px solid rgba(241,214,145,.2); font-weight:800; border-bottom:none; }
     .ddp-hist-tbl tr.ddp-total td:first-child { color:var(--gold); }
+    /* ── Semanas DDP ── */
+    .ddp-semanas { margin-bottom:4px; }
+    .ddp-semanas-lbl { font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px; }
+    .ddp-sem-row { border-bottom:1px solid rgba(37,64,96,.35); }
+    .ddp-sem-row:last-child { border-bottom:none; }
+    .ddp-sem-hd { display:grid; grid-template-columns:1fr repeat(5,auto); gap:0 8px; align-items:center; padding:8px 10px; cursor:pointer; user-select:none; transition:background .15s; }
+    .ddp-sem-hd:hover { background:rgba(241,214,145,.04); }
+    .ddp-sem-hd .sem-lbl { font-size:11px; font-weight:700; color:var(--gold); }
+    .ddp-sem-hd .sem-val { font-size:11px; font-weight:600; color:var(--text); text-align:right; min-width:28px; }
+    .ddp-sem-hd .sem-pct { font-size:11px; font-weight:700; text-align:right; min-width:38px; }
+    .ddp-sem-hd .sem-arr { font-size:10px; color:var(--muted); transition:transform .2s; margin-left:4px; }
+    .ddp-sem-hd.open .sem-arr { transform:rotate(90deg); }
+    .ddp-sem-dias { display:none; background:rgba(0,0,0,.12); }
+    .ddp-sem-dias.open { display:block; }
+    .ddp-sem-dias .ddp-hist-tbl td:first-child { padding-left:20px; color:var(--muted); font-weight:600; font-size:10px; }
+    .ddp-sem-dias .ddp-hist-tbl td { font-size:10px; padding:5px 6px; }
+    .ddp-sem-dias .ddp-hist-tbl tr.ddp-total td { background:rgba(241,214,145,.04); }
+    .ddp-hist-sec-lbl { font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;display:flex;align-items:center;gap:6px; }
     /* ── Card WhatsApp DDP ── */
     .ddp-wpp-wrap { margin-top:20px; }
     .ddp-wpp-sec-lbl { font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px; }
@@ -3983,15 +4001,13 @@ function _ddpRenderHist(hist) {
   if (!hist.length) { card.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0">Nenhum registro ainda</div>'; return; }
 
   const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
   function normISO(v) {
-    // Converte qualquer formato de data para YYYY-MM-DD
     if (!v) return '';
     const s = String(v).trim();
-    // Já está no formato correto
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    // Formato com T (ISO 8601): "2025-07-31T00:00:00.000Z"
     if (s.includes('T')) return s.split('T')[0];
-    // Sheets trunca timezone: "Wed Jul 31 2025 00:00:00 GM..." — new Date() falha, usar regex
     const mDdd = s.match(/^\w{3}\s+(\w{3})\s+(\d{1,2})\s+(\d{4})/);
     if (mDdd) {
       const MON={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
@@ -4001,80 +4017,210 @@ function _ddpRenderHist(hist) {
     if (!isNaN(d)) return d.toISOString().slice(0, 10);
     return s;
   }
-  function fmtData(dateISO) {
-    const clean = normISO(dateISO);
-    if (!clean || clean.length < 10) return clean || '—';
-    const [yy, mm, dd] = clean.split('-');
-    const isUltimoDia = new Date(Number(yy), Number(mm), 0).getDate() === Number(dd);
-    return (dd === '01' || isUltimoDia)
-      ? MESES[Number(mm)-1] + '/' + yy.slice(2)
-      : dd + '/' + mm;
+
+  function fmtMes(dateISO) {
+    const [yy, mm] = dateISO.split('-');
+    return (MESES[Number(mm)-1]||mm) + '/' + yy.slice(2);
   }
 
-  // Filtra apenas registros mensais consolidados (dia 01 ou último dia do mês)
-  // e deduplica por mês (YYYY-MM) — prioriza o registro mais recente
+  function fmtDia(dateISO) {
+    const [, mm, dd] = dateISO.split('-');
+    return dd + '/' + mm;
+  }
+
+  function semKey(dateISO) {
+    // Retorna a data da segunda-feira da semana que contém dateISO
+    const d = new Date(dateISO + 'T12:00:00');
+    const dow = d.getDay(); // 0=Dom,1=Seg,...,6=Sáb
+    // Retrocede até segunda (dow=1). Dom (0) retrocede 6 dias.
+    const diff = (dow === 0) ? -6 : 1 - dow;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().slice(0, 10); // YYYY-MM-DD da segunda
+  }
+
+  function semLabel(segISO) {
+    const seg = new Date(segISO + 'T12:00:00');
+    const dom = new Date(segISO + 'T12:00:00');
+    dom.setDate(dom.getDate() + 6);
+    const segStr = String(seg.getDate()).padStart(2,'0') + '/' + String(seg.getMonth()+1).padStart(2,'0');
+    const domStr = String(dom.getDate()).padStart(2,'0') + '/' + String(dom.getMonth()+1).padStart(2,'0');
+    return segStr + ' – ' + domStr;
+  }
+
+  function rowStats(r) {
+    const ci   = (r.ciPool||0) + (r.ciCot||0);
+    const sala = (r.salaPool||0) + (r.salaCot||0) + (r.salaConv||0);
+    const vend = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
+    const pp   = ddpPct((r.salaPool||0) + (r.salaConv||0), r.ciPool);
+    return { ci, sala, vend, pp, ciPool: r.ciPool||0, salaPool: r.salaPool||0, salaConv: r.salaConv||0 };
+  }
+
+  function accumStats(arr) {
+    let ci=0,ciPool=0,sala=0,vend=0,salaPool=0,salaConv=0;
+    arr.forEach(r => {
+      const s = rowStats(r);
+      ci+=s.ci; ciPool+=s.ciPool; sala+=s.sala; vend+=s.vend; salaPool+=s.salaPool; salaConv+=s.salaConv;
+    });
+    const pp = ddpPct(salaPool + salaConv, ciPool);
+    return { ci, ciPool, sala, vend, pp };
+  }
+
+  function tblHeader() {
+    return `<thead><tr>
+      <th>Data</th>
+      <th>C.I.<br>Total</th>
+      <th>C.I.<br>Pool</th>
+      <th>Em<br>Sala</th>
+      <th>Vendas</th>
+      <th>Penet.<br>Pool</th>
+    </tr></thead>`;
+  }
+
+  function renderDiaRow(r) {
+    const s  = rowStats(r);
+    const pC = ddpPctClass(s.pp/100, DDP_CONFIG.metaPenetracaoPool);
+    const dow = DIAS_SEMANA[new Date(r.dateISO + 'T12:00:00').getDay()];
+    return `<tr>
+      <td>${fmtDia(r.dateISO)} <span style="font-size:9px;color:var(--muted)">${dow}</span></td>
+      <td>${s.ci}</td><td>${s.ciPool}</td><td>${s.sala}</td><td>${s.vend}</td>
+      <td class="${pC}">${fmtPct(s.pp)}</td>
+    </tr>`;
+  }
+
+  // ── Mês corrente: agrupa dias por semana ──
+  const hoje = todayISO();
+  const anoMesAtual = hoje.slice(0, 7);
+
+  // Todos os dias do mês corrente com dados
+  const diasMes = hist
+    .map(r => ({ ...r, dateISO: normISO(r.dateISO) }))
+    .filter(r => r.dateISO && r.dateISO.startsWith(anoMesAtual))
+    .sort((a, b) => b.dateISO.localeCompare(a.dateISO));
+
+  // Agrupa dias por semana (chave = ISO da segunda)
+  const semanas = {};
+  diasMes.forEach(r => {
+    const sk = semKey(r.dateISO);
+    if (!semanas[sk]) semanas[sk] = [];
+    semanas[sk].push(r);
+  });
+  const semanasOrdenadas = Object.keys(semanas).sort((a,b) => b.localeCompare(a));
+
+  // ── Histórico mensal (meses anteriores + mês corrente consolidado) ──
   const byMes = {};
   hist.forEach(r => {
     const clean = normISO(r.dateISO);
     if (!clean || clean.length < 10) return;
     const [yy, mm, dd] = clean.split('-');
     const isUltimoDia = new Date(Number(yy), Number(mm), 0).getDate() === Number(dd);
-    if (dd !== '01' && !isUltimoDia && !r.mensal) return; // ignora registros diários
+    if (dd !== '01' && !isUltimoDia && !r.mensal) return;
     const chave = yy + '-' + mm;
     if (!byMes[chave]) byMes[chave] = { ...r, dateISO: clean };
   });
   const histMensal = Object.values(byMes).sort((a, b) => b.dateISO.localeCompare(a.dateISO));
 
-  if (!histMensal.length) {
+  // ── Monta HTML ──
+  let html = '';
+
+  // Seção semanas do mês corrente
+  if (semanasOrdenadas.length) {
+    html += `<div class="ddp-semanas">
+      <div class="ddp-hist-sec-lbl" style="margin-top:4px">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--gold)"></div>
+        ${MESES[Number(anoMesAtual.split('-')[1])-1]}/${anoMesAtual.split('-')[0].slice(2)} — por semana
+      </div>`;
+
+    // Mini-header para colunas das semanas
+    html += `<div class="ddp-sem-hd" style="cursor:default;opacity:.55;padding:4px 10px">
+      <span class="sem-lbl" style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Semana</span>
+      <span class="sem-val" style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">C.I.</span>
+      <span class="sem-val" style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Sala</span>
+      <span class="sem-val" style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Vend.</span>
+      <span class="sem-pct" style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">Penet.</span>
+      <span class="sem-arr"></span>
+    </div>`;
+
+    semanasOrdenadas.forEach((sk, idx) => {
+      const dias = semanas[sk].sort((a,b) => b.dateISO.localeCompare(a.dateISO));
+      const ac = accumStats(dias);
+      const ppC = ddpPctClass(ac.pp/100, DDP_CONFIG.metaPenetracaoPool);
+      const semId = 'ddp_sem_' + sk.replace(/-/g,'');
+      html += `
+      <div class="ddp-sem-row">
+        <div class="ddp-sem-hd${idx === 0 ? ' open' : ''}" onclick="_ddpToggleSem('${semId}',this)">
+          <span class="sem-lbl">${semLabel(sk)}</span>
+          <span class="sem-val">${ac.ci}</span>
+          <span class="sem-val">${ac.sala}</span>
+          <span class="sem-val">${ac.vend}</span>
+          <span class="sem-pct ${ppC}">${fmtPct(ac.pp)}</span>
+          <span class="sem-arr">▶</span>
+        </div>
+        <div class="ddp-sem-dias${idx === 0 ? ' open' : ''}" id="${semId}">
+          <table class="ddp-hist-tbl">
+            ${tblHeader()}
+            <tbody>
+              ${dias.map(renderDiaRow).join('')}
+              ${dias.length > 1 ? `<tr class="ddp-total">
+                <td>Semana</td><td>${ac.ci}</td><td>${ac.ciPool}</td>
+                <td>${ac.sala}</td><td>${ac.vend}</td>
+                <td class="${ppC}">${fmtPct(ac.pp)}</td>
+              </tr>` : ''}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // Seção histórico mensal
+  if (histMensal.length) {
+    let tCI=0, tPool=0, tSala=0, tVend=0, tSalaPool=0, tSalaConv=0;
+    const mesRows = histMensal.map(r => {
+      const s  = rowStats(r);
+      const pC = ddpPctClass(s.pp/100, DDP_CONFIG.metaPenetracaoPool);
+      tCI += s.ci; tPool += s.ciPool; tSala += s.sala; tVend += s.vend;
+      tSalaPool += s.salaPool; tSalaConv += s.salaConv;
+      return `<tr>
+        <td>${fmtMes(r.dateISO)}</td>
+        <td>${s.ci}</td><td>${s.ciPool}</td><td>${s.sala}</td><td>${s.vend}</td>
+        <td class="${pC}">${fmtPct(s.pp)}</td>
+      </tr>`;
+    }).join('');
+    const tPP  = ddpPct(tSalaPool + tSalaConv, tPool);
+    const tPPC = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
+
+    html += `
+    <div class="ddp-hist-sec-lbl">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--muted)"></div>
+      Acumulado mensal
+    </div>
+    <table class="ddp-hist-tbl">
+      ${tblHeader()}
+      <tbody>
+        ${mesRows}
+        <tr class="ddp-total">
+          <td>Total</td><td>${tCI}</td><td>${tPool}</td>
+          <td>${tSala}</td><td>${tVend}</td>
+          <td class="${tPPC}">${fmtPct(tPP)}</td>
+        </tr>
+      </tbody>
+    </table>`;
+  }
+
+  if (!html) {
     card.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px 0">Nenhum registro mensal ainda</div>';
     return;
   }
 
-  // Acumula totais
-  let tCI = 0, tPool = 0, tSala = 0, tVend = 0, tSalaPool = 0, tSalaConv = 0;
-  const rows = histMensal.map(r => {
-    const ci      = (r.ciPool||0) + (r.ciCot||0);
-    const sala    = (r.salaPool||0) + (r.salaCot||0) + (r.salaConv||0);
-    const vend    = (r.vendPool||0) + (r.vendCot||0) + (r.vendConv||0);
-    const pp      = ddpPct((r.salaPool||0) + (r.salaConv||0), r.ciPool);
-    const pC      = ddpPctClass(pp/100, DDP_CONFIG.metaPenetracaoPool);
-    tCI      += ci; tPool += (r.ciPool||0); tSala += sala; tVend += vend;
-    tSalaPool += (r.salaPool||0); tSalaConv += (r.salaConv||0);
-    return `<tr>
-      <td>${fmtData(r.dateISO)}</td>
-      <td>${ci}</td>
-      <td>${r.ciPool||0}</td>
-      <td>${sala}</td>
-      <td>${vend}</td>
-      <td class="${pC}">${fmtPct(pp)}</td>
-    </tr>`;
-  }).join('');
+  card.innerHTML = html;
+}
 
-  const tPP  = ddpPct(tSalaPool + tSalaConv, tPool);
-  const tPPC = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
-
-  card.innerHTML = `
-  <table class="ddp-hist-tbl">
-    <thead><tr>
-      <th>Mês</th>
-      <th>C.I.<br>Total</th>
-      <th>C.I.<br>Pool</th>
-      <th>Em<br>Sala</th>
-      <th>Vendas</th>
-      <th>Penet.<br>Pool</th>
-    </tr></thead>
-    <tbody>
-      ${rows}
-      <tr class="ddp-total">
-        <td>Total</td>
-        <td>${tCI}</td>
-        <td>${tPool}</td>
-        <td>${tSala}</td>
-        <td>${tVend}</td>
-        <td class="${tPPC}">${fmtPct(tPP)}</td>
-      </tr>
-    </tbody>
-  </table>`;
+function _ddpToggleSem(id, hd) {
+  const dias = document.getElementById(id);
+  if (!dias) return;
+  const open = dias.classList.toggle('open');
+  hd.classList.toggle('open', open);
 }
 
 // ── Card Resumo WhatsApp ──
