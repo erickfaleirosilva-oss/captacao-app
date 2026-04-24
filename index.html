@@ -2811,18 +2811,13 @@ function toggleSala(leadId) {
     delete leads[idx].venda;
   }
   _salvarLeads();
+  // Reenvio do lead completo garante que o Sheets tenha a linha mesmo se o POST original falhou
   if (navigator.onLine && API.ok()) {
-    // Envia update_sala E também o lead completo com emSala atualizado.
-    // Isso garante que, se o lead ainda não chegou ao Sheets (race condition),
-    // o upsert vai criar/atualizar a linha com EmSala correto.
-    const leadAtual = { ...leads[idx] };
-    API.post({ _action: 'update_sala', id: leadAtual.id, emSala: leadAtual.emSala })
-      .catch(() => offlineEnqueue({ _action: 'update_sala', id: leadAtual.id, emSala: leadAtual.emSala }));
-    // Reenvio do lead completo garante que o Sheets tenha a linha mesmo se o POST original falhou
-    API.post(leadAtual).catch(() => offlineEnqueue(leadAtual));
-  } else if (!navigator.onLine) {
-    offlineEnqueue({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala });
+    API.post({ ...leads[idx] }).catch(() => offlineEnqueue({ ...leads[idx] }));
+  } else {
+    offlineEnqueue({ ...leads[idx] });
   }
+  _syncSalaState(idx);
   renderHistList();
   atualizarCdp();
 }
@@ -2833,6 +2828,7 @@ function setTipoSala(leadId, tipo) {
   // Toggle: se já está selecionado, desmarca
   leads[idx].tipoSala = leads[idx].tipoSala === tipo ? null : tipo;
   _salvarLeads();
+  _syncSalaState(idx);
   renderHistList();
 }
 
@@ -2841,7 +2837,18 @@ function toggleVenda(leadId) {
   if (idx === -1) return;
   leads[idx].venda = !leads[idx].venda;
   _salvarLeads();
+  _syncSalaState(idx);
   renderHistList();
+}
+
+// Sincroniza emSala + tipoSala + venda com o Sheets após qualquer alteração de sala
+function _syncSalaState(idx) {
+  if (!navigator.onLine || !API.ok()) {
+    offlineEnqueue({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala, tipoSala: leads[idx].tipoSala || null, venda: !!leads[idx].venda });
+    return;
+  }
+  const payload = { _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala, tipoSala: leads[idx].tipoSala || null, venda: !!leads[idx].venda };
+  API.post(payload).catch(() => offlineEnqueue(payload));
 }
 
 function _salvarLeads() {

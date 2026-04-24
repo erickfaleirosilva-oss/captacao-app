@@ -18,13 +18,13 @@ const SALA_SHEETS = {
 const DEFAULT_SHEET = 'Alta Vista'; // fallback — evita criação de abas novas
 
 const COLUNAS = [
-  'ID','Data','Hora','Captador','Sala','Nome','Telefone','Cidade','Resultado','Tipo','Renda','Modo','EmSala',
+  'ID','Data','Hora','Captador','Sala','Nome','Telefone','Cidade','Resultado','Tipo','Renda','Modo','EmSala','TipoSala','Venda',
   // Campos detalhados das respostas
   'PontoCaptacao','IdadeTitular','ProfissaoTitular','IdadeConjuge','ProfissaoConjuge',
   'Carro','Casa','Cartao','Viagens',
 ];
 const N_COLS  = COLUNAS.length;
-const COL_WIDTHS = [180,100,80,150,150,150,130,130,90,150,130,80,80,150,120,150,120,150,120,80,80,80];
+const COL_WIDTHS = [180,100,80,150,150,150,130,130,90,150,130,80,80,100,80,150,120,150,120,150,120,80,80,80];
 
 function aplicarCabecalho(sheet) {
   const header = sheet.getRange(1, 1, 1, N_COLS);
@@ -232,7 +232,7 @@ function doPost(e) {
       return jsonResponse({ status: 'ok', removed: 0, message: 'DDP agora usa aba no Sheets — dedup automático no upsert' });
     }
 
-    // update_sala: atualiza coluna EmSala de um lead existente
+    // update_sala: atualiza EmSala, TipoSala e Venda de um lead existente
     if (data._action === 'update_sala') {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheetsAlvo = Object.values(SALA_SHEETS).map(n => ss.getSheetByName(n)).filter(Boolean);
@@ -240,10 +240,13 @@ function doPost(e) {
         const row = findRowById(sheet, data.id);
         if (row > 0) {
           const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-          const emSalaCol = cabecalho.indexOf('EmSala');
-          if (emSalaCol >= 0) {
-            sheet.getRange(row, emSalaCol + 1).setValue(data.emSala ? 'SIM' : '');
-          }
+          const set = (col, val) => {
+            const i = cabecalho.indexOf(col);
+            if (i >= 0) sheet.getRange(row, i + 1).setValue(val);
+          };
+          set('EmSala',   data.emSala   ? 'SIM' : '');
+          set('TipoSala', data.tipoSala || '');
+          set('Venda',    data.venda    ? 'SIM' : '');
           return jsonResponse({ status: 'ok', id: data.id });
         }
       }
@@ -275,11 +278,16 @@ function doPost(e) {
     const sheet = resolverSheet(data.sala || '');
     const existingRow = findRowById(sheet, data.id);
     if (existingRow > 0) {
-      // Lead já existe — se emSala=true, aproveita para atualizar a coluna EmSala
-      if (data.emSala) {
+      // Lead já existe — sincroniza EmSala, TipoSala e Venda se presentes no request
+      if (data.emSala || data.tipoSala || data.venda) {
         const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-        const emSalaCol = cabecalho.indexOf('EmSala');
-        if (emSalaCol >= 0) sheet.getRange(existingRow, emSalaCol + 1).setValue('SIM');
+        const set = (col, val) => {
+          const i = cabecalho.indexOf(col);
+          if (i >= 0) sheet.getRange(existingRow, i + 1).setValue(val);
+        };
+        if (data.emSala)   set('EmSala',   'SIM');
+        if (data.tipoSala) set('TipoSala', data.tipoSala);
+        if (data.venda)    set('Venda',    'SIM');
       }
       return jsonResponse({ status: 'duplicate', id: data.id });
     }
@@ -308,7 +316,9 @@ function doPost(e) {
       data.captador || '', data.sala || '', data.nome || '',
       data.tel || '', data.cidade || '', data.verdict || '',
       data.tipo || '', data.renda || '', data.mode || '',
-      data.emSala ? 'SIM' : '',
+      data.emSala   ? 'SIM' : '',          // EmSala
+      data.tipoSala || '',                 // TipoSala
+      data.venda    ? 'SIM' : '',          // Venda
       // Campos detalhados
       data.sala || '',                     // PontoCaptacao (mesmo que Sala — filtrável)
       ans.idadeMarido      || '',          // IdadeTitular
@@ -411,7 +421,9 @@ function doGet(e) {
           captador: get('Captador'), sala: get('Sala'), nome: get('Nome'),
           tel: get('Telefone'), cidade: get('Cidade'), verdict: get('Resultado'),
           tipo: get('Tipo'), renda: get('Renda'), mode: get('Modo'),
-          emSala: get('EmSala') === 'SIM',
+          emSala:   get('EmSala')   === 'SIM',
+          tipoSala: get('TipoSala') || null,
+          venda:    get('Venda')    === 'SIM',
           _ans: {
             idadeMarido:      get('IdadeTitular')      || null,
             profissaoTitular: get('ProfissaoTitular')  || null,
