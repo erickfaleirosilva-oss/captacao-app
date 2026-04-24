@@ -336,10 +336,32 @@ function doGet(e) {
 
     // ?dateISO=2026-04-24 filtra só pelo dia — evita timeout com 12k leads
     const dateISOFiltro = params.dateISO || null;
-    // Converte YYYY-MM-DD para DD/MM/YYYY (formato salvo no Sheets)
-    const dateFiltro = dateISOFiltro
-      ? dateISOFiltro.split('-').reverse().join('/')
-      : null;
+
+    // Normaliza qualquer formato de data para YYYY-MM-DD
+    function _normRowDate(v) {
+      if (!v) return '';
+      if (v instanceof Date) {
+        const y = v.getFullYear();
+        const m = String(v.getMonth() + 1).padStart(2, '0');
+        const d = String(v.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+      }
+      const s = String(v).trim();
+      // Já está em YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+      // DD/MM/YYYY
+      const m1 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if (m1) return m1[3] + '-' + m1[2] + '-' + m1[1];
+      // "Thu Apr 24 2026 ..." ou qualquer formato JS Date string
+      const dt = new Date(s);
+      if (!isNaN(dt)) {
+        const y = dt.getFullYear();
+        const mo = String(dt.getMonth() + 1).padStart(2, '0');
+        const d = String(dt.getDate()).padStart(2, '0');
+        return y + '-' + mo + '-' + d;
+      }
+      return s;
+    }
 
     const leads = [];
     sheetsAlvo.forEach(sheet => {
@@ -353,9 +375,9 @@ function doGet(e) {
       rows.forEach(r => {
         if (!r[0]) return;
         // Filtro por data — se solicitado, pula linhas de outras datas
-        if (dateFiltro) {
-          const rowDate = idx['Data'] >= 0 ? String(r[idx['Data']]).trim() : '';
-          if (!rowDate.includes(dateFiltro)) return;
+        if (dateISOFiltro) {
+          const rowDateISO = idx['Data'] >= 0 ? _normRowDate(r[idx['Data']]) : '';
+          if (rowDateISO !== dateISOFiltro) return;
         }
         const get = (col) => idx[col] >= 0 ? r[idx[col]] : '';
         leads.push({
