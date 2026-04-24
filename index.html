@@ -113,6 +113,7 @@
     #pwChangePanel.hidden { display: none !important; }
     #forgotPanel { width: 100%; max-width: 380px; }
     #forgotPanel.hidden { display: none !important; }
+    #criarSenhaPanel.hidden { display: none !important; }
     .pwc-title { font-size: 19px; font-weight: 800; color: var(--gold2); margin-bottom: 6px; }
     .pwc-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; text-align: center; }
     .pwc-form  { width: 100%; }
@@ -790,6 +791,27 @@
     <button class="btn-login" onclick="fecharAjudaSenha()">← Voltar</button>
   </div>
 
+  <!-- PAINEL: criar senha pessoal (primeiro login) -->
+  <div id="criarSenhaPanel" class="hidden">
+    <div class="pwc-title">🔐 Crie sua senha pessoal</div>
+    <div class="pwc-sub" style="text-align:center;margin-bottom:20px;line-height:1.6">
+      Olá, <strong id="criarSenhaNome" style="color:var(--gold2)"></strong>!<br>
+      É a primeira vez que você acessa. Crie uma senha pessoal para proteger sua conta.
+    </div>
+    <div class="pwc-form">
+      <label class="pwc-label">NOVA SENHA</label>
+      <div class="pw-wrap" style="margin-bottom:14px">
+        <input class="pw-input" id="criarSenhaInput" type="password" placeholder="Mínimo 4 caracteres" autocomplete="new-password" style="background:var(--navy2);" onkeydown="criarSenhaKeydown(event)" />
+      </div>
+      <label class="pwc-label">CONFIRMAR SENHA</label>
+      <div class="pw-wrap" style="margin-bottom:6px">
+        <input class="pw-input" id="criarSenhaConfirm" type="password" placeholder="Repita a senha" autocomplete="new-password" style="background:var(--navy2);" onkeydown="criarSenhaKeydown(event)" />
+      </div>
+      <div class="pwc-error" id="criarSenhaError"></div>
+      <button class="btn-login" onclick="confirmarCriarSenha()">Salvar e entrar →</button>
+    </div>
+  </div>
+
   <!-- PAINEL: trocar senha (abre por cima, dentro do mesmo screenLogin) -->
   <div id="pwChangePanel" class="hidden">
     <div class="pwc-title">🔐 Alterar senha</div>
@@ -1109,47 +1131,47 @@ const CONFIG = {
     // São Pedro — captadores escolhem a sala ao iniciar (Thermas SP ou SPTR)
     // Bruno Moisés, José Heraldo e Mayra Teixeira → SPTR fixo
     // Demais → sem sala fixa (escolhem ao qualificar)
-    { nome: 'Alayne Helena Guisini Rosa',        cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'alayne123'    },
-    { nome: 'Andrey Mansur de Andrade',          cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'andrey123'    },
-    { nome: 'Antony Alex dos Santos',            cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'antony123'    },
-    { nome: 'Bruno Moisés',                      cargo: 'captador', operacao: 'São Pedro', sala: 'SPTR', senhaDefault: 'brunobruno'   },
-    { nome: 'Murilo Henrique',                   cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'murilo123'    },
-    { nome: 'Flavio Henrique Marcondes',         cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'flavio123'    },
-    { nome: 'Glaucilene Barbosa Ribeiro',        cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'glauci123'    },
-    { nome: 'Ivan Gabriel Botão as Silva',       cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'ivan123'      },
-    { nome: 'João Mario Dias Silva',             cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'joaomario123' },
-    { nome: 'João Pedro de Matos Saia',          cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'joaopedro123' },
-    { nome: 'João Victor Ferreira Rodrigues',    cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'joaovictor123'},
-    { nome: 'Julia Eyer da Cunha',               cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'julia123'     },
-    { nome: 'José Heraldo',                      cargo: 'captador', operacao: 'São Pedro', sala: 'SPTR', senhaDefault: 'josejose'     },
-    { nome: 'Lucas de Souza Miranda',            cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'lucas123'     },
-    { nome: 'Matheus Henrique Franca Silva',     cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'matheus123'   },
-    { nome: 'Mayara Teixeira da Silva',          cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'mayara123'    },
-    { nome: 'Mayra Teixeira',                    cargo: 'captador', operacao: 'São Pedro', sala: 'SPTR', senhaDefault: 'mayramayra'   },
-    { nome: 'Patrick Henrique Faria',            cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'patrick123'   },
-    { nome: 'Raphael Luiz Ramos Milano',         cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'raphael123'   },
-    { nome: 'Romenik Cardoso de Jesus',          cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'romenik123'   },
-    { nome: 'Tiago Batista Santos',              cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'tiago123'     },
-    { nome: 'Vinicius Alves Brilho',             cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'vinicius123'  },
-    { nome: 'Vinicius Eduardo Alves de Lima',    cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'viniciuse123' },
-    { nome: 'Walasson de Jesus Alves',           cargo: 'captador', operacao: 'São Pedro', senhaDefault: 'walasson123'  },
+    { nome: 'Alayne Helena Guisini Rosa',        cargo: 'captador', operacao: 'São Pedro', senhaHash: '242c5938003bb9f8e1d7cf9401edf3f48b0979d231ac286cb758693d5a85f58f' },
+    { nome: 'Andrey Mansur de Andrade',          cargo: 'captador', operacao: 'São Pedro', senhaHash: '263ff3ae3a19c5c974fc1675985ad68acad1a4cd95d2781f8b21f51325631a1a' },
+    { nome: 'Antony Alex dos Santos',            cargo: 'captador', operacao: 'São Pedro', senhaHash: '16634349387974f3e363104d54031d5376cc2bb79ebd97496f89e75d8cbad41b' },
+    { nome: 'Bruno Moisés',                      cargo: 'captador', operacao: 'São Pedro', sala: 'SPTR', senhaHash: '519d074bcf48d6a73e9fcdf57e382ae0050d4d6b13d9860d4f55e54af3ea77de' },
+    { nome: 'Murilo Henrique',                   cargo: 'captador', operacao: 'São Pedro', senhaHash: '8433136f0f96ae634caaa199f0742614c469ba9eaac3a3acaa1a3ed0d565fa67' },
+    { nome: 'Flavio Henrique Marcondes',         cargo: 'captador', operacao: 'São Pedro', senhaHash: '2aa3a11eab1eb052b0c9e0e1efd638608f7cf78d2d66b467b60f9562d3987057' },
+    { nome: 'Glaucilene Barbosa Ribeiro',        cargo: 'captador', operacao: 'São Pedro', senhaHash: '9b99a36d49c8ab0291add94ff14f3a01c7ec1c55c0708a9a991c938c306cce14' },
+    { nome: 'Ivan Gabriel Botão as Silva',       cargo: 'captador', operacao: 'São Pedro', senhaHash: '6c84b1086e558a0b9dad7623979f6ddf9f337084f281d9b3a07273d04b425344' },
+    { nome: 'João Mario Dias Silva',             cargo: 'captador', operacao: 'São Pedro', senhaHash: '73cb527d86806651b552209ba1b6a2d84f0f34413c42fa284a9fd47c064493fd' },
+    { nome: 'João Pedro de Matos Saia',          cargo: 'captador', operacao: 'São Pedro', senhaHash: 'f864e2834f0bdc1a76e229e5c5bdf31c696146967533fe476b370ed4bee796d4' },
+    { nome: 'João Victor Ferreira Rodrigues',    cargo: 'captador', operacao: 'São Pedro', senhaHash: '993ec596db5df0fe4592b291da08e52cb214cdfc1331cdd092704f82735ee20f' },
+    { nome: 'Julia Eyer da Cunha',               cargo: 'captador', operacao: 'São Pedro', senhaHash: 'cdbd41d016cdec10d0ff2291a6bdae398b565a831622bedcd4dcafa69252b5e7' },
+    { nome: 'José Heraldo',                      cargo: 'captador', operacao: 'São Pedro', sala: 'SPTR', senhaHash: '3c15990dc727dc05256b2a16ca3dce571d42767b85008fb4c90c1dc24131adff' },
+    { nome: 'Lucas de Souza Miranda',            cargo: 'captador', operacao: 'São Pedro', senhaHash: 'ad1e10c7f2d809520c2191e442ed016ed7507debeaad03d061a97ec69dc2361e' },
+    { nome: 'Matheus Henrique Franca Silva',     cargo: 'captador', operacao: 'São Pedro', senhaHash: '05a9e62653eb0eaa116a1b8bbc06dd30ab0df73ab8ae16a500c80875e6e6c8a9' },
+    { nome: 'Mayara Teixeira da Silva',          cargo: 'captador', operacao: 'São Pedro', senhaHash: 'c7a110bf85ca72649e0b16de55a28edda316dcf10202c29e86b0400aa09ef828' },
+    { nome: 'Mayra Teixeira',                    cargo: 'captador', operacao: 'São Pedro', sala: 'SPTR', senhaHash: 'dc65d6126fdf082d5c6a92e3344870538035850fd5a67c8a0fd53302b6e54371' },
+    { nome: 'Patrick Henrique Faria',            cargo: 'captador', operacao: 'São Pedro', senhaHash: '830557a900f7c746d6a02f4be5b4434d53ecfb40fb88b8e865c7a4213c7a5d04' },
+    { nome: 'Raphael Luiz Ramos Milano',         cargo: 'captador', operacao: 'São Pedro', senhaHash: '1f5fed26678ed82e4c57d7b4b395deb6847fc62d60db853af70483739a395b66' },
+    { nome: 'Romenik Cardoso de Jesus',          cargo: 'captador', operacao: 'São Pedro', senhaHash: 'f20728d227541307b6b673bcd3fd5a80df1e5a11290ea9ceb0b62d6a23e4f351' },
+    { nome: 'Tiago Batista Santos',              cargo: 'captador', operacao: 'São Pedro', senhaHash: 'c90dc61cae171669019bbabecad9c1c06aebb586cc1fb0b1a60efaa1594244dd' },
+    { nome: 'Vinicius Alves Brilho',             cargo: 'captador', operacao: 'São Pedro', senhaHash: 'f2d009efda17558eb1522b37b62f9aa11404f5fc91d7c0e9f849a8bde20750c4' },
+    { nome: 'Vinicius Eduardo Alves de Lima',    cargo: 'captador', operacao: 'São Pedro', senhaHash: '36568ce38fe75d769846e592d9b313513504c78620155f50aecd420eb4dcad83' },
+    { nome: 'Walasson de Jesus Alves',           cargo: 'captador', operacao: 'São Pedro', senhaHash: '3d11860579fa943ae671629212fbbcdc3efe9d801b9a5b864da3e3b4a9a82cf6' },
     // — Caldas Novas (Alta Vista / Atrium / Marina) —
-    { nome: 'Vanessa Silva',      cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'vanessa123'   },
-    { nome: 'Natur Calixto',      cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'natur123'     },
-    { nome: 'Neuselia Ferreira',  cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'neuselia123'  },
-    // { nome: 'Eduardo Castellani', cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'eduardo123'   }, // desativado 24/04/2026
-    { nome: 'Luciano Camilo',     cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'luciano123'   },
-    { nome: 'Cleber Araujo',      cargo: 'captador', operacao: 'Caldas Novas', senhaDefault: 'cleber123'    },
+    { nome: 'Vanessa Silva',      cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '0e8341968360719c3a3b5080047219e2c69f1586780e4920a55e3f5307d5881e' },
+    { nome: 'Natur Calixto',      cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '0e732fda2d935c7cd4090b4b542a9fc2f065b5ddec0d720dc37e377e9bd98dec' },
+    { nome: 'Neuselia Ferreira',  cargo: 'captador', operacao: 'Caldas Novas', senhaHash: 'e05bbd73204b1d7e48b5eb9cd92ba8537794ba14c5698f37ab0e36151ebc6665' },
+    // { nome: 'Eduardo Castellani', cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '...' }, // desativado 24/04/2026
+    { nome: 'Luciano Camilo',     cargo: 'captador', operacao: 'Caldas Novas', senhaHash: 'b42faf87ea2f8c0db71c7218af5299e890ce581d00e926bb06f2827851118ace' },
+    { nome: 'Cleber Araujo',      cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '61365f9db11fb7ee77f5cedabf41e8d72031775f0b434c075ae9babacdc390af' },
     // — Atibaia —
-    { nome: 'Evelyn Mirella Bueno Ramos',          cargo: 'captador', sala: 'Atibaia', senhaDefault: 'evelyn123'   },
-    { nome: 'Pablo César Sánchez Montealegre',     cargo: 'captador', sala: 'Atibaia', senhaDefault: 'pablo123'    },
+    { nome: 'Evelyn Mirella Bueno Ramos',          cargo: 'captador', sala: 'Atibaia', senhaHash: 'a1abcff526565b5f6065e1e501fe91eec1c1ba601d3e529675e195147523c46b' },
+    { nome: 'Pablo César Sánchez Montealegre',     cargo: 'captador', sala: 'Atibaia', senhaHash: 'c1761e6dff44a93b593ed7447d983c259a5aefdf3a11960b81c2196ca56772bc' },
     // — Lideranças —
-    { nome: 'Lucas Marotti',         cargo: 'sublider', operacao: 'São Pedro', senhaDefault: 'lucaslucas'        },
-    { nome: 'Bruno Teixeira',         cargo: 'lider',    operacao: 'Caldas Novas', senhaDefault: 'brunoteixeira'    },
-    { nome: 'Gustavo Viana',          cargo: 'sublider', operacao: 'Caldas Novas', senhaDefault: 'gustavo123'       },
-    { nome: 'Rogerio Medeiros',       cargo: 'lider',    operacao: 'São Pedro', senhaDefault: 'rogeriorogerio'   },
-    { nome: 'André Luis Neves Fontes',cargo: 'sublider', sala: 'Atibaia',          senhaDefault: 'andreneves123'    },
-    { nome: 'Erick Faleiro',          cargo: 'ceo',      senhaDefault: 'erickerick'     },
+    { nome: 'Lucas Marotti',         cargo: 'sublider', operacao: 'São Pedro',    senhaHash: 'd76cedbee29bc2393e5b6317f71525b51ffe8f656da3dfcbac94d237adc0030a' },
+    { nome: 'Bruno Teixeira',         cargo: 'lider',    operacao: 'Caldas Novas', senhaHash: '47fc23b32d2bc339fda336ba515c47caf5d08bf6614b08091d2d3c429ae95c4f' },
+    { nome: 'Gustavo Viana',          cargo: 'sublider', operacao: 'Caldas Novas', senhaHash: 'bcba6396fdabedace92c5cf63862816957750e3846e73d0c0ff06f1b8f1e0099' },
+    { nome: 'Rogerio Medeiros',       cargo: 'lider',    operacao: 'São Pedro',    senhaHash: 'a5a9b74ffc8d1bdc63761cd5e397a8e36b3cd82d9b05236d283f4c350a49a9de' },
+    { nome: 'André Luis Neves Fontes',cargo: 'sublider', sala: 'Atibaia',          senhaHash: 'a84136124669f0f9cf606fa1049cb7fe6b6aca50b0f7570e836035e89caf3e54' },
+    { nome: 'Erick Faleiro',          cargo: 'ceo',                               senhaHash: 'd6a6f6d36aa9001ed5521eec687c1fa4209e4c008e91f9cb8eb7512b32fc0ea7' },
   ],
   salas: [
     { id: 'alta-vista', nome: 'Alta Vista',  cidade: 'Caldas Novas', modos: ['baixa','alta'],     sheetName: 'Alta Vista',  operacao: 'Caldas Novas', ddpHotel: 'Alta Vista' },
@@ -1265,15 +1287,32 @@ let loginSelectedNome = null;
 let histFiltro = { periodo: 'hoje', captador: 'todos', operacao: 'todas', sala: 'todas', de: '', ate: '' };
 let cdpFiltro  = { periodo: 'hoje', operacao: 'todas', sala: 'todas', captador: 'todos', de: '', ate: '' };
 
-function getSenha(nome) {
+// — Hashing —
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// Retorna o hash da senha armazenada para comparação.
+// Prioridade: localStorage (senha personalizada) > senhaHash do CONFIG/extras.
+function getSenhaHash(nome) {
   const stored = localStorage.getItem('yv_pw_' + nome);
-  if (stored) return stored;
+  if (stored) return stored; // já é um hash
   const todos = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
   const c = todos.find(x => x.nome === nome);
-  return c ? c.senhaDefault : null;
+  return c ? (c.senhaHash || null) : null;
 }
-function setSenha(nome, pw) {
-  localStorage.setItem('yv_pw_' + nome, pw);
+
+// Salva o hash da nova senha no localStorage.
+async function setSenha(nome, pw) {
+  const h = await sha256(pw);
+  localStorage.setItem('yv_pw_' + nome, h);
+  return h;
+}
+
+// Verifica se o captador ainda usa a senha padrão do CONFIG (sem senha personalizada no localStorage).
+function usaSenhaPadrao(nome) {
+  return !localStorage.getItem('yv_pw_' + nome);
 }
 function temAcessoTotal(c) {
   return c && ['sublider','lider','ceo'].includes(c.cargo);
@@ -1433,20 +1472,54 @@ function togglePw() {
   inp.type = inp.type === 'password' ? 'text' : 'password';
 }
 
-function doLogin() {
+async function doLogin() {
   const nome = loginSelectedNome;
   if (!nome) return;
-  const pw      = document.getElementById('pwInput').value;
-  const correta = getSenha(nome);
-  if (!pw)        { document.getElementById('pwError').textContent = 'Insira sua senha.'; return; }
-  if (pw !== correta) { document.getElementById('pwError').textContent = 'Senha incorreta. Tente novamente.'; return; }
+  const pw = document.getElementById('pwInput').value;
+  if (!pw) { document.getElementById('pwError').textContent = 'Insira sua senha.'; return; }
+  const hashCorreta = getSenhaHash(nome);
+  const hashDigitada = await sha256(pw);
+  if (hashDigitada !== hashCorreta) { document.getElementById('pwError').textContent = 'Senha incorreta. Tente novamente.'; return; }
   const todosLogin = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
   captador = todosLogin.find(c => c.nome === nome);
+  // Primeiro login com senha padrão → exige criação de senha pessoal
+  if (usaSenhaPadrao(nome)) {
+    abrirCriarSenha(nome);
+    return;
+  }
   sessionStorage.setItem('yv_captador', nome);
   try { localStorage.setItem('yv_captador', nome); } catch(e) {}
   document.getElementById('screenLogin').classList.add('hidden');
   afterLogin();
 }
+
+// — Primeiro login: criação de senha pessoal —
+function abrirCriarSenha(nome) {
+  document.getElementById('criarSenhaNome').textContent = nome.split(' ')[0];
+  document.getElementById('criarSenhaInput').value = '';
+  document.getElementById('criarSenhaConfirm').value = '';
+  document.getElementById('criarSenhaError').textContent = '';
+  document.getElementById('pwPanel').classList.add('hidden');
+  document.getElementById('criarSenhaPanel').classList.remove('hidden');
+  setTimeout(() => document.getElementById('criarSenhaInput').focus(), 80);
+}
+
+async function confirmarCriarSenha() {
+  const pw1 = document.getElementById('criarSenhaInput').value;
+  const pw2 = document.getElementById('criarSenhaConfirm').value;
+  const errEl = document.getElementById('criarSenhaError');
+  if (pw1.length < 4) { errEl.textContent = 'Senha deve ter no mínimo 4 caracteres.'; return; }
+  if (pw1 !== pw2)    { errEl.textContent = 'As senhas não coincidem.'; return; }
+  const nome = captador.nome;
+  await setSenha(nome, pw1);
+  document.getElementById('criarSenhaPanel').classList.add('hidden');
+  sessionStorage.setItem('yv_captador', nome);
+  try { localStorage.setItem('yv_captador', nome); } catch(e) {}
+  document.getElementById('screenLogin').classList.add('hidden');
+  afterLogin();
+}
+
+function criarSenhaKeydown(e) { if (e.key === 'Enter') confirmarCriarSenha(); }
 
 function afterLogin() {
   const primeiroNome = captador.nome.split(' ')[0];
@@ -1505,12 +1578,13 @@ function closePwChange() {
 }
 function pwcClearError() { document.getElementById('pwcError').textContent = ''; }
 
-function doChangePw() {
+async function doChangePw() {
   const old  = document.getElementById('pwOld').value;
   const nw   = document.getElementById('pwNew').value;
   const conf = document.getElementById('pwConf').value;
   if (!captador) return;
-  if (old !== getSenha(captador.nome)) {
+  const hashOld = await sha256(old);
+  if (hashOld !== getSenhaHash(captador.nome)) {
     document.getElementById('pwcError').textContent = 'Senha atual incorreta.'; return;
   }
   if (nw.length < 4) {
@@ -1519,7 +1593,7 @@ function doChangePw() {
   if (nw !== conf) {
     document.getElementById('pwcError').textContent = 'As senhas não coincidem.'; return;
   }
-  setSenha(captador.nome, nw);
+  await setSenha(captador.nome, nw);
   closePwChange();
   alert('Senha alterada com sucesso!');
 }
@@ -4706,7 +4780,7 @@ function abrirModalEquipe() {
 function fecharModalEquipe() { document.getElementById('modalEquipe').classList.add('hidden'); }
 function eqClearError() { document.getElementById('eqError').textContent = ''; }
 
-function salvarNovoMembro() {
+async function salvarNovoMembro() {
   const nome  = document.getElementById('eqNome').value.trim();
   const cargo = document.getElementById('eqCargo').value;
   const senha = document.getElementById('eqSenha').value.trim();
@@ -4718,29 +4792,25 @@ function salvarNovoMembro() {
     errEl.textContent = 'Já existe um membro com esse nome.'; return;
   }
   const extras = getExtras();
-  const obj = { nome, cargo, senhaDefault: senha };
+  const obj = { nome, cargo };
   if (sala) obj.sala = sala;
   extras.push(obj);
   saveExtras(extras);
-  setSenha(nome, senha);
+  await setSenha(nome, senha);
   fecharModalEquipe();
   showEquipe();
 }
 
 function redefinirSenha(nome) {
-  const todos = todosOsMembros();
-  const membro = todos.find(m => m.nome === nome);
-  if (!membro) return;
-  const senhaDefault = membro.senhaDefault || nome.split(' ')[0].toLowerCase();
-  if (!confirm(`Redefinir a senha de "${nome}" para a senha padrão?\n\nSenha padrão: ${senhaDefault}`)) return;
-  setSenha(nome, senhaDefault);
-  // Se era o captador logado, desloga para forçar nova senha
+  if (!confirm(`Redefinir a senha de "${nome}"?\n\nEle precisará criar uma nova senha pessoal no próximo login.`)) return;
+  // Remove senha personalizada → no próximo login cairá no fluxo "criar senha"
+  localStorage.removeItem('yv_pw_' + nome);
   if (captador && captador.nome === nome) {
     captador = null;
     afterLogout();
   }
   showEquipe();
-  alert(`✅ Senha de "${nome}" redefinida para a senha padrão.`);
+  alert(`✅ Senha de "${nome}" redefinida. Ele criará uma nova senha pessoal no próximo login.`);
 }
 
 function removerMembro(nome) {
