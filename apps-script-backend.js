@@ -334,6 +334,13 @@ function doGet(e) {
       ? [ss.getSheetByName(SALA_SHEETS[salaFiltro] || salaFiltro)].filter(Boolean)
       : Object.values(SALA_SHEETS).map(n => ss.getSheetByName(n)).filter(Boolean);
 
+    // ?dateISO=2026-04-24 filtra só pelo dia — evita timeout com 12k leads
+    const dateISOFiltro = params.dateISO || null;
+    // Converte YYYY-MM-DD para DD/MM/YYYY (formato salvo no Sheets)
+    const dateFiltro = dateISOFiltro
+      ? dateISOFiltro.split('-').reverse().join('/')
+      : null;
+
     const leads = [];
     sheetsAlvo.forEach(sheet => {
       const lastRow = sheet.getLastRow();
@@ -345,6 +352,11 @@ function doGet(e) {
       const rows = sheet.getRange(2, 1, lastRow - 1, nCols).getValues();
       rows.forEach(r => {
         if (!r[0]) return;
+        // Filtro por data — se solicitado, pula linhas de outras datas
+        if (dateFiltro) {
+          const rowDate = idx['Data'] >= 0 ? String(r[idx['Data']]).trim() : '';
+          if (!rowDate.includes(dateFiltro)) return;
+        }
         const get = (col) => idx[col] >= 0 ? r[idx[col]] : '';
         leads.push({
           id: String(get('ID')), date: String(get('Data')), time: String(get('Hora')),

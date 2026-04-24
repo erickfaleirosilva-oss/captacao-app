@@ -1215,13 +1215,16 @@ const API = {
       });
     } catch(e) { /* fire and forget */ }
   },
-  getLeads: async () => {
+  getLeads: async (dateISO) => {
     if (!API.ok()) return null;
     try {
-      const r = await fetch(CONFIG.webhookUrl);
+      // Passa filtro de data para evitar timeout com muitos leads
+      const url = dateISO
+        ? CONFIG.webhookUrl + '?dateISO=' + encodeURIComponent(dateISO)
+        : CONFIG.webhookUrl;
+      const r = await fetch(url);
       if (!r.ok) return null;
       const json = await r.json();
-      // Apps Script retorna { status, leads: [...] }
       return Array.isArray(json) ? json : (json.leads || null);
     } catch(e) { return null; }
   }
@@ -2549,7 +2552,7 @@ function showHist() {
   renderHistFiltros();
   renderHistList();
   if (API.ok()) {
-    API.getLeads().then(remoto => {
+    API.getLeads(todayISO()).then(remoto => {
       if (mergeRemoto(remoto)) { renderHistFiltros(); renderHistList(); }
     }).catch(() => {});
   }
@@ -3105,8 +3108,13 @@ function showCdp() {
 
   if (API.ok()) {
     document.getElementById('cdpSync').classList.remove('hidden');
+    // Passa filtro de data para evitar timeout — busca só o período relevante
+    const _cdpDateISO = cdpFiltro.periodo === 'hoje' ? todayISO()
+      : cdpFiltro.periodo === 'semana' ? domingoSemana()
+      : cdpFiltro.periodo === 'mes'    ? todayISO().slice(0,7) + '-01'
+      : null; // período livre ou sem filtro: busca sem filtro de data
     Promise.all([
-      API.getLeads(),
+      API.getLeads(_cdpDateISO),
       fetch(CONFIG.webhookUrl + '?_type=pi').then(r=>r.json()).catch(()=>null)
     ]).then(([remoto, piRemoto]) => {
       document.getElementById('cdpSync').classList.add('hidden');
