@@ -1,20 +1,30 @@
 // ═══════════════════════════════════════════════════════
 // Your Vacation — Qualificador de Captação
-// Google Apps Script Backend — v6
+// Google Apps Script Backend — v7
 // Cole este código em: Planilha > Extensões > Apps Script
 // Depois: Implantar > Gerenciar implantações > Editar > Nova versão > Implantar
 // ═══════════════════════════════════════════════════════
 
 const SALA_SHEETS = {
   'Alta Vista':       'Alta Vista',
-  'São Pedro Resort': 'São Pedro',
+  'Atrium':           'Alta Vista',
+  'Marina':           'Alta Vista',
+  'Externo':          'Alta Vista',
+  'Thermas SP':       'São Pedro',
+  'SPTR':             'São Pedro',
+  'São Pedro Resort': 'São Pedro',   // legado
   'Atibaia':          'Atibaia',
 };
-const DEFAULT_SHEET = 'Leads';
+const DEFAULT_SHEET = 'Alta Vista'; // fallback — evita criação de abas novas
 
-const COLUNAS = ['ID','Data','Hora','Captador','Sala','Nome','Telefone','Cidade','Resultado','Tipo','Renda','Modo','EmSala'];
+const COLUNAS = [
+  'ID','Data','Hora','Captador','Sala','Nome','Telefone','Cidade','Resultado','Tipo','Renda','Modo','EmSala',
+  // Campos detalhados das respostas
+  'PontoCaptacao','IdadeTitular','ProfissaoTitular','IdadeConjuge','ProfissaoConjuge',
+  'Carro','Casa','Cartao','Viagens',
+];
 const N_COLS  = COLUNAS.length;
-const COL_WIDTHS = [180, 100, 80, 150, 150, 150, 130, 130, 90, 150, 130, 80, 80];
+const COL_WIDTHS = [180,100,80,150,150,150,130,130,90,150,130,80,80,150,120,150,120,150,120,80,80,80];
 
 function aplicarCabecalho(sheet) {
   const header = sheet.getRange(1, 1, 1, N_COLS);
@@ -97,6 +107,24 @@ function getDDPStore() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
   const rows = sheet.getRange(2, 1, lastRow - 1, DDP_COLS.length).getValues();
+
+  function _normDate(v) {
+    if (!v) return '';
+    if (v instanceof Date) {
+      const y = v.getFullYear();
+      const m = String(v.getMonth() + 1).padStart(2, '0');
+      const d = String(v.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+    const s = String(v).trim().replace(/^DDP_/, '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const dt = new Date(s);
+    if (!isNaN(dt)) {
+      return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+    }
+    return s;
+  }
+
   return rows
     .filter(r => r[0] && r[1]) // hotel e dateISO preenchidos
     .map(r => {
@@ -104,33 +132,66 @@ function getDDPStore() {
       DDP_COLS.forEach((col, i) => {
         obj[col] = (i >= 2) ? (Number(r[i]) || 0) : String(r[i] || '').trim();
       });
-      // Remove prefixo DDP_ se vier da planilha
-      if (obj.dateISO.startsWith('DDP_')) obj.dateISO = obj.dateISO.slice(4);
+      obj.dateISO = _normDate(r[1]);
       return obj;
-    });
+    })
+    .filter(r => r.dateISO); // descarta linhas com data inválida
 }
 
 function saveDDPEntry(entry) {
   const sheet = getDDPSheet();
   const lastRow = sheet.getLastRow();
+  const dateISO = String(entry.dateISO || '').replace(/^DDP_/, '');
+
+  // Normaliza valor de data vindo do Sheets (pode ser Date object ou string)
+  function _normSheetDate(v) {
+    if (!v) return '';
+    if (v instanceof Date) {
+      const y = v.getFullYear();
+      const m = String(v.getMonth() + 1).padStart(2, '0');
+      const d = String(v.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+    const s = String(v).trim().replace(/^DDP_/, '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const dt = new Date(s);
+    if (!isNaN(dt)) {
+      const y = dt.getFullYear();
+      const mo = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return y + '-' + mo + '-' + d;
+    }
+    return s;
+  }
+
   // Busca linha existente com mesmo hotel+dateISO
   let targetRow = -1;
   if (lastRow >= 2) {
-    const hotelCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().map(String);
-    const dateCol  = sheet.getRange(2, 2, lastRow - 1, 1).getValues().flat().map(String);
+    const hotelCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+    const dateCol  = sheet.getRange(2, 2, lastRow - 1, 1).getValues().flat();
     for (let i = 0; i < hotelCol.length; i++) {
-      if (hotelCol[i] === entry.hotel && dateCol[i] === entry.dateISO) {
+      if (String(hotelCol[i]) === entry.hotel && _normSheetDate(dateCol[i]) === dateISO) {
         targetRow = i + 2;
         break;
       }
     }
   }
-  const rowData = DDP_COLS.map(col => entry[col] !== undefined ? entry[col] : 0);
+
+  // Monta rowData forçando dateISO como string (apóstrofo evita parse automático pelo Sheets)
+  const rowData = DDP_COLS.map(col => {
+    if (col === 'dateISO') return dateISO; // string pura
+    if (col === 'hotel')   return entry.hotel || '';
+    return entry[col] !== undefined ? Number(entry[col]) : 0;
+  });
+
   if (targetRow > 0) {
     sheet.getRange(targetRow, 1, 1, DDP_COLS.length).setValues([rowData]);
   } else {
     sheet.appendRow(rowData);
   }
+  // Força formato texto na célula dateISO para evitar conversão futura
+  const writtenRow = targetRow > 0 ? targetRow : sheet.getLastRow();
+  sheet.getRange(writtenRow, 2).setNumberFormat('@STRING@');
 }
 
 function doPost(e) {
@@ -217,12 +278,23 @@ function doPost(e) {
       return jsonResponse({ status: 'duplicate', id: data.id });
     }
 
+    const ans = data._ans || {};
     sheet.appendRow([
       data.id || '', data.date || '', data.time || '',
       data.captador || '', data.sala || '', data.nome || '',
       data.tel || '', data.cidade || '', data.verdict || '',
       data.tipo || '', data.renda || '', data.mode || '',
       data.emSala ? 'SIM' : '',
+      // Campos detalhados
+      data.sala || '',                     // PontoCaptacao (mesmo que Sala — filtrável)
+      ans.idadeMarido      || '',          // IdadeTitular
+      ans.profissaoTitular || '',          // ProfissaoTitular
+      ans.idadeConjuge     || '',          // IdadeConjuge
+      ans.profissaoConjuge || '',          // ProfissaoConjuge
+      ans.carro            || '',          // Carro
+      ans.casa             || '',          // Casa
+      ans.cartao           || '',          // Cartao
+      ans.viagens          || '',          // Viagens
     ]);
 
     // Aplica cor na linha recém inserida
@@ -280,6 +352,16 @@ function doGet(e) {
           tel: get('Telefone'), cidade: get('Cidade'), verdict: get('Resultado'),
           tipo: get('Tipo'), renda: get('Renda'), mode: get('Modo'),
           emSala: get('EmSala') === 'SIM',
+          _ans: {
+            idadeMarido:      get('IdadeTitular')      || null,
+            profissaoTitular: get('ProfissaoTitular')  || null,
+            idadeConjuge:     get('IdadeConjuge')      || null,
+            profissaoConjuge: get('ProfissaoConjuge')  || null,
+            carro:            get('Carro')             || null,
+            casa:             get('Casa')              || null,
+            cartao:           get('Cartao')            || null,
+            viagens:          get('Viagens')           || null,
+          },
         });
       });
     });
