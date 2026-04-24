@@ -275,6 +275,12 @@ function doPost(e) {
     const sheet = resolverSheet(data.sala || '');
     const existingRow = findRowById(sheet, data.id);
     if (existingRow > 0) {
+      // Lead já existe — se emSala=true, aproveita para atualizar a coluna EmSala
+      if (data.emSala) {
+        const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        const emSalaCol = cabecalho.indexOf('EmSala');
+        if (emSalaCol >= 0) sheet.getRange(existingRow, emSalaCol + 1).setValue('SIM');
+      }
       return jsonResponse({ status: 'duplicate', id: data.id });
     }
 

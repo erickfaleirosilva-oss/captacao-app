@@ -2812,8 +2812,16 @@ function toggleSala(leadId) {
   }
   _salvarLeads();
   if (navigator.onLine && API.ok()) {
-    API.post({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala })
-      .catch(() => offlineEnqueue({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala }));
+    // Envia update_sala E também o lead completo com emSala atualizado.
+    // Isso garante que, se o lead ainda não chegou ao Sheets (race condition),
+    // o upsert vai criar/atualizar a linha com EmSala correto.
+    const leadAtual = { ...leads[idx] };
+    API.post({ _action: 'update_sala', id: leadAtual.id, emSala: leadAtual.emSala })
+      .catch(() => offlineEnqueue({ _action: 'update_sala', id: leadAtual.id, emSala: leadAtual.emSala }));
+    // Reenvio do lead completo garante que o Sheets tenha a linha mesmo se o POST original falhou
+    API.post(leadAtual).catch(() => offlineEnqueue(leadAtual));
+  } else if (!navigator.onLine) {
+    offlineEnqueue({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala });
   }
   renderHistList();
   atualizarCdp();
