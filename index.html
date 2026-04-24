@@ -3020,14 +3020,13 @@ function mergeRemoto(remoto) {
       // lead existente — preserva _ans local (Sheets não armazena esse campo)
       const local = leads[idxMap[key]];
       if (!r._ans && local._ans) r._ans = local._ans;
-      // sincroniza emSala se o remoto tiver marcado
-      if (r.emSala && !local.emSala) {
-        local.emSala = true;
-        changed = true;
-      }
-      // se local tem emSala=true mas remoto está false → reenviar update_sala silenciosamente
+      // sincroniza emSala, tipoSala e venda do remoto para o local (remoto é mais recente)
+      if (r.emSala && !local.emSala) { local.emSala = true; changed = true; }
+      if (r.tipoSala && r.tipoSala !== local.tipoSala) { local.tipoSala = r.tipoSala; changed = true; }
+      if (r.venda && !local.venda)   { local.venda = true; changed = true; }
+      // se local tem emSala=true mas remoto está false → reenviar estado completo silenciosamente
       if (local.emSala && !r.emSala && navigator.onLine && API.ok()) {
-        API.post({ _action: 'update_sala', id: local.id, emSala: true }).catch(() => {});
+        API.post({ _action: 'update_sala', id: local.id, emSala: true, tipoSala: local.tipoSala || null, venda: !!local.venda }).catch(() => {});
       }
     }
   });
