@@ -279,8 +279,26 @@ function doPost(e) {
     }
 
     const ans = data._ans || {};
+    // Normaliza data para DD/MM/YYYY fixo — evita que o Sheets converta para Date object
+    function _fmtDate(v) {
+      if (!v) return '';
+      const s = String(v).trim();
+      // Já está em DD/MM/YYYY
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+      // YYYY-MM-DD
+      const m1 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m1) return m1[3] + '/' + m1[2] + '/' + m1[1];
+      // Qualquer outro formato JS Date string
+      const dt = new Date(s);
+      if (!isNaN(dt)) {
+        return String(dt.getDate()).padStart(2,'0') + '/' +
+               String(dt.getMonth()+1).padStart(2,'0') + '/' + dt.getFullYear();
+      }
+      return s;
+    }
+    const dataFmt = _fmtDate(data.date);
     sheet.appendRow([
-      data.id || '', data.date || '', data.time || '',
+      data.id || '', dataFmt, data.time || '',
       data.captador || '', data.sala || '', data.nome || '',
       data.tel || '', data.cidade || '', data.verdict || '',
       data.tipo || '', data.renda || '', data.mode || '',
@@ -297,9 +315,11 @@ function doPost(e) {
       ans.viagens          || '',          // Viagens
     ]);
 
-    // Aplica cor na linha recém inserida
+    // Aplica cor na linha recém inserida e trava formato da coluna Data como texto
     const row = sheet.getLastRow();
     const nCols = sheet.getLastColumn();
+    const idxData = COLUNAS.indexOf('Data');
+    if (idxData >= 0) sheet.getRange(row, idxData + 1).setNumberFormat('@STRING@');
     const range = sheet.getRange(row, 1, 1, nCols);
     if (data.verdict === 'Q')       range.setBackground('#d4edda');
     if (data.verdict === 'PARCIAL') range.setBackground('#fff3cd');
