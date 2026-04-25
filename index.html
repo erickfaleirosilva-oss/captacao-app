@@ -380,6 +380,8 @@
     .hc-sala-btn { background:none; border:none; cursor:pointer; font-size:20px; padding:4px 2px; border-radius:6px; transition:transform .15s; line-height:1; flex-shrink:0; opacity:.75; }
     .hc-sala-btn:active { transform:scale(.85); }
     .hc-sala-btn.marcado { opacity:1; }
+    /* indicador de sync pendente */
+    .hc-sync-badge { font-size:10px; color:var(--yellow); font-weight:700; line-height:1; margin-top:3px; text-align:center; }
     /* ── tipo + venda no card histórico ── */
     .hc-actions { margin-top:8px; padding-top:8px; border-top:1px solid var(--border); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .hc-actions-lbl { font-size:9px; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.08em; width:100%; margin-bottom:1px; }
@@ -1224,18 +1226,22 @@ const CONFIG = {
   },
 };
 
-// API (Google Sheets backend, fire-and-forget)
+// API (Google Sheets backend)
 const API = {
   ok: () => !!CONFIG.webhookUrl,
+  // Retorna true se confirmado pelo servidor, false se falhou
   post: async (lead) => {
-    if (!API.ok()) return;
+    if (!API.ok()) return false;
     try {
-      await fetch(CONFIG.webhookUrl, {
-        method: 'POST', mode: 'no-cors',
+      const r = await fetch(CONFIG.webhookUrl, {
+        method: 'POST',
         headers: {'Content-Type':'text/plain'},
         body: JSON.stringify(lead)
       });
-    } catch(e) { /* fire and forget */ }
+      if (!r.ok) return false;
+      const json = await r.json().catch(() => null);
+      return json && (json.status === 'ok' || json.status === 'duplicate');
+    } catch(e) { return false; }
   },
   getLeads: async (dateISO) => {
     if (!API.ok()) return null;
@@ -2486,7 +2492,9 @@ function _persistLead() {
   if (leads.length > 500) leads.pop();
   sessionStorage.setItem('yv_leads', JSON.stringify(leads));
   try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-  if (navigator.onLine) { API.post(lead).catch(() => offlineEnqueue(lead)); } else { offlineEnqueue(lead); }
+  if (navigator.onLine && API.ok()) {
+    API.post(lead).then(ok => { if (!ok) offlineEnqueue(lead); }).catch(() => offlineEnqueue(lead));
+  } else { offlineEnqueue(lead); }
 }
 
 function showResult() {
@@ -2719,6 +2727,12 @@ function setHistFiltro(chave, valor) {
   renderHistList();
 }
 
+// Verifica se um lead ainda está na fila offline (não confirmado pelo servidor)
+function _isPendente(id) {
+  const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
+  return q.some(x => String(x.id) === String(id) && !x._action);
+}
+
 function renderHistList() {
   const list = document.getElementById('histList');
   const fonte = filtrarPorAcesso(leads);
@@ -2796,7 +2810,10 @@ function renderHistList() {
           ${resumoHtml}
           ${actionsHtml}
         </div>
-        <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Clique para desmarcar sala':'Clique para marcar que entrou em sala'}">${h.emSala?'🟢':'🔴'}</button>
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+          <button class="hc-sala-btn${h.emSala?' marcado':''}" onclick="toggleSala('${h.id}')" title="${h.emSala?'Clique para desmarcar sala':'Clique para marcar que entrou em sala'}">${h.emSala?'🟢':'🔴'}</button>
+          ${_isPendente(h.id)?'<div class="hc-sync-badge" title="Aguardando envio para o servidor">⏳</div>':''}
+        </div>
       </div>`;
     }).join('')}`;
 }
@@ -2813,7 +2830,8 @@ function toggleSala(leadId) {
   _salvarLeads();
   // Reenvio do lead completo garante que o Sheets tenha a linha mesmo se o POST original falhou
   if (navigator.onLine && API.ok()) {
-    API.post({ ...leads[idx] }).catch(() => offlineEnqueue({ ...leads[idx] }));
+    const snap = { ...leads[idx] };
+    API.post(snap).then(ok => { if (!ok) offlineEnqueue(snap); }).catch(() => offlineEnqueue(snap));
   } else {
     offlineEnqueue({ ...leads[idx] });
   }
@@ -2848,7 +2866,7 @@ function _syncSalaState(idx) {
     return;
   }
   const payload = { _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala, tipoSala: leads[idx].tipoSala || null, venda: !!leads[idx].venda };
-  API.post(payload).catch(() => offlineEnqueue(payload));
+  API.post(payload).then(ok => { if (!ok) offlineEnqueue(payload); }).catch(() => offlineEnqueue(payload));
 }
 
 function _salvarLeads() {
@@ -3034,7 +3052,7 @@ function mergeRemoto(remoto) {
   if (navigator.onLine && API.ok()) {
     leads.forEach(l => {
       if (!remotosIds.has(String(l.id))) {
-        API.post(l).catch(() => offlineEnqueue(l));
+        API.post(l).then(ok => { if (!ok) offlineEnqueue(l); }).catch(() => offlineEnqueue(l));
       }
     });
   }
@@ -4904,22 +4922,27 @@ function getPIs() { return JSON.parse(localStorage.getItem(PI_KEY) || '[]'); }
 
 function offlineEnqueue(lead) {
   const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
-  q.push(lead);
+  // Evita duplicatas na fila: mesmo id + mesma _action substitui a entrada anterior
+  const key = (lead._action || 'lead') + '_' + (lead.id || '');
+  const idx = q.findIndex(x => ((x._action || 'lead') + '_' + (x.id || '')) === key);
+  if (idx >= 0) q[idx] = lead; else q.push(lead);
   localStorage.setItem(OFFLINE_KEY, JSON.stringify(q));
 }
 
 function offlineFlush() {
-  if (!API.ok()) return;
+  if (!navigator.onLine || !API.ok()) return;
   const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
   if (!q.length) return;
   const pendentes = [...q];
   localStorage.removeItem(OFFLINE_KEY);
   pendentes.forEach(lead => {
-    API.post(lead).catch(() => offlineEnqueue(lead));
+    API.post(lead).then(ok => { if (!ok) offlineEnqueue(lead); }).catch(() => offlineEnqueue(lead));
   });
 }
 
 window.addEventListener('online', offlineFlush);
+// Reenvio periódico silencioso a cada 30s — garante que nenhum lead fique preso na fila
+setInterval(offlineFlush, 30000);
 
 // INIT
 initLogin();
