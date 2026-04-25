@@ -2493,7 +2493,13 @@ function _persistLead() {
   sessionStorage.setItem('yv_leads', JSON.stringify(leads));
   try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
   if (navigator.onLine && API.ok()) {
-    API.post(lead).then(ok => { if (!ok) offlineEnqueue(lead); }).catch(() => offlineEnqueue(lead));
+    API.post(lead).then(ok => {
+      if (ok) {
+        // Marca como sincronizado no array local
+        const i = leads.findIndex(l => String(l.id) === String(lead.id));
+        if (i >= 0) { leads[i]._synced = true; _salvarLeads(); }
+      } else { offlineEnqueue(lead); }
+    }).catch(() => offlineEnqueue(lead));
   } else { offlineEnqueue(lead); }
 }
 
@@ -2637,7 +2643,29 @@ function showHist() {
     API.getLeads(todayISO()).then(remoto => {
       if (mergeRemoto(remoto)) { renderHistFiltros(); renderHistList(); }
     }).catch(() => {});
+    // Reenvia silenciosamente leads locais de qualquer data que ainda não chegaram ao Sheets
+    _reenviaPendentesHistorico();
   }
+}
+
+// Varre leads locais de todos os dias e reenvia os que não foram confirmados pelo servidor.
+// Usa a fila offline como mecanismo — se o id não estiver confirmado (ainda na fila ou nunca enviado),
+// recoloca na fila. O offlineFlush cuida do envio com confirmação real.
+function _reenviaPendentesHistorico() {
+  if (!navigator.onLine || !API.ok()) return;
+  // Pega ids que já estão na fila (aguardando confirmação)
+  const filaIds = new Set(
+    JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]')
+      .filter(x => !x._action)
+      .map(x => String(x.id))
+  );
+  // Leads locais sem _synced e sem a fila já cuidando deles → reenviar
+  leads.forEach(l => {
+    if (!l._synced && !filaIds.has(String(l.id))) {
+      offlineEnqueue(l);
+    }
+  });
+  offlineFlush();
 }
 
 function renderHistFiltros() {
@@ -3030,13 +3058,15 @@ function mergeRemoto(remoto) {
     }
     const key = String(r.id);
     if (idxMap[key] === undefined) {
-      // lead novo vindo do servidor — adiciona localmente
+      // lead novo vindo do servidor — adiciona localmente já marcado como sincronizado
+      r._synced = true;
       idxMap[key] = leads.length;
       leads.push(r);
       changed = true;
     } else {
       // lead existente — preserva _ans local (Sheets não armazena esse campo)
       const local = leads[idxMap[key]];
+      if (!local._synced) { local._synced = true; changed = true; }
       if (!r._ans && local._ans) r._ans = local._ans;
       // sincroniza emSala, tipoSala e venda do remoto para o local (remoto é mais recente)
       if (r.emSala && !local.emSala) { local.emSala = true; changed = true; }
@@ -4936,7 +4966,14 @@ function offlineFlush() {
   const pendentes = [...q];
   localStorage.removeItem(OFFLINE_KEY);
   pendentes.forEach(lead => {
-    API.post(lead).then(ok => { if (!ok) offlineEnqueue(lead); }).catch(() => offlineEnqueue(lead));
+    API.post(lead).then(ok => {
+      if (ok) {
+        if (!lead._action) {
+          const i = leads.findIndex(l => String(l.id) === String(lead.id));
+          if (i >= 0) { leads[i]._synced = true; _salvarLeads(); renderHistList(); }
+        }
+      } else { offlineEnqueue(lead); }
+    }).catch(() => offlineEnqueue(lead));
   });
 }
 
