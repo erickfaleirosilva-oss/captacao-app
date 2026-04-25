@@ -4536,12 +4536,21 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
     : ['Hotel','CI Total','CI Pool','CI Cotistas','MC'];
   const colsGrid = multi ? '100px 1fr 1fr 1fr 1fr 1fr 1fr' : '90px 1fr 1fr 1fr 1fr';
 
-  // Acumulado mensal por hotel
+  // Dados do dia anterior (dataAtiva) por hotel — NÃO acumulado
   let totais = { ciTotal:0, ciPool:0, ciCot:0, mc:0, salaTotal:0, salaPool:0, salaConv:0 };
 
   let rowsHtml = '';
   hoteis.forEach(h => {
-    const a   = acHotel(h);
+    // Busca só o registro do dia específico (dataAtiva)
+    const diaEntry = ddpLoadHist(h).find(r => r.dateISO === dataAtiva) || {};
+    const a = {
+      ciPool:   diaEntry.ciPool   || 0,
+      ciCot:    diaEntry.ciCot    || 0,
+      ciTotal:  (diaEntry.ciPool || 0) + (diaEntry.ciCot || 0),
+      salaPool: diaEntry.salaPool || 0,
+      salaConv: diaEntry.salaConv || 0,
+      salaTotal:(diaEntry.salaPool || 0) + (diaEntry.salaCot || 0) + (diaEntry.salaConv || 0),
+    };
     const mcH = Math.round(a.ciPool * DDP_CONFIG.metaPenetracaoPool);
     const pp  = ddpPct(a.salaPool + (a.salaConv||0), a.ciPool);
     totais.ciTotal   += a.ciTotal;
