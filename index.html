@@ -1535,7 +1535,7 @@ function afterLogin() {
   const navTR = document.getElementById('navTimeRange');
   const navDD = document.getElementById('navDdp');
   const isLider = ['lider','sublider','ceo'].includes(captador.cargo);
-  if (['lider','ceo'].includes(captador.cargo)) navEq.classList.remove('hidden');
+  if (['lider','sublider','ceo'].includes(captador.cargo)) navEq.classList.remove('hidden');
   else navEq.classList.add('hidden');
   if (isLider) navTR.classList.remove('hidden');
   else navTR.classList.add('hidden');
