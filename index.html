@@ -3075,19 +3075,22 @@ function mergeRemoto(remoto) {
       if (r.emSala && !local.emSala) { local.emSala = true; changed = true; }
       if (r.tipoSala && r.tipoSala !== local.tipoSala) { local.tipoSala = r.tipoSala; changed = true; }
       if (r.venda && !local.venda)   { local.venda = true; changed = true; }
-      // se local tem emSala=true mas remoto está false → reenviar estado completo silenciosamente
-      if (local.emSala && !r.emSala && navigator.onLine && API.ok()) {
-        API.post({ _action: 'update_sala', id: local.id, emSala: true, tipoSala: local.tipoSala || null, venda: !!local.venda }).catch(() => {});
+      // se local tem emSala=true mas remoto está false → reenviar via fila (com confirmação)
+      if (local.emSala && !r.emSala) {
+        offlineEnqueue({ _action: 'update_sala', id: local.id, emSala: true, tipoSala: local.tipoSala || null, venda: !!local.venda });
       }
     }
   });
-  // Leads locais que não chegaram ao Sheets — reenviar silenciosamente
+  // Leads locais que não chegaram ao Sheets — enfileira até 20 por merge para não disparar em massa
   if (navigator.onLine && API.ok()) {
-    leads.forEach(l => {
+    let reenviados = 0;
+    for (const l of leads) {
+      if (reenviados >= 20) break;
       if (!remotosIds.has(String(l.id))) {
-        API.post(l).then(ok => { if (!ok) offlineEnqueue(l); }).catch(() => offlineEnqueue(l));
+        offlineEnqueue(l);
+        reenviados++;
       }
-    });
+    }
   }
   if (changed) {
     try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
@@ -4966,13 +4969,15 @@ function offlineEnqueue(lead) {
   localStorage.setItem(OFFLINE_KEY, JSON.stringify(q));
 }
 
+let _flushEmAndamento = false;
 function offlineFlush() {
   if (!navigator.onLine || !API.ok()) return;
+  if (_flushEmAndamento) return; // já está rodando, não empilha
   const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
   if (!q.length) return;
   const pendentes = [...q];
   localStorage.removeItem(OFFLINE_KEY);
-  // Envia sequencialmente para não sobrecarregar o Sheets nem o celular
+  _flushEmAndamento = true;
   let salvouAlgo = false;
   (async () => {
     for (const lead of pendentes) {
@@ -4984,7 +4989,7 @@ function offlineFlush() {
         }
       } else { offlineEnqueue(lead); }
     }
-    // Salva e re-renderiza UMA vez só ao final, não a cada lead
+    _flushEmAndamento = false;
     if (salvouAlgo) { _salvarLeads(); renderHistList(); }
   })();
 }
