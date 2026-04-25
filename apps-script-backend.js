@@ -449,6 +449,54 @@ function migrarTodasAsAbas() {
   Logger.log('Migração concluída.');
 }
 
+// ── Remove linhas duplicadas por ID, mantendo apenas a ÚLTIMA ocorrência de cada ID ──
+// Rodar manualmente no Apps Script quando houver duplicatas
+function dedupTodasAsAbas() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const nomeAbas = [...new Set(Object.values(SALA_SHEETS))]; // ['Alta Vista', 'São Pedro', 'Atibaia']
+  let totalRemovidas = 0;
+
+  nomeAbas.forEach(nome => {
+    const sheet = ss.getSheetByName(nome);
+    if (!sheet) { Logger.log(nome + ': aba não encontrada, pulando.'); return; }
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) { Logger.log(nome + ': vazia, pulando.'); return; }
+
+    const nCols = sheet.getLastColumn();
+    const allRows = sheet.getRange(2, 1, lastRow - 1, nCols).getValues();
+
+    // Mapeia id → índice da última ocorrência (mais recente = maior índice no array)
+    const lastIdx = {};
+    allRows.forEach((r, i) => {
+      const id = String(r[0]).trim();
+      if (id) lastIdx[id] = i;
+    });
+
+    // Marca linhas a remover (qualquer linha que NÃO é a última ocorrência do seu ID)
+    const linhasParaRemover = []; // índices no array (base 0)
+    allRows.forEach((r, i) => {
+      const id = String(r[0]).trim();
+      if (id && lastIdx[id] !== i) linhasParaRemover.push(i);
+    });
+
+    if (!linhasParaRemover.length) {
+      Logger.log(nome + ': sem duplicatas.');
+      return;
+    }
+
+    // Remove de baixo para cima para não deslocar índices
+    linhasParaRemover.sort((a, b) => b - a);
+    linhasParaRemover.forEach(i => {
+      sheet.deleteRow(i + 2); // +2 porque array é base-0 e linha 1 é cabeçalho
+    });
+
+    totalRemovidas += linhasParaRemover.length;
+    Logger.log(nome + ': ' + linhasParaRemover.length + ' duplicatas removidas. Restam ' + (allRows.length - linhasParaRemover.length) + ' linhas.');
+  });
+
+  Logger.log('=== Dedup concluído. Total removidas: ' + totalRemovidas + ' linhas. ===');
+}
+
 // ── Migra dados do PropertiesService (ddp_store antigo) para a aba DDP ──
 // Rodar UMA VEZ manualmente no Apps Script após implantar nova versão
 function migrarDDPParaSheets() {
