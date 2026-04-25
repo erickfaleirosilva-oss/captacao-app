@@ -2642,9 +2642,9 @@ function showHist() {
   if (API.ok()) {
     API.getLeads(todayISO()).then(remoto => {
       if (mergeRemoto(remoto)) { renderHistFiltros(); renderHistList(); }
+      // Reenvio só depois que o getLeads terminou — não compete com a leitura
+      setTimeout(_reenviaPendentesHistorico, 500);
     }).catch(() => {});
-    // Reenvia silenciosamente leads locais de qualquer data que ainda não chegaram ao Sheets
-    _reenviaPendentesHistorico();
   }
 }
 
@@ -3264,6 +3264,8 @@ function showCdp() {
       mergePIsRemoto(piRemoto);
       renderCdpFiltros();
       atualizarCdp();
+      // Flush só depois que o sync visual terminou — não compete com o getLeads
+      setTimeout(offlineFlush, 500);
     }).catch(() => { document.getElementById('cdpSync').classList.add('hidden'); });
   }
 }
