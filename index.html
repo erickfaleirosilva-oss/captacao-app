@@ -2659,13 +2659,16 @@ function _reenviaPendentesHistorico() {
       .filter(x => !x._action)
       .map(x => String(x.id))
   );
-  // Leads locais sem _synced e sem a fila já cuidando deles → reenviar
-  leads.forEach(l => {
+  // Leads locais sem _synced — enfileira até 20 por vez para não sobrecarregar
+  let count = 0;
+  for (const l of leads) {
+    if (count >= 20) break;
     if (!l._synced && !filaIds.has(String(l.id))) {
       offlineEnqueue(l);
+      count++;
     }
-  });
-  offlineFlush();
+  }
+  if (count > 0) offlineFlush();
 }
 
 function renderHistFiltros() {
@@ -4969,16 +4972,21 @@ function offlineFlush() {
   if (!q.length) return;
   const pendentes = [...q];
   localStorage.removeItem(OFFLINE_KEY);
-  pendentes.forEach(lead => {
-    API.post(lead).then(ok => {
+  // Envia sequencialmente para não sobrecarregar o Sheets nem o celular
+  let salvouAlgo = false;
+  (async () => {
+    for (const lead of pendentes) {
+      const ok = await API.post(lead).catch(() => false);
       if (ok) {
         if (!lead._action) {
           const i = leads.findIndex(l => String(l.id) === String(lead.id));
-          if (i >= 0) { leads[i]._synced = true; _salvarLeads(); renderHistList(); }
+          if (i >= 0) { leads[i]._synced = true; salvouAlgo = true; }
         }
       } else { offlineEnqueue(lead); }
-    }).catch(() => offlineEnqueue(lead));
-  });
+    }
+    // Salva e re-renderiza UMA vez só ao final, não a cada lead
+    if (salvouAlgo) { _salvarLeads(); renderHistList(); }
+  })();
 }
 
 window.addEventListener('online', offlineFlush);
