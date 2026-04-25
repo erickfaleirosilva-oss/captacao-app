@@ -4132,14 +4132,7 @@ function renderDdp() {
 
     <!-- RESUMO WHATSAPP -->
     <div class="ddp-wpp-wrap">
-      <div class="ddp-wpp-sec-lbl">
-        <div style="width:6px;height:6px;border-radius:50%;background:#25d366"></div>
-        Resumo para WhatsApp
-      </div>
       <div id="ddp_wppCard"></div>
-      <button class="btn" style="margin-top:10px;background:#25d366;color:#fff;font-weight:800;border:none;padding:11px 20px;border-radius:10px;width:100%;font-size:13px" onclick="ddpCopyCard()">
-        📋 Copiar resumo em texto
-      </button>
     </div>
   `;
 
@@ -4566,16 +4559,18 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
     </div>`;
   });
 
-  // Linha acumulado (Total CN se multi, "Acumulado" se single)
-  const acLabel = multi ? 'Total ' + op.split(' ')[0] : 'Acumulado';
-  const acMC    = Math.round(totais.ciPool * DDP_CONFIG.metaPenetracaoPool);
-  const acPP    = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool);
-  rowsHtml += `<div class="ddp-wpp-row wpp-ac" style="grid-template-columns:${colsGrid}">
-    <span>${acLabel}</span>
-    <span>${totais.ciTotal}</span><span>${totais.ciPool}</span><span>${totais.ciCot}</span>
-    <span class="wpp-mc">${acMC}</span>
-    ${multi ? `<span>${totais.salaTotal}</span><span>${fmtPct(acPP)}</span>` : ''}
-  </div>`;
+  // Linha de total só aparece quando há múltiplos hotéis (CN) — single hotel não precisa de acumulado
+  if (multi) {
+    const acLabel = 'Total ' + op.split(' ')[0];
+    const acMC    = Math.round(totais.ciPool * DDP_CONFIG.metaPenetracaoPool);
+    const acPP    = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool);
+    rowsHtml += `<div class="ddp-wpp-row wpp-ac" style="grid-template-columns:${colsGrid}">
+      <span>${acLabel}</span>
+      <span>${totais.ciTotal}</span><span>${totais.ciPool}</span><span>${totais.ciCot}</span>
+      <span class="wpp-mc">${acMC}</span>
+      <span>${totais.salaTotal}</span><span>${fmtPct(acPP)}</span>
+    </div>`;
+  }
 
   // Cabeçalho de colunas
   const colHdHtml = cols.map((c,i) =>
