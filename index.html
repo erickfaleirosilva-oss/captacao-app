@@ -3772,7 +3772,50 @@ function ddpSheetsLoad(hotel) {
     .catch(() => {}); // Offline — usa só localStorage
 }
 
-// Grava uma entrada no Google Sheets (fire-and-forget com retry silencioso)
+const DDP_OFFLINE_KEY = 'ddp_offline_queue';
+
+function _ddpOfflineEnqueue(entry) {
+  const q = JSON.parse(localStorage.getItem(DDP_OFFLINE_KEY) || '[]');
+  const key = (entry.hotel || '') + '_' + (entry.dateISO || '');
+  const idx = q.findIndex(x => ((x.hotel || '') + '_' + (x.dateISO || '')) === key);
+  if (idx >= 0) q[idx] = entry; else q.push(entry);
+  localStorage.setItem(DDP_OFFLINE_KEY, JSON.stringify(q));
+}
+
+let _ddpFlushEmAndamento = false;
+function ddpOfflineFlush() {
+  if (!navigator.onLine || !DDP_CONFIG.sheetsUrl) return;
+  if (_ddpFlushEmAndamento) return;
+  const q = JSON.parse(localStorage.getItem(DDP_OFFLINE_KEY) || '[]');
+  if (!q.length) return;
+  localStorage.removeItem(DDP_OFFLINE_KEY);
+  _ddpFlushEmAndamento = true;
+  (async () => {
+    for (const entry of q) {
+      const ok = await _ddpPostSheets(entry).catch(() => false);
+      if (!ok) _ddpOfflineEnqueue(entry);
+    }
+    _ddpFlushEmAndamento = false;
+  })();
+}
+window.addEventListener('online', ddpOfflineFlush);
+setInterval(ddpOfflineFlush, 30000);
+
+async function _ddpPostSheets(entry) {
+  const payload = Object.assign({ action: 'saveDDP' }, entry);
+  try {
+    const r = await fetch(DDP_CONFIG.sheetsUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) return false;
+    const json = await r.json().catch(() => null);
+    return json && (json.status === 'ok' || json.status === 'duplicate');
+  } catch(e) { return false; }
+}
+
+// Grava uma entrada no Google Sheets com confirmação real
 function ddpSheetsSave(entry) {
   if (!DDP_CONFIG.sheetsUrl) return;
   // Atualiza o cache local imediatamente
@@ -3781,15 +3824,13 @@ function ddpSheetsSave(entry) {
   if (idx >= 0) _ddpRemoteCache[entry.hotel][idx] = entry;
   else _ddpRemoteCache[entry.hotel].push(entry);
 
-  // Prefixo DDP_ evita que o Sheets converta a string ISO para Date nativo
-  // (o que causaria dateISO="" ao retornar via getDDP)
-  const payload = Object.assign({ action: 'saveDDP' }, entry);
-
-  fetch(DDP_CONFIG.sheetsUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload),
-  }).catch(() => {}); // Falha silenciosa — dado já está no localStorage
+  if (!navigator.onLine || !DDP_CONFIG.sheetsUrl) {
+    _ddpOfflineEnqueue(entry);
+    return;
+  }
+  _ddpPostSheets(entry).then(ok => {
+    if (!ok) _ddpOfflineEnqueue(entry);
+  }).catch(() => _ddpOfflineEnqueue(entry));
 }
 
 function ddpLoadHist(hotel) {
@@ -3877,6 +3918,8 @@ function showDdp() {
   opcoes.forEach(op => {
     (DDP_CONFIG.operacoes[op] || []).forEach(h => ddpSheetsLoad(h));
   });
+  // Reenvia entradas que ficaram presas na fila offline
+  setTimeout(ddpOfflineFlush, 500);
 }
 
 function renderDdp() {
