@@ -3802,13 +3802,22 @@ window.addEventListener('online', ddpOfflineFlush);
 setInterval(ddpOfflineFlush, 30000);
 
 async function _ddpPostSheets(entry) {
-  const payload = Object.assign({ action: 'saveDDP' }, entry);
+  // Usa GET com query string — POST não sobrevive ao redirect do Apps Script (HTTP 405)
   try {
-    const r = await fetch(DDP_CONFIG.sheetsUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(payload),
+    const params = new URLSearchParams({
+      action: 'saveDDP',
+      hotel:    entry.hotel    || '',
+      dateISO:  entry.dateISO  || '',
+      ciPool:   entry.ciPool   || 0,
+      ciCot:    entry.ciCot    || 0,
+      salaPool: entry.salaPool || 0,
+      salaCot:  entry.salaCot  || 0,
+      salaConv: entry.salaConv || 0,
+      vendPool: entry.vendPool || 0,
+      vendCot:  entry.vendCot  || 0,
+      vendConv: entry.vendConv || 0,
     });
+    const r = await fetch(DDP_CONFIG.sheetsUrl + '?' + params.toString());
     if (!r.ok) return false;
     const json = await r.json().catch(() => null);
     return json && (json.status === 'ok' || json.status === 'duplicate');
