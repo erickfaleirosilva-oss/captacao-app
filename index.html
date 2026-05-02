@@ -1245,13 +1245,15 @@ const API = {
       return json && (json.status === 'ok' || json.status === 'duplicate');
     } catch(e) { return false; }
   },
-  getLeads: async (dateISO) => {
+  getLeads: async (dateISO, dateFrom, dateTo) => {
     if (!API.ok()) return null;
     try {
-      // Passa filtro de data para evitar timeout com muitos leads
-      const url = dateISO
-        ? CONFIG.webhookUrl + '?dateISO=' + encodeURIComponent(dateISO)
-        : CONFIG.webhookUrl;
+      const p = new URLSearchParams();
+      if (dateISO)  p.set('dateISO',  dateISO);
+      if (dateFrom) p.set('dateFrom', dateFrom);
+      if (dateTo)   p.set('dateTo',   dateTo);
+      const qs = p.toString();
+      const url = qs ? CONFIG.webhookUrl + '?' + qs : CONFIG.webhookUrl;
       const r = await fetch(url);
       if (!r.ok) return null;
       const json = await r.json();
@@ -3256,9 +3258,12 @@ function showCdp() {
     const _cdpDateISO = cdpFiltro.periodo === 'hoje' ? todayISO()
       : cdpFiltro.periodo === 'semana' ? domingoSemana()
       : cdpFiltro.periodo === 'mes'    ? todayISO().slice(0,7) + '-01'
-      : null; // período livre ou sem filtro: busca sem filtro de data
+      : null;
+    // Período livre com datas definidas — passa range para o servidor
+    const _cdpDateFrom = (cdpFiltro.periodo === 'livre' && cdpFiltro.de)  ? cdpFiltro.de  : null;
+    const _cdpDateTo   = (cdpFiltro.periodo === 'livre' && cdpFiltro.ate) ? cdpFiltro.ate : null;
     Promise.all([
-      API.getLeads(_cdpDateISO),
+      API.getLeads(_cdpDateISO, _cdpDateFrom, _cdpDateTo),
       fetch(CONFIG.webhookUrl + '?_type=pi').then(r=>r.json()).catch(()=>null)
     ]).then(([remoto, piRemoto]) => {
       document.getElementById('cdpSync').classList.add('hidden');
