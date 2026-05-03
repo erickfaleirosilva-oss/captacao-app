@@ -1246,6 +1246,11 @@ const API = {
     } catch(e) { return false; }
   },
   getLeads: async (dateISO, dateFrom, dateTo) => {
+    // ⚠️ REGRA CRÍTICA — NUNCA filtrar por data única (dateISO) no sync do CDP.
+    // O mergeRemoto só ADICIONA leads — nunca remove. Se o filtro for restrito demais
+    // (ex: só "hoje"), leads de outros dias não chegam e o CEO/líder vê dados incompletos.
+    // Sempre usar dateFrom+dateTo cobrindo o período completo relevante (mês corrente, no mínimo).
+    // dateISO só deve ser usado no showHist (Histórico individual do captador).
     if (!API.ok()) return null;
     try {
       const p = new URLSearchParams();
@@ -3048,6 +3053,10 @@ function normalizarTime(t, id) {
 
 // Merge leads remotos no array local (sem duplicar por id)
 // Também corrige divergências: leads locais não enviados e emSala pendente
+// ⚠️ REGRA CRÍTICA — mergeRemoto só ADICIONA e ATUALIZA, nunca remove leads do array local.
+// Isso significa que se getLeads trouxer um período pequeno (ex: só hoje), os leads
+// de outros dias continuam no localStorage mas NÃO são sincronizados — ficam desatualizados.
+// Por isso o showCdp DEVE buscar o mês corrente completo (não só "hoje").
 function mergeRemoto(remoto) {
   if (!Array.isArray(remoto) || !remoto.length) return false;
   const idxMap = {};
