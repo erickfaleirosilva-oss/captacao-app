@@ -3254,16 +3254,14 @@ function showCdp() {
 
   if (API.ok()) {
     document.getElementById('cdpSync').classList.remove('hidden');
-    // Passa filtro de data para evitar timeout — busca só o período relevante
-    const _cdpDateISO = cdpFiltro.periodo === 'hoje' ? todayISO()
-      : cdpFiltro.periodo === 'semana' ? domingoSemana()
-      : cdpFiltro.periodo === 'mes'    ? todayISO().slice(0,7) + '-01'
-      : null;
-    // Período livre com datas definidas — passa range para o servidor
-    const _cdpDateFrom = (cdpFiltro.periodo === 'livre' && cdpFiltro.de)  ? cdpFiltro.de  : null;
-    const _cdpDateTo   = (cdpFiltro.periodo === 'livre' && cdpFiltro.ate) ? cdpFiltro.ate : null;
+    // Busca sempre o mês corrente completo — evita timeout e garante que todos os leads do mês cheguem
+    // O filtro de exibição (hoje/semana/etc) é aplicado localmente pelo atualizarCdp
+    const _mesAtual = todayISO().slice(0, 7) + '-01';
+    // Período livre com datas fora do mês corrente — passa range específico
+    const _cdpDateFrom = (cdpFiltro.periodo === 'livre' && cdpFiltro.de && cdpFiltro.de < _mesAtual) ? cdpFiltro.de : _mesAtual;
+    const _cdpDateTo   = (cdpFiltro.periodo === 'livre' && cdpFiltro.ate) ? cdpFiltro.ate : todayISO();
     Promise.all([
-      API.getLeads(_cdpDateISO, _cdpDateFrom, _cdpDateTo),
+      API.getLeads(null, _cdpDateFrom, _cdpDateTo),
       fetch(CONFIG.webhookUrl + '?_type=pi').then(r=>r.json()).catch(()=>null)
     ]).then(([remoto, piRemoto]) => {
       document.getElementById('cdpSync').classList.add('hidden');
