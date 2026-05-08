@@ -4604,12 +4604,9 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
   const multi = hoteis.length > 1;
 
   // Colunas e larguras
-  // SP: Hotel | CI Total | CI Pool | CI Cotistas | MC
-  // CN: Hotel | CI Total | CI Pool | CI Cotistas | MC | Em sala | Pen. Pool
-  const cols = multi
-    ? ['Hotel','CI Total','CI Pool','CI Cotistas','MC','Em sala','Pen. Pool']
-    : ['Hotel','CI Total','CI Pool','CI Cotistas','MC'];
-  const colsGrid = multi ? '100px 1fr 1fr 1fr 1fr 1fr 1fr' : '90px 1fr 1fr 1fr 1fr';
+  // SP e CN: Hotel | CI Total | CI Pool | CI Cotistas | MC (sem Em sala / Pen. Pool)
+  const cols = ['Hotel','CI Total','CI Pool','CI Cotistas','MC'];
+  const colsGrid = multi ? '100px 1fr 1fr 1fr 1fr' : '90px 1fr 1fr 1fr 1fr';
 
   // Dados do dia anterior (dataAtiva) por hotel — NÃO acumulado
   let totais = { ciTotal:0, ciPool:0, ciCot:0, mc:0, salaTotal:0, salaPool:0, salaConv:0 };
@@ -4639,7 +4636,6 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
       <span>${h}</span>
       <span>${a.ciTotal}</span><span>${a.ciPool}</span><span>${a.ciCot}</span>
       <span class="wpp-mc">${mcH}</span>
-      ${multi ? `<span>${a.salaTotal}</span><span>${fmtPct(pp)}</span>` : ''}
     </div>`;
   });
 
@@ -4652,7 +4648,6 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
       <span>${acLabel}</span>
       <span>${totais.ciTotal}</span><span>${totais.ciPool}</span><span>${totais.ciCot}</span>
       <span class="wpp-mc">${acMC}</span>
-      <span>${totais.salaTotal}</span><span>${fmtPct(acPP)}</span>
     </div>`;
   }
 
@@ -4690,7 +4685,7 @@ function ddpCopyCard() {
     const pp = ddpPct(a.salaPool + (a.salaConv||0), a.ciPool);
     lines.push(`*${h}*`);
     lines.push(`  CI Total: ${a.ciTotal} | Pool: ${a.ciPool} | Cotistas: ${a.ciCot}`);
-    lines.push(`  MC: ${mc}${multi ? ` | Em sala: ${a.salaTotal} | Pen. Pool: ${fmtPct(pp)}` : ''}`);
+    lines.push(`  MC: ${mc}`);
   });
 
   if (multi) {
@@ -4709,7 +4704,7 @@ function ddpCopyCard() {
     lines.push('');
     lines.push(`*Total ${op}*`);
     lines.push(`  CI Total: ${tot.ciTotal} | Pool: ${tot.ciPool} | Cotistas: ${tot.ciCot}`);
-    lines.push(`  MC: ${mc} | Em sala: ${tot.salaTotal} | Pen. Pool: ${fmtPct(pp)}`);
+    lines.push(`  MC: ${mc}`);
   }
 
   const txt = lines.join('\n');
