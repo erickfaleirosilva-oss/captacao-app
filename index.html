@@ -4189,7 +4189,8 @@ function renderDdp() {
         <table class="ddp-ac-table">
           <thead><tr>
             <th>Hotel</th><th>CI<br>Total</th><th>CI<br>Pool</th>
-            <th>Sala</th><th>MC</th>
+            <th>Sala<br>Total</th><th>Sala<br>Pool</th><th>Sala<br>Conv.</th><th>Sala<br>Cot.</th>
+            <th>MC</th>
             <th>Pen.<br>Pool</th><th>Pen.<br>Geral</th>
             <th>Vendas</th><th>Efic.</th>
           </tr></thead>
@@ -4261,7 +4262,7 @@ function _ddpRenderAc(hoteis, anoMes) {
   const tbody = document.getElementById('ddp_acBody');
   if (!tbody) return;
   // totais inclui salaPool e salaConv separados para penetração pool correta
-  let totais = { ciPool:0, ciCot:0, ciTotal:0, salaPool:0, salaConv:0, salaTotal:0, mc:0, vendTotal:0 };
+  let totais = { ciPool:0, ciCot:0, ciTotal:0, salaPool:0, salaCot:0, salaConv:0, salaTotal:0, mc:0, vendTotal:0 };
   let rows = '';
   hoteis.forEach(h => {
     const a = acHotel(h);
@@ -4269,6 +4270,7 @@ function _ddpRenderAc(hoteis, anoMes) {
     totais.ciCot     += a.ciCot;
     totais.ciTotal   += a.ciTotal;
     totais.salaPool  += a.salaPool  || 0;
+    totais.salaCot   += a.salaCot   || 0;
     totais.salaConv  += a.salaConv  || 0;
     totais.salaTotal += a.salaTotal;
     totais.mc        += a.mc;
@@ -4278,7 +4280,8 @@ function _ddpRenderAc(hoteis, anoMes) {
     const efC = a.efic >= 20 ? 'ddp-c-green' : a.efic >= 10 ? 'ddp-c-yellow' : 'ddp-c-red';
     rows += `<tr>
       <td>${h}</td><td>${a.ciTotal}</td><td>${a.ciPool}</td>
-      <td>${a.salaTotal}</td><td>${a.mc}</td>
+      <td>${a.salaTotal}</td><td>${a.salaPool||0}</td><td>${a.salaConv||0}</td><td>${a.salaCot||0}</td>
+      <td>${a.mc}</td>
       <td class="${ppC}">${fmtPct(a.penetPool)}</td>
       <td class="${pgC}">${fmtPct(a.penetGeral)}</td>
       <td>${a.vendTotal}</td><td class="${efC}">${fmtPct(a.efic)}</td>
@@ -4294,7 +4297,8 @@ function _ddpRenderAc(hoteis, anoMes) {
     const efC = tEf >= 20 ? 'ddp-c-green' : tEf >= 10 ? 'ddp-c-yellow' : 'ddp-c-red';
     rows += `<tr class="total-row">
       <td>Total CN</td><td>${totais.ciTotal}</td><td>${totais.ciPool}</td>
-      <td>${totais.salaTotal}</td><td>${totais.mc}</td>
+      <td>${totais.salaTotal}</td><td>${totais.salaPool}</td><td>${totais.salaConv}</td><td>${totais.salaCot}</td>
+      <td>${totais.mc}</td>
       <td class="${ppC}">${fmtPct(tPP)}</td>
       <td class="${pgC}">${fmtPct(tPG)}</td>
       <td>${totais.vendTotal}</td><td class="${efC}">${fmtPct(tEf)}</td>
