@@ -4005,16 +4005,24 @@ function renderDdp() {
       acc.vendCot  += e.vendCot  || 0;
       acc.vendConv += e.vendConv || 0;
     });
-    // Para hotéis auto: adicionar os dados de hoje dos leads (que não estão no localStorage ainda)
+    // Para hotéis auto: substitui dados de sala/venda pelo valor real dos leads
+    // (cobre casos onde o registro foi salvo com sala=0 no Sheets)
     if (ddpIsAuto(h)) {
       const diasDoMes = new Set(
         leads.filter(l => l.sala === h && l.emSala && (l.dateISO || '').startsWith(anoMes))
              .map(l => l.dateISO)
       );
       diasDoMes.forEach(d => {
-        const jaSalvo = entries.some(e => e.dateISO === d);
-        if (!jaSalvo) {
-          const av = ddpAutoFromLeads(h, d);
+        const savedEntry = entries.find(e => e.dateISO === d);
+        const av = ddpAutoFromLeads(h, d);
+        if (savedEntry) {
+          acc.salaPool += av.salaPool - (savedEntry.salaPool || 0);
+          acc.salaCot  += av.salaCot  - (savedEntry.salaCot  || 0);
+          acc.salaConv += av.salaConv - (savedEntry.salaConv || 0);
+          acc.vendPool += av.vendPool - (savedEntry.vendPool || 0);
+          acc.vendCot  += av.vendCot  - (savedEntry.vendCot  || 0);
+          acc.vendConv += av.vendConv - (savedEntry.vendConv || 0);
+        } else {
           acc.salaPool += av.salaPool;
           acc.salaCot  += av.salaCot;
           acc.salaConv += av.salaConv;
@@ -4828,6 +4836,35 @@ function acHotel(h) {
     acc.vendCot  += e.vendCot  || 0;
     acc.vendConv += e.vendConv || 0;
   });
+  // Para hotéis auto: para cada dia do mês com leads em memória,
+  // subtrai o que foi somado via entries (pode estar zerado no Sheets)
+  // e substitui pelo valor real dos leads — garantindo dados corretos mesmo se salvos com 0
+  if (ddpIsAuto(h)) {
+    const diasDoMes = new Set(
+      leads.filter(l => l.sala === h && l.emSala && (l.dateISO || '').startsWith(anoMes))
+           .map(l => l.dateISO)
+    );
+    diasDoMes.forEach(d => {
+      const savedEntry = entries.find(e => e.dateISO === d);
+      const av = ddpAutoFromLeads(h, d);
+      if (savedEntry) {
+        // Substitui os campos de sala/venda pelo valor real dos leads (remove o que foi somado antes)
+        acc.salaPool += av.salaPool - (savedEntry.salaPool || 0);
+        acc.salaCot  += av.salaCot  - (savedEntry.salaCot  || 0);
+        acc.salaConv += av.salaConv - (savedEntry.salaConv || 0);
+        acc.vendPool += av.vendPool - (savedEntry.vendPool || 0);
+        acc.vendCot  += av.vendCot  - (savedEntry.vendCot  || 0);
+        acc.vendConv += av.vendConv - (savedEntry.vendConv || 0);
+      } else {
+        acc.salaPool += av.salaPool;
+        acc.salaCot  += av.salaCot;
+        acc.salaConv += av.salaConv;
+        acc.vendPool += av.vendPool;
+        acc.vendCot  += av.vendCot;
+        acc.vendConv += av.vendConv;
+      }
+    });
+  }
   acc.ciTotal   = acc.ciPool + acc.ciCot;
   acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv;
   acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv;
