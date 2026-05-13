@@ -1802,31 +1802,36 @@ function _nqNoivos()   { return { verdict:'NQ', rows:[{i:'⚠️', l:'Relacionam
 
 
 // ── ALTA VISTA ──────────────────────────────
+// Perfil vigente a partir de 14/05/2026 — sem diferenciação de temporada
 function calcAltaVista() {
   const a = ans;
-  const { rNum, cAno, isSol, isNoivos, relOk, idOk, cartaoS, casaS } = _base(a);
-  const baixa = mode === 'low'; // baixa temporada = low, alta = high
+  const { rNum, cAno, isSol, isNoivos, relOk, cartaoS, casaS } = _base(a);
+  // CN aceita 28–65: valor 'menor30' ainda inclui 28 e 29, então aprovamos menor30 OU 30a65
+  const idOkCN = (v) => v === '30a65' || v === 'menor30';
+  const idOk = a.tipo === 'solteiro'
+    ? idOkCN(a.idadeMarido)
+    : (idOkCN(a.idadeMarido) || idOkCN(a.idadeConjuge));
 
   if (isNoivos) return _nqNoivos();
 
   if (isSol) {
-    // Solteiro: R$6k+, carro 2016+, idade 30-65, cartão
-    const ok = rNum >= 6000 && cAno >= 2016 && idOk && cartaoS;
+    // Solteiro: R$6k+, carro 2012+, idade 28-65, cartão
+    const ok = rNum >= 6000 && cAno >= 2012 && idOk && cartaoS;
     if (ok) return {
       verdict:'Q', perfil:'Solteiro/Divorciado — Alta Vista',
       rule: null,
       rows:[
         {i:'✅', l:'Perfil',       v:'Solteiro / Divorciado'},
         {i:'✅', l:'Renda',        v:rendaStr(a.renda)},
-        {i:'✅', l:'Idade',        v:'30–65 anos'},
-        {i:'✅', l:'Veículo',      v:'2016+'},
+        {i:'✅', l:'Idade',        v:'28–65 anos'},
+        {i:'✅', l:'Veículo',      v:'2012+'},
         {i:'✅', l:'Cartão',       v:'Sim'},
       ]
     };
     return { verdict:'NQ', perfil:null, rule:null, rows:[
       _row(rNum>=6000,  'Renda',   rNum>=6000  ? rendaStr(a.renda) : 'Mínimo R$6.000'),
-      _row(idOk,        'Idade',   idOk        ? '30–65 anos'      : 'Exige 30–65 anos'),
-      _row(cAno>=2016,  'Veículo', cAno>=2016  ? '2016+'           : 'Mínimo 2016'),
+      _row(idOk,        'Idade',   idOk        ? '28–65 anos'      : 'Exige 28–65 anos'),
+      _row(cAno>=2012,  'Veículo', cAno>=2012  ? '2012+'           : 'Mínimo 2012'),
       _row(cartaoS,     'Cartão',  cartaoS     ? 'Sim'             : 'Obrigatório'),
     ]};
   }
@@ -1836,33 +1841,31 @@ function calcAltaVista() {
     {i:'⚠️', l:'Relacionamento', v: a.tipo==='uniao' ? 'União estável < 1 ano — NQ' : 'Exige casado ou União estável ≥1 ano'},
   ]};
   if (!idOk) return { verdict:'NQ', perfil:null, rule:null, rows:[
-    {i:'⚠️', l:'Idade', v:'Exige 30–65 anos'},
+    {i:'⚠️', l:'Idade', v:'Exige 28–65 anos'},
   ]};
 
-  const carroMin = baixa ? 2010 : 2014;
-
-  // Perfil 1: R$8k+, carro mínimo, sem obrigação de casa, cartão
-  if (rNum >= 8000 && cAno >= carroMin && cartaoS) return {
-    verdict:'Q', perfil:`Casal — Alta Vista ${baixa?'Baixa':'Alta'} Temporada (R$8k+)`,
+  // Perfil 1: R$8k+, carro 2010+, cartão (sem distinção de temporada)
+  if (rNum >= 8000 && cAno >= 2010 && cartaoS) return {
+    verdict:'Q', perfil:'Casal — Alta Vista (R$8k+)',
     rule:null,
     rows:[
       {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
       {i:'✅', l:'Relacionamento', v:_relLabel(a)},
-      {i:'✅', l:'Idade',          v:'30–65 anos'},
-      {i:'✅', l:'Veículo',        v:cAno>=2016?'2016+':'2014+'},
+      {i:'✅', l:'Idade',          v:'28–65 anos'},
+      {i:'✅', l:'Veículo',        v:'2010+'},
       {i:'✅', l:'Cartão',         v:'Sim'},
     ]
   };
 
-  // Perfil 2: R$6k–7.999, carro 2016+, casa própria, cartão
-  if (rNum >= 6000 && rNum < 8000 && cAno >= 2016 && casaS && cartaoS) return {
-    verdict:'Q', perfil:`Casal — Alta Vista (R$6–7k + casa própria)`,
+  // Perfil 2: R$6k–7.999, carro 2012+, casa própria, cartão
+  if (rNum >= 6000 && rNum < 8000 && cAno >= 2012 && casaS && cartaoS) return {
+    verdict:'Q', perfil:'Casal — Alta Vista (R$6–7k + casa própria)',
     rule:null,
     rows:[
       {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
       {i:'✅', l:'Relacionamento', v:_relLabel(a)},
-      {i:'✅', l:'Idade',          v:'30–65 anos'},
-      {i:'✅', l:'Veículo',        v:'2016+'},
+      {i:'✅', l:'Idade',          v:'28–65 anos'},
+      {i:'✅', l:'Veículo',        v:'2012+'},
       {i:'✅', l:'Casa própria',   v:'Sim'},
       {i:'✅', l:'Cartão',         v:'Sim'},
     ]
@@ -1870,12 +1873,12 @@ function calcAltaVista() {
 
   // Perfil 3: sem cartão, R$10k+, carro 2010+
   if (rNum >= 10000 && cAno >= 2010 && !cartaoS) return {
-    verdict:'Q', perfil:`Casal — Alta Vista sem cartão (R$10k+)`,
+    verdict:'Q', perfil:'Casal — Alta Vista sem cartão (R$10k+)',
     rule:null,
     rows:[
       {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
       {i:'✅', l:'Relacionamento', v:_relLabel(a)},
-      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Idade',          v:'28–65 anos'},
       {i:'✅', l:'Veículo',        v:'2010+'},
       {i:'➞',  l:'Cartão',        v:'Dispensado (R$10k+)'},
     ]
@@ -1883,11 +1886,11 @@ function calcAltaVista() {
 
   // NQ — mostrar o que faltou
   return { verdict:'NQ', perfil:null, rule:null, rows:[
-    _row(rNum>=6000,      'Renda',          rNum>=6000      ? rendaStr(a.renda)   : 'Mínimo R$6.000'),
-    _row(idOk,            'Idade',          idOk            ? '30–65 anos'        : 'Exige 30–65 anos'),
-    _row(cAno>=carroMin,  'Veículo',        cAno>=carroMin  ? `${carroMin}+`      : `Mínimo ${carroMin}`),
-    _row(relOk,           'Relacionamento', relOk           ? _relLabel(a)        : 'Casado ou UE ≥1 ano'),
-    _row(cartaoS,         'Cartão',         cartaoS         ? 'Sim'               : 'Obrigatório (salvo R$10k+ sem cartão)'),
+    _row(rNum>=6000,   'Renda',          rNum>=6000   ? rendaStr(a.renda) : 'Mínimo R$6.000'),
+    _row(idOk,         'Idade',          idOk         ? '28–65 anos'      : 'Exige 28–65 anos'),
+    _row(cAno>=2010,   'Veículo',        cAno>=2010   ? '2010+'           : 'Mínimo 2010'),
+    _row(relOk,        'Relacionamento', relOk        ? _relLabel(a)      : 'Casado ou UE ≥1 ano'),
+    _row(cartaoS,      'Cartão',         cartaoS      ? 'Sim'             : 'Obrigatório (salvo R$10k+ sem cartão)'),
   ]};
 }
 
@@ -2381,7 +2384,12 @@ function renderStep() {
   } else {
     wN.classList.add('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.remove('hidden'); wP.classList.add('hidden');
     wC.innerHTML = '';
-    q.opts.forEach(o => {
+    // Para CN (28–65), substituir label/icon da opção menor30 nas perguntas de idade
+    const _cnSala = salaAtual && ['alta-vista','atrium','marina','externo-cn'].includes(salaAtual.id);
+    const optsDisplay = (q.id === 'idadeMarido' || q.id === 'idadeConjuge') && _cnSala
+      ? q.opts.map(o => o.value === 'menor30' ? { ...o, icon:'✅', label:'28 a 29 anos' } : o)
+      : q.opts;
+    optsDisplay.forEach(o => {
       const chip = document.createElement('div');
       chip.className = 'chip' + (ans[q.id]===o.value ? ' selected' : '');
       chip.innerHTML = `<div class="chip-icon">${o.icon}</div>
@@ -2802,12 +2810,14 @@ function renderHistList() {
       const chips = [];
       if (h.cidade && h.cidade !== '—')
         chips.push({ t: h.cidade, c:'neu' });
+      const _isCN = ['Alta Vista','Atrium','Marina','Externo'].includes(h.sala);
+      const _idadeOkChip = (v) => v === '30a65' || (_isCN && v === 'menor30');
       if (a.idadeMarido)
-        chips.push({ t: 'Tit. ' + (IDADE_LABEL[a.idadeMarido]  || a.idadeMarido),  c: a.idadeMarido  === '30a65' ? 'ok' : 'no' });
+        chips.push({ t: 'Tit. ' + (IDADE_LABEL[a.idadeMarido]  || a.idadeMarido),  c: _idadeOkChip(a.idadeMarido)  ? 'ok' : 'no' });
       if (a.profissaoTitular)
         chips.push({ t: PROF_LABEL[a.profissaoTitular] || a.profissaoTitular, c:'neu' });
       if (a.idadeConjuge && h.tipo !== 'solteiro')
-        chips.push({ t: 'Côn. ' + (IDADE_LABEL[a.idadeConjuge] || a.idadeConjuge), c: a.idadeConjuge === '30a65' ? 'ok' : 'no' });
+        chips.push({ t: 'Côn. ' + (IDADE_LABEL[a.idadeConjuge] || a.idadeConjuge), c: _idadeOkChip(a.idadeConjuge) ? 'ok' : 'no' });
       if (a.profissaoConjuge && h.tipo !== 'solteiro')
         chips.push({ t: 'Côn. ' + (PROF_LABEL[a.profissaoConjuge] || a.profissaoConjuge), c:'neu' });
       if (a.carro)
