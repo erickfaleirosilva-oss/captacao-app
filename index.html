@@ -2659,8 +2659,13 @@ function showHist() {
   renderHistFiltros();
   renderHistList();
   if (API.ok()) {
-    API.getLeads(todayISO()).then(remoto => {
-      if (mergeRemoto(remoto)) { renderHistFiltros(); renderHistList(); }
+    // ⚠️ REGRA CRÍTICA — nunca passar só todayISO() aqui.
+    // mergeRemoto só ADICIONA leads; se o Sheets retornar só hoje, os de outros dias
+    // ficam desatualizados E são reenfileirados como "não sincronizados" — causando reenvio em massa.
+    // Sempre buscar o mês corrente completo para garantir que o histórico esteja completo.
+    const _mesAtual = todayISO().slice(0, 7) + '-01';
+    API.getLeads(null, _mesAtual, todayISO()).then(remoto => {
+      if (mergeRemoto(remoto, _mesAtual)) { renderHistFiltros(); renderHistList(); }
       // Reenvio só depois que o getLeads terminou — não compete com a leitura
       setTimeout(_reenviaPendentesHistorico, 500);
     }).catch(() => {});
@@ -3068,8 +3073,12 @@ function normalizarTime(t, id) {
 // ⚠️ REGRA CRÍTICA — mergeRemoto só ADICIONA e ATUALIZA, nunca remove leads do array local.
 // Isso significa que se getLeads trouxer um período pequeno (ex: só hoje), os leads
 // de outros dias continuam no localStorage mas NÃO são sincronizados — ficam desatualizados.
-// Por isso o showCdp DEVE buscar o mês corrente completo (não só "hoje").
-function mergeRemoto(remoto) {
+// Por isso o showCdp e showHist DEVEM buscar o mês corrente completo (não só "hoje").
+//
+// O parâmetro opcional `periodoFrom` indica a data mínima do período buscado no Sheets.
+// Leads locais com dateISO DENTRO desse período que não chegaram do Sheets = reenviar.
+// Leads locais com dateISO FORA do período = ignorar (não enfileirar como faltantes).
+function mergeRemoto(remoto, periodoFrom) {
   if (!Array.isArray(remoto) || !remoto.length) return false;
   const idxMap = {};
   leads.forEach((l, i) => { idxMap[String(l.id)] = i; });
@@ -3106,12 +3115,15 @@ function mergeRemoto(remoto) {
       }
     }
   });
-  // Leads locais que não chegaram ao Sheets — enfileira até 20 por merge para não disparar em massa
+  // Leads locais que não chegaram ao Sheets — só reenviar os que estão DENTRO do período buscado
+  // Se periodoFrom não foi passado, usa o início do mês corrente como limite mínimo seguro
   if (navigator.onLine && API.ok()) {
+    const limiteFrom = periodoFrom || (todayISO().slice(0, 7) + '-01');
     let reenviados = 0;
     for (const l of leads) {
       if (reenviados >= 20) break;
-      if (!remotosIds.has(String(l.id))) {
+      // Só reenviar leads dentro do período coberto pelo Sheets — evita reenvio de leads antigos
+      if (!remotosIds.has(String(l.id)) && (l.dateISO || '') >= limiteFrom) {
         offlineEnqueue(l);
         reenviados++;
       }
@@ -3286,7 +3298,7 @@ function showCdp() {
       fetch(CONFIG.webhookUrl + '?_type=pi').then(r=>r.json()).catch(()=>null)
     ]).then(([remoto, piRemoto]) => {
       document.getElementById('cdpSync').classList.add('hidden');
-      mergeRemoto(remoto);
+      mergeRemoto(remoto, _cdpDateFrom);
       mergePIsRemoto(piRemoto);
       renderCdpFiltros();
       atualizarCdp();
