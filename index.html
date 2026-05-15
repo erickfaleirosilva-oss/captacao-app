@@ -784,13 +784,13 @@
   <!-- PAINEL: esqueci minha senha -->
   <div id="forgotPanel" class="hidden">
     <div class="pwc-title">🔒 Senha esquecida?</div>
-    <div class="pwc-sub" style="text-align:center;margin-bottom:24px;line-height:1.7">
-      Por segurança, a redefinição de senha<br>
-      é feita pelo seu <strong style="color:var(--gold2)">líder ou CEO</strong>.<br><br>
-      Procure seu líder e peça para redefinir<br>
-      sua senha na aba <strong style="color:var(--gold2)">Equipe</strong> do app.
+    <div class="pwc-sub" style="text-align:center;margin-bottom:20px;line-height:1.7">
+      Clique no botão abaixo para redefinir sua senha<br>
+      de volta para a <strong style="color:var(--gold2)">senha padrão</strong> cadastrada pelo líder.<br><br>
+      <span style="font-size:11px;color:var(--muted)">Nenhum dado será perdido.</span>
     </div>
-    <button class="btn-login" onclick="fecharAjudaSenha()">← Voltar</button>
+    <button class="btn-login" onclick="resetarSenhaPadrao()" style="margin-bottom:10px">🔑 Redefinir para senha padrão</button>
+    <button class="btn-login" onclick="fecharAjudaSenha()" style="background:var(--navy2);color:var(--muted);font-size:13px">← Voltar</button>
   </div>
 
   <!-- PAINEL: criar senha pessoal (primeiro login) -->
@@ -1571,11 +1571,25 @@ function trocarCaptador() {
 // TROCAR SENHA
 function mostrarAjudaSenha() {
   document.getElementById('loginSelectPanel').classList.add('hidden');
+  document.getElementById('pwPanel').classList.add('hidden');
   document.getElementById('forgotPanel').classList.remove('hidden');
 }
 function fecharAjudaSenha() {
   document.getElementById('forgotPanel').classList.add('hidden');
   document.getElementById('loginSelectPanel').classList.remove('hidden');
+}
+function resetarSenhaPadrao() {
+  if (!loginSelectedNome) {
+    alert('Selecione seu nome na lista antes de redefinir a senha.');
+    fecharAjudaSenha();
+    return;
+  }
+  localStorage.removeItem('yv_pw_' + loginSelectedNome);
+  document.getElementById('forgotPanel').classList.add('hidden');
+  document.getElementById('loginSelectPanel').classList.remove('hidden');
+  // Reabre o painel de senha para o captador entrar com a senha padrão
+  loginPickNome(loginSelectedNome);
+  alert('Senha redefinida! Use agora a senha padrão que foi cadastrada para você.');
 }
 
 function openPwChange() {
