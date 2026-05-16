@@ -1300,7 +1300,12 @@ let step     = 0;
 let ans      = {};
 let captador = null;
 let salaAtual = null;
-let leads    = (JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]')).map(l => ({ ...l, sala: normalizarSala(l.sala, l.captador) }));
+// Retorna o nome da sala atual (em memória) ou a última sala persistida na sessão
+function getSalaAtualNome() {
+  if (salaAtual) return salaAtual.nome;
+  try { const s = sessionStorage.getItem('yv_sala_atual'); return s ? JSON.parse(s).nome : null; } catch(e) { return null; }
+}
+let leads    =(JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]')).map(l => ({ ...l, sala: normalizarSala(l.sala, l.captador) }));
 let loginSelectedNome = null;
 let histFiltro = { periodo: 'hoje', captador: 'todos', operacao: 'todas', sala: 'todas', de: '', ate: '' };
 let cdpFiltro  = { periodo: 'hoje', operacao: 'todas', sala: 'todas', captador: 'todos', de: '', ate: '' };
@@ -1392,7 +1397,7 @@ function getSalasVisiveis(operacaoFiltro) {
   if (captador && captador.operacao && captador.cargo !== 'ceo') {
     const permitidas = SALAS_POR_OPERACAO[captador.operacao] || [];
     // Inclui sala atual selecionada no login (suporte a operações cruzadas)
-    const salaAtualNome = salaAtual ? salaAtual.nome : null;
+    const salaAtualNome = getSalaAtualNome();
     return todas.filter(s => permitidas.includes(s.nome) || (salaAtualNome && s.nome === salaAtualNome));
   }
   // CEO com filtro de operação ativo
@@ -1562,8 +1567,10 @@ function afterLogin() {
 
 function trocarCaptador() {
   sessionStorage.removeItem('yv_captador');
+  sessionStorage.removeItem('yv_sala_atual');
   try { localStorage.removeItem('yv_captador'); } catch(e) {}
   captador = null;
+  salaAtual = null;
   loginSelectedNome = null;
   renderLoginList(null);
   document.getElementById('pwPanel').classList.add('hidden');
@@ -2165,6 +2172,7 @@ function pickSala(el, salaId, nome) {
   document.querySelectorAll('#salaChips .sala-chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   salaAtual = { id: salaId, nome };
+  sessionStorage.setItem('yv_sala_atual', JSON.stringify(salaAtual));
   document.getElementById('fieldOutraSala').value = '';
   document.getElementById('btnIniciarQuiz').disabled = false;
 }
@@ -2174,6 +2182,7 @@ function onOutraSalaInput() {
   document.querySelectorAll('#salaChips .sala-chip').forEach(c => c.classList.remove('selected'));
   if (val) {
     salaAtual = { id: null, nome: val };
+    sessionStorage.setItem('yv_sala_atual', JSON.stringify(salaAtual));
     document.getElementById('btnIniciarQuiz').disabled = false;
   } else {
     salaAtual = null;
@@ -2271,6 +2280,7 @@ function startQuiz() {
   if (captador && captador.sala) {
     const salaCfg = CONFIG.salas.find(s => s.nome === captador.sala || s.id === captador.sala);
     salaAtual = salaCfg ? { id: salaCfg.id, nome: salaCfg.nome } : { id: null, nome: captador.sala };
+    sessionStorage.setItem('yv_sala_atual', JSON.stringify(salaAtual));
     const pill = document.getElementById('salaPill');
     pill.textContent = '🏢 ' + salaAtual.nome;
     pill.classList.remove('hidden');
@@ -2664,7 +2674,7 @@ function filtrarLeads(fonte, filtro) {
   if (filtro.operacao && filtro.operacao !== 'todas') {
     const salasOp = SALAS_POR_OPERACAO[filtro.operacao] || [];
     // Inclui leads da sala atual mesmo fora da operação (ex: sublíder em suporte cruzado)
-    const salaAtualNome = salaAtual ? salaAtual.nome : null;
+    const salaAtualNome = getSalaAtualNome();
     filtered = filtered.filter(l => salasOp.includes(l.sala) || (salaAtualNome && l.sala === salaAtualNome));
   }
   if (filtro.sala && filtro.sala !== 'todas') {
