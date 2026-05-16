@@ -1388,10 +1388,12 @@ const SALAS_POR_OPERACAO = {
 // Retorna salas filtradas pela operação selecionada (considera operação do login também)
 function getSalasVisiveis(operacaoFiltro) {
   const todas = getTodasSalas();
-  // Lider/sublider com operação fixada: só vê salas da sua operação
+  // Lider/sublider com operação fixada: vê salas da sua operação + sala atual (caso esteja em outra operação)
   if (captador && captador.operacao && captador.cargo !== 'ceo') {
     const permitidas = SALAS_POR_OPERACAO[captador.operacao] || [];
-    return todas.filter(s => permitidas.includes(s.nome));
+    // Inclui sala atual selecionada no login (suporte a operações cruzadas)
+    const salaAtualNome = salaAtual ? salaAtual.nome : null;
+    return todas.filter(s => permitidas.includes(s.nome) || (salaAtualNome && s.nome === salaAtualNome));
   }
   // CEO com filtro de operação ativo
   if (operacaoFiltro && operacaoFiltro !== 'todas') {
@@ -2661,7 +2663,9 @@ function filtrarLeads(fonte, filtro) {
   }
   if (filtro.operacao && filtro.operacao !== 'todas') {
     const salasOp = SALAS_POR_OPERACAO[filtro.operacao] || [];
-    filtered = filtered.filter(l => salasOp.includes(l.sala));
+    // Inclui leads da sala atual mesmo fora da operação (ex: sublíder em suporte cruzado)
+    const salaAtualNome = salaAtual ? salaAtual.nome : null;
+    filtered = filtered.filter(l => salasOp.includes(l.sala) || (salaAtualNome && l.sala === salaAtualNome));
   }
   if (filtro.sala && filtro.sala !== 'todas') {
     filtered = filtered.filter(l => l.sala === filtro.sala);
