@@ -1172,7 +1172,7 @@ const CONFIG = {
     // { nome: 'Pablo César Sánchez Montealegre',     cargo: 'captador', sala: 'Atibaia', senhaHash: 'c1761e6dff44a93b593ed7447d983c259a5aefdf3a11960b81c2196ca56772bc' }, // desligado 13/05/2026
     { nome: 'Diego Santos de Lima',               cargo: 'captador', sala: 'Atibaia', senhaHash: 'df85278327aa37e896b48dbe64ac4c34986562bd1075951a6863de3a7a23031c' },
     // — Lideranças —
-    { nome: 'Lucas Marotti',         cargo: 'sublider', operacao: 'São Pedro', operacoesExtras: ['Atibaia'], captaAtivo: true, senhaHash: 'd76cedbee29bc2393e5b6317f71525b51ffe8f656da3dfcbac94d237adc0030a' },
+    { nome: 'Lucas Marotti',         cargo: 'sublider', operacao: 'São Pedro', senhaHash: 'd76cedbee29bc2393e5b6317f71525b51ffe8f656da3dfcbac94d237adc0030a' },
     { nome: 'Bruno Teixeira',         cargo: 'lider',    operacao: 'Caldas Novas', senhaHash: '47fc23b32d2bc339fda336ba515c47caf5d08bf6614b08091d2d3c429ae95c4f' },
     { nome: 'Gustavo Viana',          cargo: 'sublider', operacao: 'Caldas Novas', senhaHash: 'bcba6396fdabedace92c5cf63862816957750e3846e73d0c0ff06f1b8f1e0099' },
     { nome: 'Rogerio Medeiros',       cargo: 'lider',    operacao: 'São Pedro',    senhaHash: 'a5a9b74ffc8d1bdc63761cd5e397a8e36b3cd82d9b05236d283f4c350a49a9de' },
@@ -1305,6 +1305,37 @@ function getSalaAtualNome() {
   if (salaAtual) return salaAtual.nome;
   try { const s = sessionStorage.getItem('yv_sala_atual'); return s ? JSON.parse(s).nome : null; } catch(e) { return null; }
 }
+
+// — Suporte temporário a operações cruzadas —
+// Estrutura localStorage 'yv_suporte_temp': { [nome]: { operacoes: [...], expira: 'YYYY-MM-DD' } }
+function getSuportesTemp() {
+  try { return JSON.parse(localStorage.getItem('yv_suporte_temp') || '{}'); } catch(e) { return {}; }
+}
+function getSuporteTemp(nome) {
+  const todos = getSuportesTemp();
+  const s = todos[nome];
+  if (!s) return null;
+  if (s.expira && s.expira < todayISO()) { cancelarSuporteTemp(nome, true); return null; }
+  return s;
+}
+function setSuporteTemp(nome, operacoes, expira) {
+  const todos = getSuportesTemp();
+  todos[nome] = { operacoes, expira };
+  localStorage.setItem('yv_suporte_temp', JSON.stringify(todos));
+}
+function cancelarSuporteTemp(nome, silencioso) {
+  const todos = getSuportesTemp();
+  delete todos[nome];
+  localStorage.setItem('yv_suporte_temp', JSON.stringify(todos));
+  if (!silencioso) { showEquipe(); }
+}
+// Retorna operações extras ativas (CONFIG + suporte temporário)
+function getOperacoesExtras(membro) {
+  const fixas = membro.operacoesExtras || [];
+  const temp = getSuporteTemp(membro.nome);
+  if (!temp) return fixas;
+  return [...new Set([...fixas, ...temp.operacoes])];
+}
 let leads    =(JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]')).map(l => ({ ...l, sala: normalizarSala(l.sala, l.captador) }));
 let loginSelectedNome = null;
 let histFiltro = { periodo: 'hoje', captador: 'todos', operacao: 'todas', sala: 'todas', de: '', ate: '' };
@@ -1393,13 +1424,11 @@ const SALAS_POR_OPERACAO = {
 // Retorna salas filtradas pela operação selecionada (considera operação do login também)
 function getSalasVisiveis(operacaoFiltro) {
   const todas = getTodasSalas();
-  // Lider/sublider com operação fixada: vê salas da sua operação + operações extras
+  // Lider/sublider com operação fixada: vê salas da sua operação + operações extras (fixas ou temporárias)
   if (captador && captador.operacao && captador.cargo !== 'ceo') {
     const permitidas = SALAS_POR_OPERACAO[captador.operacao] || [];
-    // Inclui salas das operações extras (ex: suporte cruzado permanente)
-    const extras = (captador.operacoesExtras || []).flatMap(op => SALAS_POR_OPERACAO[op] || []);
+    const extras = getOperacoesExtras(captador).flatMap(op => SALAS_POR_OPERACAO[op] || []);
     const todasPermitidas = [...new Set([...permitidas, ...extras])];
-    // Inclui também sala atual da sessão como fallback
     const salaAtualNome = getSalaAtualNome();
     return todas.filter(s => todasPermitidas.includes(s.nome) || (salaAtualNome && s.nome === salaAtualNome));
   }
@@ -2762,7 +2791,7 @@ function renderHistFiltros() {
   if (temAcessoTotal(captador)) {
     const opcoesSelect = captador.cargo === 'ceo'
       ? todos
-      : todos.filter(m => !['lider','sublider','ceo'].includes(m.cargo) || m.captaAtivo);
+      : todos.filter(m => !['lider','sublider','ceo'].includes(m.cargo) || !!getSuporteTemp(m.nome));
     html += '<select class="filtro-select" onchange="setHistFiltro(\'captador\',this.value)">';
     html += `<option value="todos"${histFiltro.captador==='todos'?' selected':''}>Captador</option>`;
     opcoesSelect.forEach(m => {
@@ -3205,7 +3234,7 @@ function renderCdpFiltros() {
   }
   // Select de captador — lider/CEO
   if (captador && ['ceo','lider','sublider'].includes(captador.cargo)) {
-    const todos = todosOsMembros().filter(m => m.cargo === 'captador' || !m.cargo || m.captaAtivo);
+    const todos = todosOsMembros().filter(m => m.cargo === 'captador' || !m.cargo || !!getSuporteTemp(m.nome));
     html += '<select class="filtro-select" onchange="setCdpFiltro(\'captador\',this.value)">';
     html += `<option value="todos"${cdpFiltro.captador==='todos'?' selected':''}>Todos captadores</option>`;
     todos.forEach(m => {
@@ -4956,13 +4985,25 @@ function showEquipe() {
       const resetBtn = temAcessoTotal(captador)
         ? `<button style="background:none;border:1px solid rgba(201,168,76,.3);border-radius:6px;color:var(--gold);font-size:11px;padding:4px 8px;cursor:pointer;flex-shrink:0" onclick="redefinirSenha('${nomeEsc}')">🔑 Redefinir</button>`
         : '';
+      // Botão de suporte temporário — só para lider/sublider logado como ceo/lider, em cards de lider/sublider
+      const suporteAtivo = getSuporteTemp(m.nome);
+      const suporteBtn = (temAcessoTotal(captador) && ['lider','sublider'].includes(m.cargo))
+        ? suporteAtivo
+          ? `<button style="background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.5);border-radius:6px;color:var(--gold);font-size:11px;padding:4px 8px;cursor:pointer;flex-shrink:0" onclick="cancelarSuporteTemp('${nomeEsc}')">✕ Suporte</button>`
+          : `<button style="background:none;border:1px solid rgba(136,153,187,.3);border-radius:6px;color:var(--muted);font-size:11px;padding:4px 8px;cursor:pointer;flex-shrink:0" onclick="abrirSuporteTemp('${nomeEsc}')">↔ Suporte</button>`
+        : '';
+      const suporteInfo = suporteAtivo
+        ? `<div style="font-size:10px;color:var(--gold);margin-top:2px">↔ Suporte: ${suporteAtivo.operacoes.join(', ')} até ${suporteAtivo.expira}</div>`
+        : '';
       return `<div class="eq-card">
         <div class="eq-av">${ini}</div>
         <div class="eq-info">
           <div class="eq-name">${m.nome}${tag}</div>
           <div class="eq-meta">${ROLE[m.cargo]||m.cargo}${m.sala ? ' · 🏢 '+m.sala : ''} · Senha: <span class="eq-pw-mask" data-nome="${m.nome}">••••••</span> <span class="eq-pw-eye" onclick="toggleEqPw('${nomeEsc}')">👁️</span></div>
+          ${suporteInfo}
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          ${suporteBtn}
           ${resetBtn}
           ${removeBtn}
         </div>
@@ -5032,6 +5073,30 @@ async function salvarNovoMembro() {
   await setSenha(nome, senha);
   fecharModalEquipe();
   showEquipe();
+}
+
+function abrirSuporteTemp(nome) {
+  // Lista operações disponíveis (exceto a própria operação do membro)
+  const membro = todosOsMembros().find(m => m.nome === nome);
+  const opsPossiveis = Object.keys(SALAS_POR_OPERACAO).filter(op => op !== (membro && membro.operacao));
+  if (!opsPossiveis.length) { alert('Não há outras operações disponíveis.'); return; }
+
+  const opEscolhida = opsPossiveis.length === 1
+    ? opsPossiveis[0]
+    : prompt(`Operação de suporte para ${nome}:\n${opsPossiveis.map((o,i)=>`${i+1}. ${o}`).join('\n')}\n\nDigite o número:`);
+  if (!opEscolhida) return;
+  const opFinal = isNaN(opEscolhida) ? opEscolhida : opsPossiveis[parseInt(opEscolhida)-1];
+  if (!opFinal || !SALAS_POR_OPERACAO[opFinal]) { alert('Operação inválida.'); return; }
+
+  const hoje = todayISO();
+  const expiraInput = prompt(`Até quando? (AAAA-MM-DD)\nDeixe em branco para encerrar amanhã.`,'');
+  const expira = expiraInput && expiraInput.match(/^\d{4}-\d{2}-\d{2}$/)
+    ? expiraInput
+    : (function(){ const d = new Date(hoje+'T00:00:00'); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+
+  setSuporteTemp(nome, [opFinal], expira);
+  showEquipe();
+  alert(`✅ Suporte ativado!\n${nome} → ${opFinal} até ${expira}`);
 }
 
 function redefinirSenha(nome) {
