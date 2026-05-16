@@ -4985,9 +4985,9 @@ function showEquipe() {
       const resetBtn = temAcessoTotal(captador)
         ? `<button style="background:none;border:1px solid rgba(201,168,76,.3);border-radius:6px;color:var(--gold);font-size:11px;padding:4px 8px;cursor:pointer;flex-shrink:0" onclick="redefinirSenha('${nomeEsc}')">🔑 Redefinir</button>`
         : '';
-      // Botão de suporte temporário — só para lider/sublider logado como ceo/lider, em cards de lider/sublider
+      // Botão de suporte temporário — qualquer membro (exceto CEO), visível para lider/ceo logado
       const suporteAtivo = getSuporteTemp(m.nome);
-      const suporteBtn = (temAcessoTotal(captador) && ['lider','sublider'].includes(m.cargo))
+      const suporteBtn = (temAcessoTotal(captador) && m.cargo !== 'ceo')
         ? suporteAtivo
           ? `<button style="background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.5);border-radius:6px;color:var(--gold);font-size:11px;padding:4px 8px;cursor:pointer;flex-shrink:0" onclick="cancelarSuporteTemp('${nomeEsc}')">✕ Suporte</button>`
           : `<button style="background:none;border:1px solid rgba(136,153,187,.3);border-radius:6px;color:var(--muted);font-size:11px;padding:4px 8px;cursor:pointer;flex-shrink:0" onclick="abrirSuporteTemp('${nomeEsc}')">↔ Suporte</button>`
