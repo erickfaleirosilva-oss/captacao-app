@@ -2082,12 +2082,61 @@ function calcAltaVista() {
 }
 
 // ── SÃO PEDRO ───────────────────────────────
+
+// Regra A: NQ apenas se AMBOS do casal tiverem profissão da lista (para casais)
+const _PROF_NQ_AMBOS_SP = [
+  'babá ou babysitter','porteiro','cozinheiro','mototaxista','motofrete',
+  'atendente','cuidador(a) de idosos','balconista','manicure',
+  'faxineiro','soldador','recepcionista','caldeireiro','açougueiro',
+  'diarista','frentista','garçom','jardineiro','entregador',
+];
+// Regra B: NQ se qualquer UM do casal tiver (ou o titular solteiro)
+const _PROF_NQ_UM_SP = [
+  'delegado','promotor','promotor de justiça','promotor público/de justiça',
+  'juiz','juiz de direito','juiz ou árbitro de futebol',
+  'desembargador','desembargador de justiça',
+  'procurador','procurador de justiça',
+];
+
+function _normProf(p) {
+  if (!p) return '';
+  return p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+}
+function _matchProfList(p, lista) {
+  const n = _normProf(p);
+  return lista.some(item => n.startsWith(item) || n.includes(item));
+}
+function _checkProfSP(a, isSol) {
+  const pt = a.profissaoTitular;
+  const pc = a.profissaoConjuge;
+  // Regra B — qualquer UM basta
+  if (_matchProfList(pt, _PROF_NQ_UM_SP) || (!isSol && _matchProfList(pc, _PROF_NQ_UM_SP))) {
+    const quem = _matchProfList(pt, _PROF_NQ_UM_SP) ? pt : pc;
+    return { verdict:'NQ', perfil:null, rule:null, rows:[
+      {i:'🚫', l:'Profissão', v: quem + ' — não elegível para São Pedro'},
+    ]};
+  }
+  // Regra A — NQ somente se os DOIS tiverem (só para casais)
+  if (!isSol && pt && pc) {
+    if (_matchProfList(pt, _PROF_NQ_AMBOS_SP) && _matchProfList(pc, _PROF_NQ_AMBOS_SP)) {
+      return { verdict:'NQ', perfil:null, rule:null, rows:[
+        {i:'🚫', l:'Profissão', v: 'Perfil profissional do casal não elegível para São Pedro'},
+      ]};
+    }
+  }
+  return null;
+}
+
 function calcSaoPedro() {
   const a = ans;
   const { rNum, cAno, isSol, isNoivos, relOk, idOk, cartaoS, casaS } = _base(a);
   const hi = mode === 'high';
 
   if (isNoivos) return _nqNoivos();
+
+  // Verificação de profissão — São Pedro (antes dos demais critérios)
+  const _profNQ = _checkProfSP(a, isSol);
+  if (_profNQ) return _profNQ;
 
   if (isSol) {
     const ok = rNum>=10000 && cAno>=2010 && idOk;
