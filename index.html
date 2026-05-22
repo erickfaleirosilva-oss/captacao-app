@@ -1439,7 +1439,8 @@ function filtrarPorAcesso(lista) {
     if (captador.sala) return lista.filter(l => l.sala === captador.sala);
     if (captador.operacao) {
       const salas = getSalasDeOperacao(captador.operacao);
-      return salas.length ? lista.filter(l => salas.includes(l.sala)) : lista;
+      // inclui leads da operação + leads registrados pelo próprio líder em qualquer sala
+      return lista.filter(l => salas.includes(l.sala) || l.captador === captador.nome);
     }
     return lista;
   }
@@ -1453,7 +1454,7 @@ function filtrarPorAcessoPI(lista) {
     if (captador.sala) return lista.filter(p => p.sala === captador.sala);
     if (captador.operacao) {
       const salas = getSalasDeOperacao(captador.operacao);
-      return salas.length ? lista.filter(p => salas.includes(p.sala)) : lista;
+      return lista.filter(p => salas.includes(p.sala) || p.captador === captador.nome);
     }
     return lista;
   }
