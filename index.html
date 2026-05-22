@@ -1759,7 +1759,7 @@ function _profRenderList(query) {
     ? _profListaAtual.length + ' resultado' + (_profListaAtual.length > 1 ? 's' : '')
     : TODAS_PROFISSOES.length + ' profissões disponíveis';
   list.innerHTML = _profListaAtual.map((p,i) =>
-    `<div class="prof-item" data-idx="${i}" onmousedown="_profPick(TODAS_PROFISSOES[${i}])">${_profHL(p, query)}</div>`
+    `<div class="prof-item" data-idx="${i}" onmousedown="_profPick(_profListaAtual[${i}])">${_profHL(p, query)}</div>`
   ).join('');
 }
 function _profOpenDD() {
@@ -1969,6 +1969,13 @@ function calcResult() {
   if (salaId === 'thermas-sp') return calcSaoPedro();
   if (salaId === 'sao-pedro')  return calcSaoPedro(); // legado
   if (salaId === 'atibaia')    return calcAtibaia();
+  // Fallback: salaAtual digitada no campo livre (id=null) — mapeia pelo nome
+  if (!salaId && salaAtual && salaAtual.nome) {
+    const _nome = salaAtual.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if (_nome.includes('atibaia'))                          return calcAtibaia();
+    if (_nome.includes('alta vista') || _nome.includes('atrium') || _nome.includes('marina') || _nome.includes('externo')) return calcAltaVista();
+    if (_nome.includes('thermas') || _nome.includes('sptr') || _nome.includes('sao pedro') || _nome.includes('são pedro')) return calcSaoPedro();
+  }
   return { verdict:'NQ', rows:[{i:'⚠️', l:'Sala', v:'Sala não reconhecida'}], rule:null, perfil:null };
 }
 
