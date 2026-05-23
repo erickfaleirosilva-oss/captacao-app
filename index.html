@@ -1238,7 +1238,7 @@ const CONFIG = {
     { id: 'atibaia',    nome: 'Atibaia',     cidade: 'Atibaia',      modos: [],                   sheetName: 'Atibaia',     operacao: null,           ddpHotel: null         },
   ],
   // Salas que alimentam o DDP automaticamente (captadores marcam tipo+venda no histórico)
-  salasDdpAuto: ['Alta Vista', 'Atrium', 'Marina', 'SPTR'],
+  salasDdpAuto: ['Alta Vista', 'Atrium', 'Marina', 'SPTR', 'Thermas SP'],
   // Salas onde aparece apenas 🤝 venda (sem chips de tipo)
   salasDdpVenda: ['Atibaia', 'Thermas SP'],
   // Pontos de Caldas Novas (captadores escolhem ao iniciar)
@@ -3954,8 +3954,13 @@ function toggleEqPw(nome) {
 const DDP_CONFIG = {
   operacoes: {
     'Caldas Novas': ['Alta Vista', 'Atrium', 'Marina'],
-    'São Pedro':    ['SPTR'],
+    'São Pedro':    ['SPTR', 'Thermas SP (Parque)'],
   },
+  // Hotels que usam o modo "parque" — visitantes manuais + casais auto (sem CI, sem tipos)
+  hoteisParque: ['Thermas SP (Parque)'],
+  // Mapeamento hotel-parque → sala dos leads
+  parqueSalaLeads: { 'Thermas SP (Parque)': 'Thermas SP' },
+  metaPenetracaoParque: 0.02, // 2%
   // Mapeamento sala do captador/líder → operação DDP
   salaParaOperacao: {
     'Alta Vista': 'Caldas Novas',
@@ -3988,7 +3993,21 @@ function ddpAutoFromLeads(hotelNome, dateISO) {
 
 // Verifica se um hotel usa feed automático
 function ddpIsAuto(hotelNome) {
+  if (DDP_CONFIG.hoteisParque.includes(hotelNome)) return true; // parque também é auto
   return CONFIG.salasDdpAuto.includes(hotelNome);
+}
+
+// Verifica se é hotel no modo parque (visitantes manuais + casais auto simples)
+function ddpIsParque(hotelNome) {
+  return DDP_CONFIG.hoteisParque.includes(hotelNome);
+}
+
+// Contagem de casais em sala para hotel-parque (sem tipos, apenas total com emSala=true)
+function ddpAutoFromParque(hotelNome, dateISO) {
+  const salaLeads = DDP_CONFIG.parqueSalaLeads[hotelNome];
+  if (!salaLeads) return 0;
+  const dataBR = dateISO.split('-').reverse().join('/');
+  return leads.filter(l => l.sala === salaLeads && l.emSala && (l.date === dataBR || l.dateISO === dateISO)).length;
 }
 
 // Estado da tela DDP
@@ -4092,16 +4111,17 @@ async function _ddpPostSheets(entry) {
   try {
     const params = new URLSearchParams({
       action: 'saveDDP',
-      hotel:    entry.hotel    || '',
-      dateISO:  entry.dateISO  || '',
-      ciPool:   entry.ciPool   || 0,
-      ciCot:    entry.ciCot    || 0,
-      salaPool: entry.salaPool || 0,
-      salaCot:  entry.salaCot  || 0,
-      salaConv: entry.salaConv || 0,
-      vendPool: entry.vendPool || 0,
-      vendCot:  entry.vendCot  || 0,
-      vendConv: entry.vendConv || 0,
+      hotel:      entry.hotel      || '',
+      dateISO:    entry.dateISO    || '',
+      ciPool:     entry.ciPool     || 0,
+      ciCot:      entry.ciCot      || 0,
+      salaPool:   entry.salaPool   || 0,
+      salaCot:    entry.salaCot    || 0,
+      salaConv:   entry.salaConv   || 0,
+      vendPool:   entry.vendPool   || 0,
+      vendCot:    entry.vendCot    || 0,
+      vendConv:   entry.vendConv   || 0,
+      visitantes: entry.visitantes || 0,
     });
     const r = await fetch(DDP_CONFIG.sheetsUrl + '?' + params.toString());
     if (!r.ok) return false;
@@ -4225,6 +4245,10 @@ function renderDdp() {
   const isHoje = dataAtiva === hoje;
   const op  = ddpState.operacao;
   const hotel = ddpState.hotel;
+
+  // Modo parque — renderização própria
+  if (ddpIsParque(hotel)) { renderDdpParque(wrap, hotel, op, dataAtiva, dataAtivaBR, isHoje, hoje); return; }
+
   const saved = ddpLoad(hotel, dataAtiva) || {};
   const isAuto = ddpIsAuto(hotel);
 
@@ -5055,17 +5079,27 @@ function ddpRecalc() {
 function ddpSalvarDia() {
   const hotel   = ddpState.hotel;
   const dateISO = ddpState.dateISO || todayISO();
-  const data = {
-    hotel, dateISO,
-    ciPool:   _ddpVal('ddp_ciPool'),
-    ciCot:    _ddpVal('ddp_ciCot'),
-    salaPool: _ddpVal('ddp_salaPool'),
-    salaCot:  _ddpVal('ddp_salaCot'),
-    salaConv: _ddpVal('ddp_salaConv'),
-    vendPool: _ddpVal('ddp_vendPool'),
-    vendCot:  _ddpVal('ddp_vendCot'),
-    vendConv: _ddpVal('ddp_vendConv'),
-  };
+  let data;
+  if (ddpIsParque(hotel)) {
+    // Modo parque: salva visitantes (manual) + casais (auto)
+    data = {
+      hotel, dateISO,
+      visitantes: _ddpVal('ddp_visitantes'),
+      salaPool:   ddpAutoFromParque(hotel, dateISO),
+    };
+  } else {
+    data = {
+      hotel, dateISO,
+      ciPool:   _ddpVal('ddp_ciPool'),
+      ciCot:    _ddpVal('ddp_ciCot'),
+      salaPool: _ddpVal('ddp_salaPool'),
+      salaCot:  _ddpVal('ddp_salaCot'),
+      salaConv: _ddpVal('ddp_salaConv'),
+      vendPool: _ddpVal('ddp_vendPool'),
+      vendCot:  _ddpVal('ddp_vendCot'),
+      vendConv: _ddpVal('ddp_vendConv'),
+    };
+  }
   ddpSave(hotel, dateISO, data);   // localStorage (sempre, inclusive offline)
   ddpSheetsSave(data);             // Google Sheets (fire-and-forget)
   // Feedback visual
@@ -5144,6 +5178,203 @@ function acHotel(h) {
   acc.penetGeral = ddpPct(acc.salaTotal, acc.ciTotal);
   acc.efic       = ddpPct(acc.vendTotal, acc.salaTotal);
   return acc;
+}
+
+// ── DDP PARQUE ──
+function renderDdpParque(wrap, hotel, op, dataAtiva, dataAtivaBR, isHoje, hoje) {
+  const saved      = ddpLoad(hotel, dataAtiva) || {};
+  const visitantes = saved.visitantes || 0;
+  const casais     = ddpAutoFromParque(hotel, dataAtiva);
+  const penetPct   = ddpPct(casais, visitantes);
+  const meta       = DDP_CONFIG.metaPenetracaoParque * 100; // 2
+  const hoteis     = DDP_CONFIG.operacoes[op] || [];
+  const anoMes     = dataAtiva.slice(0, 7);
+  const hist       = ddpLoadHist(hotel).filter(r => r.dateISO !== dataAtiva);
+
+  const pClass = ddpPctClass(penetPct/100, DDP_CONFIG.metaPenetracaoParque);
+  const fClass = ddpFillClass(penetPct/100, DDP_CONFIG.metaPenetracaoParque);
+
+  // Acumulado do mês para o parque
+  function acParque() {
+    const entries = ddpLoadHist(hotel).filter(r => r.dateISO && r.dateISO.startsWith(anoMes));
+    let totVis = 0, totCasais = 0;
+    entries.forEach(e => {
+      totVis    += e.visitantes || 0;
+      const cAuto = ddpAutoFromParque(hotel, e.dateISO);
+      totCasais += cAuto || e.salaPool || 0;
+    });
+    // inclui dia ativo se tiver visitantes salvos
+    const savedHoje = ddpLoad(hotel, dataAtiva);
+    if (savedHoje) {
+      totVis    += savedHoje.visitantes || 0;
+      totCasais += ddpAutoFromParque(hotel, dataAtiva);
+    }
+    return { visitantes: totVis, casais: totCasais, penet: ddpPct(totCasais, totVis) };
+  }
+  const ac = acParque();
+  const acPClass = ddpPctClass(ac.penet/100, DDP_CONFIG.metaPenetracaoParque);
+
+  // Histórico
+  function histRows() {
+    if (!hist.length) return '<div class="hist-empty" style="padding:12px 0;text-align:center;color:var(--muted);font-size:13px">Nenhum registro ainda.</div>';
+    return hist.slice(0, 30).map(r => {
+      const c = ddpAutoFromParque(hotel, r.dateISO) || r.salaPool || 0;
+      const v = r.visitantes || 0;
+      const p = ddpPct(c, v);
+      const pc = ddpPctClass(p/100, DDP_CONFIG.metaPenetracaoParque);
+      const dBR = r.dateISO.split('-').reverse().join('/');
+      return `<tr>
+        <td>${dBR.slice(0,5)}</td>
+        <td>${v}</td>
+        <td>${c}</td>
+        <td class="${pc}">${fmtPct(p)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  let html = `
+    <div class="ddp-hd">
+      <div class="ddp-hd-left">
+        <div class="ddp-title">🎢 DDP — Parque</div>
+        <div class="ddp-sub">Penetração Thermas São Pedro</div>
+      </div>
+      <div class="ddp-date-pill">${isHoje ? '📅 Hoje' : '📅 ' + dataAtivaBR}</div>
+    </div>
+    <div class="ddp-lock">🔒 Apenas lideranças</div>
+
+    <div class="ddp-sel-lbl">Data do registro</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <input type="date" id="ddp_datePicker"
+        value="${dataAtiva}" max="${hoje}"
+        style="background:var(--navy2);border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--text);flex:1"
+        onchange="ddpSetDate(this.value)"/>
+      ${!isHoje ? `<div class="ddp-mc-pill" style="white-space:nowrap">⚡ Retroativo</div>` : ''}
+    </div>
+
+    <div class="ddp-sel-lbl">Visualização</div>
+    <div class="ddp-hotel-chips">
+      ${hoteis.map(h =>
+        `<div class="ddp-chip${h===hotel?' active':''}" onclick="ddpSetHotel('${h}')">${h}</div>`
+      ).join('')}
+    </div>
+
+    <!-- VISITANTES DO PARQUE -->
+    <div class="ddp-card">
+      <div class="ddp-card-title"><div class="ddp-dot" style="background:#4a9eff"></div>
+        Visitantes do parque${isHoje ? ' (ontem)' : ' — ' + dataAtivaBR.slice(0,5)}
+      </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Visitantes</strong><span>Total de visitantes do Thermas no dia anterior</span></div>
+        <input class="ddp-num-in" id="ddp_visitantes" type="number" min="0" value="${visitantes}" oninput="ddpRecalcParque()"/>
+      </div>
+    </div>
+
+    <!-- CASAIS EM SALA -->
+    <div class="ddp-card">
+      <div class="ddp-card-title">
+        <div class="ddp-dot" style="background:var(--gold)"></div>
+        Casais em sala${isHoje ? ' hoje' : ' em ' + dataAtivaBR.slice(0,5)}
+        <span class="ddp-auto-badge">⚡ Auto</span>
+      </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Casais (Thermas SP)</strong><span>Leads com emSala marcado — sala Thermas SP</span></div>
+        <div class="ddp-num-calc" id="ddp_parqueCasais">${casais}</div>
+      </div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="ddp-card" id="ddp_resultCard">
+      <div class="ddp-card-title"><div class="ddp-dot" style="background:#c47aff"></div>Penetração do Parque</div>
+      <div class="ddp-res-row">
+        <div class="ddp-res-box" style="background:rgba(74,158,255,.06);border:1px solid rgba(74,158,255,.2)">
+          <div class="ddp-res-val" style="color:#4a9eff" id="ddp_pqVisitantes">${visitantes}</div>
+          <div class="ddp-res-lbl">Visitantes</div>
+        </div>
+        <div class="ddp-res-box gold">
+          <div class="ddp-res-val ddp-c-gold" id="ddp_pqCasais">${casais}</div>
+          <div class="ddp-res-lbl">Casais em sala</div>
+        </div>
+        <div class="ddp-res-box" style="background:rgba(241,214,145,.06);border:1px solid rgba(241,214,145,.2)">
+          <div class="ddp-res-val ${pClass}" id="ddp_pqPenet">${fmtPct(penetPct)}</div>
+          <div class="ddp-res-lbl">Penetração</div>
+        </div>
+      </div>
+      <div class="ddp-prog-wrap">
+        <div class="ddp-prog-top">
+          <span class="ddp-prog-lbl">Penetração (casais ÷ visitantes)</span>
+          <span class="ddp-prog-pct ${pClass}" id="ddp_pqBarPct">${fmtPct(penetPct)}</span>
+        </div>
+        <div class="ddp-prog-track">
+          <div class="ddp-prog-fill ${fClass}" id="ddp_pqBarFill" style="width:${Math.min(penetPct,100)}%"></div>
+          <div class="ddp-meta-line" style="left:${Math.min(meta,100)}%"></div>
+        </div>
+        <div class="ddp-meta-tip">Meta: ${fmtPct(meta)}</div>
+      </div>
+    </div>
+
+    <button class="btn btn-gold" onclick="ddpSalvarDia()" style="margin-bottom:16px">💾 Salvar registro do dia</button>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 16px"/>
+
+    <!-- ACUMULADO MÊS -->
+    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--muted)"></div>
+      Acumulado ${_mesLabel(anoMes)} — Thermas SP (Parque)
+    </div>
+    <div class="ddp-card" style="padding:10px 12px">
+      <div style="overflow-x:auto">
+        <table class="ddp-ac-table">
+          <thead><tr>
+            <th>Visitantes</th><th>Casais</th><th class="${acPClass}">Penetração</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td>${ac.visitantes}</td>
+              <td>${ac.casais}</td>
+              <td class="${acPClass}">${fmtPct(ac.penet)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO RECENTE -->
+    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 10px;display:flex;align-items:center;gap:6px">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--muted)"></div>
+      Histórico — Thermas SP (Parque)
+    </div>
+    <div class="ddp-card" style="padding:8px 12px">
+      <div style="overflow-x:auto">
+        <table class="ddp-ac-table">
+          <thead><tr><th>Data</th><th>Visitantes</th><th>Casais</th><th>Penetração</th></tr></thead>
+          <tbody>${histRows()}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  wrap.innerHTML = html;
+}
+
+function ddpRecalcParque() {
+  const visitantes = _ddpVal('ddp_visitantes');
+  const casais     = _ddpVal('ddp_parqueCasais');
+  const penet      = ddpPct(casais, visitantes);
+  const meta       = DDP_CONFIG.metaPenetracaoParque;
+  const pClass     = ddpPctClass(penet/100, meta);
+  const fClass     = ddpFillClass(penet/100, meta);
+
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('ddp_pqVisitantes', visitantes);
+  set('ddp_pqPenet',      fmtPct(penet));
+  set('ddp_pqBarPct',     fmtPct(penet));
+
+  const f = document.getElementById('ddp_pqBarFill');
+  const p = document.getElementById('ddp_pqBarPct');
+  if (f) { f.style.width = Math.min(penet,100)+'%'; f.className = 'ddp-prog-fill ' + fClass; }
+  if (p) { p.className = 'ddp-prog-pct ' + pClass; }
+  const pv = document.getElementById('ddp_pqPenet');
+  if (pv) { pv.className = 'ddp-res-val ' + pClass; }
 }
 
 // ── FIM DDP ──
