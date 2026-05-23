@@ -4187,8 +4187,8 @@ function ddpFillClass(val, meta) {
   if (val >= meta * 0.8)    return 'ddp-fill-yellow';
   return 'ddp-fill-red';
 }
-function ddpPct(n, d) { return d > 0 ? Math.round(n / d * 100) : 0; }
-function fmtPct(v)    { return v + '%'; }
+function ddpPct(n, d) { return d > 0 ? Math.round(n / d * 1000) / 10 : 0; }
+function fmtPct(v)    { return (Number.isInteger(v) ? v + ',0' : String(v).replace('.', ',')) + '%'; }
 
 // Retorna as operações que o líder logado pode ver
 function ddpOpcoesLider() {
