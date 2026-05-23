@@ -4235,6 +4235,14 @@ function showDdp() {
   });
   // Reenvia entradas que ficaram presas na fila offline
   setTimeout(ddpOfflineFlush, 500);
+  // Sincroniza leads do mês corrente do Sheets para que casais em sala (auto) fiquem corretos
+  // mesmo no dispositivo do líder que não tem os leads dos captadores em localStorage
+  if (API.ok()) {
+    const _mesAtual = todayISO().slice(0, 7) + '-01';
+    API.getLeads(null, _mesAtual, todayISO()).then(remoto => {
+      if (mergeRemoto(remoto, _mesAtual)) renderDdp(); // re-renderiza com leads atualizados
+    }).catch(() => {});
+  }
 }
 
 function renderDdp() {
