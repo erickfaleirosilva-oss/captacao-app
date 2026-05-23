@@ -5269,10 +5269,10 @@ function renderDdpParque(wrap, hotel, op, dataAtiva, dataAtivaBR, isHoje, hoje) 
     <!-- VISITANTES DO PARQUE -->
     <div class="ddp-card">
       <div class="ddp-card-title"><div class="ddp-dot" style="background:#4a9eff"></div>
-        Visitantes do parque${isHoje ? ' (ontem)' : ' — ' + dataAtivaBR.slice(0,5)}
+        VISITANTES DO PARQUE
       </div>
       <div class="ddp-ir">
-        <div class="ddp-ir-lbl"><strong>Visitantes</strong><span>Total de visitantes do Thermas no dia anterior</span></div>
+        <div class="ddp-ir-lbl"><strong>Visitantes</strong><span>Total de visitantes do Thermas no dia do registro</span></div>
         <input class="ddp-num-in" id="ddp_visitantes" type="number" min="0" value="${visitantes}" oninput="ddpRecalcParque()"/>
       </div>
     </div>
