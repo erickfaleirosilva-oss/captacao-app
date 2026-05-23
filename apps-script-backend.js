@@ -82,7 +82,7 @@ function savePIs(arr) {
 
 // ── DDP — armazenado na aba "DDP" do Sheets ──
 const DDP_SHEET_NAME = 'DDP';
-const DDP_COLS = ['hotel','dateISO','ciPool','ciCot','salaPool','salaCot','salaConv','vendPool','vendCot','vendConv'];
+const DDP_COLS = ['hotel','dateISO','ciPool','ciCot','salaPool','salaCot','salaConv','vendPool','vendCot','vendConv','visitantes'];
 
 function getDDPSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -206,14 +206,15 @@ function doPost(e) {
       if (!hotel || !dateISO) return jsonResponse({ status: 'error', message: 'hotel e dateISO obrigatórios' });
       const entry = {
         hotel, dateISO,
-        ciPool:   Number(data.ciPool)   || 0,
-        ciCot:    Number(data.ciCot)    || 0,
-        salaPool: Number(data.salaPool) || 0,
-        salaCot:  Number(data.salaCot)  || 0,
-        salaConv: Number(data.salaConv) || 0,
-        vendPool: Number(data.vendPool) || 0,
-        vendCot:  Number(data.vendCot)  || 0,
-        vendConv: Number(data.vendConv) || 0,
+        ciPool:     Number(data.ciPool)     || 0,
+        ciCot:      Number(data.ciCot)      || 0,
+        salaPool:   Number(data.salaPool)   || 0,
+        salaCot:    Number(data.salaCot)    || 0,
+        salaConv:   Number(data.salaConv)   || 0,
+        vendPool:   Number(data.vendPool)   || 0,
+        vendCot:    Number(data.vendCot)    || 0,
+        vendConv:   Number(data.vendConv)   || 0,
+        visitantes: Number(data.visitantes) || 0,
       };
       saveDDPEntry(entry);
       return jsonResponse({ status: 'ok' });
@@ -312,7 +313,7 @@ function doPost(e) {
     }
     const dataFmt = _fmtDate(data.date);
     sheet.appendRow([
-      data.id || '', dataFmt, data.time || '',
+      data.id || '', dataFmt, "'" + (data.time || ''),
       data.captador || '', data.sala || '', data.nome || '',
       data.tel || '', data.cidade || '', data.verdict || '',
       data.tipo || '', data.renda || '', data.mode || '',
@@ -366,12 +367,35 @@ function doGet(e) {
       return jsonResponse({ status: 'ok', rows });
     }
 
+    // ?action=saveDDP&hotel=...&dateISO=...&ciPool=...  — salva via GET (POST não sobrevive ao redirect)
+    if (params.action === 'saveDDP') {
+      const hotel   = params.hotel   || '';
+      const dateISO = (params.dateISO || '').replace(/^DDP_/, '');
+      if (!hotel || !dateISO) return jsonResponse({ status: 'error', message: 'hotel e dateISO obrigatórios' });
+      const entry = {
+        hotel, dateISO,
+        ciPool:     Number(params.ciPool)     || 0,
+        ciCot:      Number(params.ciCot)      || 0,
+        salaPool:   Number(params.salaPool)   || 0,
+        salaCot:    Number(params.salaCot)    || 0,
+        salaConv:   Number(params.salaConv)   || 0,
+        vendPool:   Number(params.vendPool)   || 0,
+        vendCot:    Number(params.vendCot)    || 0,
+        vendConv:   Number(params.vendConv)   || 0,
+        visitantes: Number(params.visitantes) || 0,
+      };
+      saveDDPEntry(entry);
+      return jsonResponse({ status: 'ok' });
+    }
+
     const sheetsAlvo = salaFiltro
       ? [ss.getSheetByName(SALA_SHEETS[salaFiltro] || salaFiltro)].filter(Boolean)
       : Object.values(SALA_SHEETS).map(n => ss.getSheetByName(n)).filter(Boolean);
 
-    // ?dateISO=2026-04-24 filtra só pelo dia — evita timeout com 12k leads
+    // ?dateISO=2026-04-24 filtra por dia exato; ?dateFrom=...&dateTo=... filtra por range
     const dateISOFiltro = params.dateISO || null;
+    const dateFrom = params.dateFrom || null;
+    const dateTo   = params.dateTo   || null;
 
     // Normaliza qualquer formato de data para YYYY-MM-DD
     function _normRowDate(v) {
@@ -410,14 +434,17 @@ function doGet(e) {
       const rows = sheet.getRange(2, 1, lastRow - 1, nCols).getValues();
       rows.forEach(r => {
         if (!r[0]) return;
-        // Filtro por data — se solicitado, pula linhas de outras datas
-        if (dateISOFiltro) {
+        // Filtro por data — dia exato ou range
+        // Leads sem data (rowDateISO='') são sempre incluídos para não perder registros
+        if (dateISOFiltro || dateFrom || dateTo) {
           const rowDateISO = idx['Data'] >= 0 ? _normRowDate(r[idx['Data']]) : '';
-          if (rowDateISO !== dateISOFiltro) return;
+          if (dateISOFiltro && rowDateISO && rowDateISO !== dateISOFiltro) return;
+          if (dateFrom && rowDateISO && rowDateISO < dateFrom) return;
+          if (dateTo   && rowDateISO && rowDateISO > dateTo)   return;
         }
         const get = (col) => idx[col] >= 0 ? r[idx[col]] : '';
         leads.push({
-          id: String(get('ID')), date: String(get('Data')), time: String(get('Hora')),
+          id: String(get('ID')), date: String(get('Data')), time: (function(){ var v = get('Hora'); if (!v) return ''; if (v instanceof Date) return Utilities.formatDate(v, 'America/Sao_Paulo', 'HH:mm'); return String(v); })(),
           captador: get('Captador'), sala: get('Sala'), nome: get('Nome'),
           tel: get('Telefone'), cidade: get('Cidade'), verdict: get('Resultado'),
           tipo: get('Tipo'), renda: get('Renda'), mode: get('Modo'),
