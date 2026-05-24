@@ -755,6 +755,7 @@
     .ddp-wpp-row span.wpp-mc { color:#1a4aa0; font-weight:900; }
     .ddp-wpp-row.wpp-ac span { background:#f5e642; color:#1a2340; }
     .ddp-wpp-row.wpp-ac span:first-child { background:#3d4f6e; color:#f0efe8; border-right:1px solid #3a4d6a; }
+    .ddp-wpp-section-sep { height:8px; background:#1B2340; border-top:2px solid #4a9eff33; }
     .ddp-wpp-btn { margin-top:10px; }
     .ddp-fill-green  { background:linear-gradient(90deg,#1a8a4a,var(--green)); }
     .ddp-fill-yellow { background:linear-gradient(90deg,#b07000,var(--yellow));}
@@ -4926,9 +4927,14 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
   // Dados do dia anterior (dataAtiva) por hotel — NÃO acumulado
   let totais = { ciTotal:0, ciPool:0, ciCot:0, mc:0, salaTotal:0, salaPool:0, salaConv:0 };
 
+  // Separa hotéis normais dos hotéis-parque
+  const hoteisNorm   = hoteis.filter(h => !ddpIsParque(h));
+  const hoteisParque = hoteis.filter(h =>  ddpIsParque(h));
+
   let rowsHtml = '';
-  hoteis.forEach(h => {
-    // Busca só o registro do dia específico (dataAtiva)
+
+  // --- Seção check-ins (hotéis normais) ---
+  hoteisNorm.forEach(h => {
     const diaEntry = ddpLoadHist(h).find(r => r.dateISO === dataAtiva) || {};
     const a = {
       ciPool:   diaEntry.ciPool   || 0,
@@ -4939,7 +4945,6 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
       salaTotal:(diaEntry.salaPool || 0) + (diaEntry.salaCot || 0) + (diaEntry.salaConv || 0),
     };
     const mcH = Math.round(a.ciPool * DDP_CONFIG.metaPenetracaoPool);
-    const pp  = ddpPct(a.salaPool + (a.salaConv||0), a.ciPool);
     totais.ciTotal   += a.ciTotal;
     totais.ciPool    += a.ciPool;
     totais.ciCot     += a.ciCot;
@@ -4954,11 +4959,10 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
     </div>`;
   });
 
-  // Linha de total só aparece quando há múltiplos hotéis (CN) — single hotel não precisa de acumulado
-  if (multi) {
+  // Linha de total normais (só quando há múltiplos hotéis normais OU quando há parque junto)
+  if (hoteisNorm.length > 1 || (hoteisNorm.length === 1 && hoteisParque.length > 0)) {
     const acLabel = 'Total ' + op.split(' ')[0];
     const acMC    = Math.round(totais.ciPool * DDP_CONFIG.metaPenetracaoPool);
-    const acPP    = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool);
     rowsHtml += `<div class="ddp-wpp-row wpp-ac" style="grid-template-columns:${colsGrid}">
       <span>${acLabel}</span>
       <span>${totais.ciTotal}</span><span>${totais.ciPool}</span><span>${totais.ciCot}</span>
@@ -4966,10 +4970,27 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
     </div>`;
   }
 
-  // Cabeçalho de colunas
-  const colHdHtml = cols.map((c,i) =>
-    `<span>${c}</span>`
-  ).join('');
+  // --- Seção parque (separada, com colunas diferentes) ---
+  const colsParque     = ['Hotel','Visitantes','Casais','Penetração'];
+  const colsGridParque = '100px 1fr 1fr 1fr';
+  if (hoteisParque.length > 0) {
+    const hdParque = colsParque.map(c => `<span>${c}</span>`).join('');
+    rowsHtml += `<div class="ddp-wpp-section-sep"></div>
+      <div class="ddp-wpp-col-hd" style="grid-template-columns:${colsGridParque}">${hdParque}</div>`;
+    hoteisParque.forEach(h => {
+      const diaEntry  = ddpLoadHist(h).find(r => r.dateISO === dataAtiva) || {};
+      const visitantes = diaEntry.visitantes || 0;
+      const casais     = ddpAutoFromParque(h, dataAtiva);
+      const penet      = fmtPct(ddpPct(casais, visitantes));
+      rowsHtml += `<div class="ddp-wpp-row" style="grid-template-columns:${colsGridParque}">
+        <span>${h}</span>
+        <span>${visitantes}</span><span>${casais}</span><span>${penet}</span>
+      </div>`;
+    });
+  }
+
+  // Cabeçalho de colunas (check-ins)
+  const colHdHtml = cols.map(c => `<span>${c}</span>`).join('');
 
   el.innerHTML = `
     <div class="ddp-wpp-card">
