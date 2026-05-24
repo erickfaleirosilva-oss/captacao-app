@@ -4931,44 +4931,62 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
   const hoteisNorm   = hoteis.filter(h => !ddpIsParque(h));
   const hoteisParque = hoteis.filter(h =>  ddpIsParque(h));
 
+  // ontem = dia anterior a dataAtiva (limite do acumulado até D-1)
+  const ontemISO = (function() {
+    const d = new Date(dataAtiva + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  const ontemBR = ontemISO.split('-').reverse().join('/');
+
+  // Acumulado do mês até ontem para hotéis normais
+  function acHotelCard(h) {
+    const entries = ddpLoadHist(h).filter(r => r.dateISO.startsWith(anoMes) && r.dateISO <= ontemISO);
+    const acc = { ciPool:0, ciCot:0, ciTotal:0, mc:0 };
+    entries.forEach(e => { acc.ciPool += e.ciPool||0; acc.ciCot += e.ciCot||0; });
+    acc.ciTotal = acc.ciPool + acc.ciCot;
+    acc.mc = Math.round(acc.ciPool * DDP_CONFIG.metaPenetracaoPool);
+    return acc;
+  }
+
+  // Acumulado do mês até ontem para hotéis-parque
+  function acParqueCard(h) {
+    const entries = ddpLoadHist(h).filter(r => r.dateISO.startsWith(anoMes) && r.dateISO <= ontemISO);
+    const acc = { visitantes:0, casais:0 };
+    entries.forEach(e => {
+      acc.visitantes += e.visitantes || 0;
+      acc.casais     += ddpAutoFromParque(h, e.dateISO);
+    });
+    return acc;
+  }
+
   let rowsHtml = '';
 
   // --- Seção check-ins (hotéis normais) ---
+  let totDia = { ciTotal:0, ciPool:0, ciCot:0, mc:0 };
+  let totAc  = { ciTotal:0, ciPool:0, ciCot:0, mc:0 };
   hoteisNorm.forEach(h => {
     const diaEntry = ddpLoadHist(h).find(r => r.dateISO === dataAtiva) || {};
-    const a = {
-      ciPool:   diaEntry.ciPool   || 0,
-      ciCot:    diaEntry.ciCot    || 0,
-      ciTotal:  (diaEntry.ciPool || 0) + (diaEntry.ciCot || 0),
-      salaPool: diaEntry.salaPool || 0,
-      salaConv: diaEntry.salaConv || 0,
-      salaTotal:(diaEntry.salaPool || 0) + (diaEntry.salaCot || 0) + (diaEntry.salaConv || 0),
-    };
-    const mcH = Math.round(a.ciPool * DDP_CONFIG.metaPenetracaoPool);
-    totais.ciTotal   += a.ciTotal;
-    totais.ciPool    += a.ciPool;
-    totais.ciCot     += a.ciCot;
-    totais.mc        += mcH;
-    totais.salaTotal += a.salaTotal;
-    totais.salaPool  += a.salaPool  || 0;
-    totais.salaConv  += a.salaConv  || 0;
+    const ciPool  = diaEntry.ciPool || 0;
+    const ciCot   = diaEntry.ciCot  || 0;
+    const ciTotal = ciPool + ciCot;
+    const mcH     = Math.round(ciPool * DDP_CONFIG.metaPenetracaoPool);
+    totDia.ciTotal += ciTotal; totDia.ciPool += ciPool; totDia.ciCot += ciCot; totDia.mc += mcH;
     rowsHtml += `<div class="ddp-wpp-row" style="grid-template-columns:${colsGrid}">
       <span>${h}</span>
-      <span>${a.ciTotal}</span><span>${a.ciPool}</span><span>${a.ciCot}</span>
+      <span>${ciTotal}</span><span>${ciPool}</span><span>${ciCot}</span>
       <span class="wpp-mc">${mcH}</span>
     </div>`;
+    const ac = acHotelCard(h);
+    totAc.ciTotal += ac.ciTotal; totAc.ciPool += ac.ciPool; totAc.ciCot += ac.ciCot; totAc.mc += ac.mc;
   });
 
-  // Linha de total normais (só quando há múltiplos hotéis normais OU quando há parque junto)
-  if (hoteisNorm.length > 1 || (hoteisNorm.length === 1 && hoteisParque.length > 0)) {
-    const acLabel = 'Total ' + op.split(' ')[0];
-    const acMC    = Math.round(totais.ciPool * DDP_CONFIG.metaPenetracaoPool);
-    rowsHtml += `<div class="ddp-wpp-row wpp-ac" style="grid-template-columns:${colsGrid}">
-      <span>${acLabel}</span>
-      <span>${totais.ciTotal}</span><span>${totais.ciPool}</span><span>${totais.ciCot}</span>
-      <span class="wpp-mc">${acMC}</span>
-    </div>`;
-  }
+  // Linha de acumulado até ontem
+  rowsHtml += `<div class="ddp-wpp-row wpp-ac" style="grid-template-columns:${colsGrid}">
+    <span>Acum. até ${ontemBR.slice(0,5)}</span>
+    <span>${totAc.ciTotal}</span><span>${totAc.ciPool}</span><span>${totAc.ciCot}</span>
+    <span class="wpp-mc">${totAc.mc}</span>
+  </div>`;
 
   // --- Seção parque (separada, com colunas diferentes) ---
   const colsParque     = ['Hotel','Visitantes','Casais','Penetração'];
@@ -4978,13 +4996,19 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
     rowsHtml += `<div class="ddp-wpp-section-sep"></div>
       <div class="ddp-wpp-col-hd" style="grid-template-columns:${colsGridParque}">${hdParque}</div>`;
     hoteisParque.forEach(h => {
-      const diaEntry  = ddpLoadHist(h).find(r => r.dateISO === dataAtiva) || {};
+      const diaEntry   = ddpLoadHist(h).find(r => r.dateISO === dataAtiva) || {};
       const visitantes = diaEntry.visitantes || 0;
       const casais     = ddpAutoFromParque(h, dataAtiva);
       const penet      = fmtPct(ddpPct(casais, visitantes));
       rowsHtml += `<div class="ddp-wpp-row" style="grid-template-columns:${colsGridParque}">
         <span>${h}</span>
         <span>${visitantes}</span><span>${casais}</span><span>${penet}</span>
+      </div>`;
+      const ac = acParqueCard(h);
+      const acPenet = fmtPct(ddpPct(ac.casais, ac.visitantes));
+      rowsHtml += `<div class="ddp-wpp-row wpp-ac" style="grid-template-columns:${colsGridParque}">
+        <span>Acum. até ${ontemBR.slice(0,5)}</span>
+        <span>${ac.visitantes}</span><span>${ac.casais}</span><span>${acPenet}</span>
       </div>`;
     });
   }
