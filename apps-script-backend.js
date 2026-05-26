@@ -82,7 +82,7 @@ function savePIs(arr) {
 
 // ── DDP — armazenado na aba "DDP" do Sheets ──
 const DDP_SHEET_NAME = 'DDP';
-const DDP_COLS = ['hotel','dateISO','ciPool','ciCot','salaPool','salaCot','salaConv','vendPool','vendCot','vendConv','visitantes'];
+const DDP_COLS = ['hotel','dateISO','ciPool','ciCot','ciConv','ciGrupos','salaPool','salaCot','salaConv','vendPool','vendCot','vendConv','visitantes'];
 
 function getDDPSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -357,6 +357,30 @@ function doGet(e) {
     // ?_type=pi — retorna pesquisas incompletas do PropertiesService
     if (params._type === 'pi') {
       return jsonResponse({ status: 'ok', pis: getPIs() });
+    }
+
+    // ?action=getAuditores — retorna CSV da planilha de auditores como JSON
+    if (params.action === 'getAuditores') {
+      try {
+        const AUDITORES_SS_ID = '1rNvoycg3S6PdIyVZtfECVEsBTobJXzeX';
+        const AUDITORES_GID   = 1550622683;
+        const auditSS   = SpreadsheetApp.openById(AUDITORES_SS_ID);
+        const sheets    = auditSS.getSheets();
+        let auditSheet  = sheets.find(s => s.getSheetId() === AUDITORES_GID) || sheets[0];
+        const allValues = auditSheet.getDataRange().getValues();
+        // Converter para array de arrays de strings (igual ao CSV)
+        const rows = allValues.map(row => row.map(cell => {
+          if (cell instanceof Date) {
+            // Formatar como DD/MM/YYYY
+            const d = cell.getDate(), m = cell.getMonth()+1, y = cell.getFullYear();
+            return (d<10?'0'+d:d)+'/'+(m<10?'0'+m:m)+'/'+y;
+          }
+          return cell === null || cell === undefined ? '' : String(cell);
+        }));
+        return jsonResponse({ status: 'ok', rows });
+      } catch(err) {
+        return jsonResponse({ status: 'error', message: err.message });
+      }
     }
 
     // ?action=getDDP&hotel=SPTR — retorna registros DDP

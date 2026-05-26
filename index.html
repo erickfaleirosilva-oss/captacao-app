@@ -4266,7 +4266,8 @@ function renderDdp() {
   // Lê valores salvos ou usa 0
   const ciPool    = saved.ciPool    || 0;
   const ciCot     = saved.ciCot     || 0;
-  const ciTotal   = ciPool + ciCot;
+  const ciConv    = isAuto ? leads.filter(l => l.sala === hotel && l.tipoSala === 'conv' && (l.date === dataAtiva.split('-').reverse().join('/') || l.dateISO === dataAtiva)).length : (saved.ciConv || 0);
+  const ciTotal   = ciPool + ciCot + ciConv;
   const mc        = Math.round(ciPool * DDP_CONFIG.metaPenetracaoPool);
 
   // Salas auto: casais em sala e vendas vêm dos leads; salas manuais: vêm do saved
@@ -4300,16 +4301,18 @@ function renderDdp() {
   function acHotel(h) {
     // Dias salvos no localStorage para este hotel no mês
     const entries = ddpLoadHist(h).filter(r => r.dateISO.startsWith(anoMes));
-    const acc = { ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+    const acc = { ciPool:0, ciCot:0, ciConv:0, ciGrupos:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
     entries.forEach(e => {
-      acc.ciPool   += e.ciPool   || 0;
-      acc.ciCot    += e.ciCot    || 0;
-      acc.salaPool += e.salaPool || 0;
-      acc.salaCot  += e.salaCot  || 0;
-      acc.salaConv += e.salaConv || 0;
-      acc.vendPool += e.vendPool || 0;
-      acc.vendCot  += e.vendCot  || 0;
-      acc.vendConv += e.vendConv || 0;
+      acc.ciPool    += e.ciPool    || 0;
+      acc.ciCot     += e.ciCot     || 0;
+      acc.ciConv    += e.ciConv    || 0;
+      acc.ciGrupos  += e.ciGrupos  || 0;
+      acc.salaPool  += e.salaPool  || 0;
+      acc.salaCot   += e.salaCot   || 0;
+      acc.salaConv  += e.salaConv  || 0;
+      acc.vendPool  += e.vendPool  || 0;
+      acc.vendCot   += e.vendCot   || 0;
+      acc.vendConv  += e.vendConv  || 0;
     });
     // Para hotéis auto: substitui dados de sala/venda pelo valor real dos leads
     // (cobre casos onde o registro foi salvo com sala=0 no Sheets)
@@ -4338,12 +4341,15 @@ function renderDdp() {
         }
       });
     }
-    acc.ciTotal   = acc.ciPool + acc.ciCot;
-    acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv;
-    acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv;
-    acc.mc        = Math.round(acc.ciPool * DDP_CONFIG.metaPenetracaoPool);
+    acc.ciTotal    = acc.ciPool + acc.ciCot + acc.ciConv;
+    acc.salaTotal  = acc.salaPool + acc.salaCot + acc.salaConv;
+    acc.vendTotal  = acc.vendPool + acc.vendCot + acc.vendConv;
+    acc.mc         = Math.round(acc.ciPool * DDP_CONFIG.metaPenetracaoPool);
     acc.penetPool  = ddpPct(acc.salaPool, acc.ciPool);
+    acc.penetConv  = ddpPct(acc.salaConv, acc.ciConv);
+    acc.penetAnltc = ddpPct(acc.salaPool + acc.salaConv, acc.ciPool + acc.ciConv);
     acc.penetGeral = ddpPct(acc.salaTotal, acc.ciTotal);
+    acc.pctGrupos  = ddpPct(acc.ciGrupos, acc.ciPool);
     acc.efic       = ddpPct(acc.vendTotal, acc.salaTotal);
     return acc;
   }
@@ -4394,11 +4400,26 @@ function renderDdp() {
         <div class="ddp-ir-lbl"><strong>Check-ins Cotistas</strong><span>Proprietários</span></div>
         <input class="ddp-num-in" id="ddp_ciCot" type="number" min="0" value="${ciCot}" oninput="ddpRecalc()"/>
       </div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Check-ins Convidados</strong><span>Convidados (tipoSala conv)</span></div>
+        ${isAuto
+          ? `<div class="ddp-num-calc" id="ddp_ciConv">${ciConv}</div>`
+          : `<input class="ddp-num-in" id="ddp_ciConv" type="number" min="0" value="${ciConv}" oninput="ddpRecalc()"/>`}
+      </div>
       <div class="ddp-ir" style="background:rgba(241,214,145,.04);border-radius:8px;padding:8px 8px;border-bottom:none;margin-top:4px">
         <div class="ddp-ir-lbl" style="display:flex;align-items:center;gap:8px">
           <strong style="color:var(--gold)">Total Check-ins</strong>
         </div>
         <div class="ddp-num-calc" id="ddp_ciTotal">${ciTotal}</div>
+      </div>
+    </div>
+
+    <!-- CHECK-INS GRUPOS -->
+    <div class="ddp-card">
+      <div class="ddp-card-title"><div class="ddp-dot" style="background:#6ddb6d"></div>Check-ins Grupos${isHoje ? ' de ontem' : ' do dia ' + dataAtivaBR.slice(0,5)}</div>
+      <div class="ddp-ir">
+        <div class="ddp-ir-lbl"><strong>Grupos (casais)</strong><span>Excursões, ônibus, grupos organizados</span></div>
+        <input class="ddp-num-in" id="ddp_ciGrupos" type="number" min="0" value="${saved.ciGrupos || 0}" oninput="ddpRecalc()"/>
       </div>
     </div>
 
@@ -4502,11 +4523,11 @@ function renderDdp() {
       <div style="overflow-x:auto">
         <table class="ddp-ac-table">
           <thead><tr>
-            <th>Hotel</th><th>CI<br>Total</th><th>CI<br>Pool</th>
-            <th>Sala<br>Total</th><th>Sala<br>Pool</th><th>Sala<br>Conv.</th><th>Sala<br>Cot.</th>
+            <th>Hotel</th><th>CI<br>Total</th><th>CI<br>Pool</th><th>CI<br>Cot.</th>
+            <th>CI<br>Conv.</th><th>%CI<br>Grupos</th>
             <th>MC</th>
-            <th>Pen.<br>Pool</th><th>Pen.<br>Geral</th>
-            <th>Vendas</th><th>Efic.</th>
+            <th>Sala<br>Pool</th><th>Sala<br>Cot.</th><th>Sala<br>Conv.</th>
+            <th>Pen.<br>Pool</th><th>Pen.<br>Conv.</th><th>Pen.<br>Anltc.</th><th>Pen.<br>Total</th>
           </tr></thead>
           <tbody id="ddp_acBody"></tbody>
         </table>
@@ -4575,13 +4596,14 @@ function ddpProgBarSim(label, val, id) {
 function _ddpRenderAc(hoteis, anoMes) {
   const tbody = document.getElementById('ddp_acBody');
   if (!tbody) return;
-  // totais inclui salaPool e salaConv separados para penetração pool correta
-  let totais = { ciPool:0, ciCot:0, ciTotal:0, salaPool:0, salaCot:0, salaConv:0, salaTotal:0, mc:0, vendTotal:0 };
+  let totais = { ciPool:0, ciCot:0, ciConv:0, ciGrupos:0, ciTotal:0, salaPool:0, salaCot:0, salaConv:0, salaTotal:0, mc:0, vendTotal:0 };
   let rows = '';
   hoteis.forEach(h => {
     const a = acHotel(h);
     totais.ciPool    += a.ciPool;
     totais.ciCot     += a.ciCot;
+    totais.ciConv    += a.ciConv    || 0;
+    totais.ciGrupos  += a.ciGrupos  || 0;
     totais.ciTotal   += a.ciTotal;
     totais.salaPool  += a.salaPool  || 0;
     totais.salaCot   += a.salaCot   || 0;
@@ -4589,33 +4611,41 @@ function _ddpRenderAc(hoteis, anoMes) {
     totais.salaTotal += a.salaTotal;
     totais.mc        += a.mc;
     totais.vendTotal += a.vendTotal;
-    const ppC = ddpPctClass(a.penetPool/100,  DDP_CONFIG.metaPenetracaoPool);
-    const pgC = ddpPctClass(a.penetGeral/100, DDP_CONFIG.metaPenetracaoGeral);
-    const efC = a.efic >= 20 ? 'ddp-c-green' : a.efic >= 10 ? 'ddp-c-yellow' : 'ddp-c-red';
+    const ppC  = ddpPctClass(a.penetPool/100,  DDP_CONFIG.metaPenetracaoPool);
+    const paC  = ddpPctClass(a.penetAnltc/100, DDP_CONFIG.metaPenetracaoPool);
+    const pgC  = ddpPctClass(a.penetGeral/100, DDP_CONFIG.metaPenetracaoGeral);
+    const efC  = a.efic >= 20 ? 'ddp-c-green' : a.efic >= 10 ? 'ddp-c-yellow' : 'ddp-c-red';
     rows += `<tr>
-      <td>${h}</td><td>${a.ciTotal}</td><td>${a.ciPool}</td>
-      <td>${a.salaTotal}</td><td>${a.salaPool||0}</td><td>${a.salaConv||0}</td><td>${a.salaCot||0}</td>
+      <td>${h}</td><td>${a.ciTotal}</td><td>${a.ciPool}</td><td>${a.ciCot}</td>
+      <td>${a.ciConv||0}</td><td class="${ppC}">${fmtPct(a.pctGrupos)}</td>
       <td>${a.mc}</td>
+      <td>${a.salaPool||0}</td><td>${a.salaCot||0}</td><td>${a.salaConv||0}</td>
       <td class="${ppC}">${fmtPct(a.penetPool)}</td>
+      <td class="${ppC}">${fmtPct(a.penetConv)}</td>
+      <td class="${paC}">${fmtPct(a.penetAnltc)}</td>
       <td class="${pgC}">${fmtPct(a.penetGeral)}</td>
-      <td>${a.vendTotal}</td><td class="${efC}">${fmtPct(a.efic)}</td>
     </tr>`;
   });
   // Linha Total (só mostra se há mais de 1 hotel)
   if (hoteis.length > 1) {
-    const tPP = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool);
-    const tPG = ddpPct(totais.salaTotal, totais.ciTotal);
-    const tEf = ddpPct(totais.vendTotal, totais.salaTotal);
-    const ppC = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
-    const pgC = ddpPctClass(tPG/100, DDP_CONFIG.metaPenetracaoGeral);
-    const efC = tEf >= 20 ? 'ddp-c-green' : tEf >= 10 ? 'ddp-c-yellow' : 'ddp-c-red';
+    const tPP  = ddpPct(totais.salaPool, totais.ciPool);
+    const tPC  = ddpPct(totais.salaConv, totais.ciConv);
+    const tPA  = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool + totais.ciConv);
+    const tPG  = ddpPct(totais.salaTotal, totais.ciTotal);
+    const tGr  = ddpPct(totais.ciGrupos, totais.ciPool);
+    const ppC  = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
+    const paC  = ddpPctClass(tPA/100, DDP_CONFIG.metaPenetracaoPool);
+    const pgC  = ddpPctClass(tPG/100, DDP_CONFIG.metaPenetracaoGeral);
+    const opLabel = hoteis.length > 0 ? (DDP_CONFIG.salaParaOperacao[hoteis[0]] || 'Total') : 'Total';
     rows += `<tr class="total-row">
-      <td>Total CN</td><td>${totais.ciTotal}</td><td>${totais.ciPool}</td>
-      <td>${totais.salaTotal}</td><td>${totais.salaPool}</td><td>${totais.salaConv}</td><td>${totais.salaCot}</td>
+      <td>Total ${opLabel}</td><td>${totais.ciTotal}</td><td>${totais.ciPool}</td><td>${totais.ciCot}</td>
+      <td>${totais.ciConv}</td><td class="${ppC}">${fmtPct(tGr)}</td>
       <td>${totais.mc}</td>
+      <td>${totais.salaPool}</td><td>${totais.salaCot}</td><td>${totais.salaConv}</td>
       <td class="${ppC}">${fmtPct(tPP)}</td>
+      <td class="${ppC}">${fmtPct(tPC)}</td>
+      <td class="${paC}">${fmtPct(tPA)}</td>
       <td class="${pgC}">${fmtPct(tPG)}</td>
-      <td>${totais.vendTotal}</td><td class="${efC}">${fmtPct(tEf)}</td>
     </tr>`;
   }
   tbody.innerHTML = rows;
@@ -4734,18 +4764,19 @@ function _ddpRenderHist(hist) {
     .filter(r => r.dateISO && r.dateISO.startsWith(anoMesAtual))
     .forEach(r => {
       if (!diaMapMes[r.dateISO]) {
-        diaMapMes[r.dateISO] = { ...r };
-      } else {
-        const a = diaMapMes[r.dateISO];
-        a.ciPool  = (a.ciPool||0)  + (r.ciPool||0);
-        a.ciCot   = (a.ciCot||0)   + (r.ciCot||0);
-        a.salaPool= (a.salaPool||0)+ (r.salaPool||0);
-        a.salaCot = (a.salaCot||0) + (r.salaCot||0);
-        a.salaConv= (a.salaConv||0)+ (r.salaConv||0);
-        a.vendPool= (a.vendPool||0)+ (r.vendPool||0);
-        a.vendCot = (a.vendCot||0) + (r.vendCot||0);
-        a.vendConv= (a.vendConv||0)+ (r.vendConv||0);
+        diaMapMes[r.dateISO] = { dateISO: r.dateISO, ciPool:0, ciCot:0, ciConv:0, ciGrupos:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
       }
+      const a = diaMapMes[r.dateISO];
+      a.ciPool   = (a.ciPool||0)   + (Number(r.ciPool)||0);
+      a.ciCot    = (a.ciCot||0)    + (Number(r.ciCot)||0);
+      a.ciConv   = (a.ciConv||0)   + (Number(r.ciConv)||0);
+      a.ciGrupos = (a.ciGrupos||0) + (Number(r.ciGrupos)||0);
+      a.salaPool = (a.salaPool||0) + (Number(r.salaPool)||0);
+      a.salaCot  = (a.salaCot||0)  + (Number(r.salaCot)||0);
+      a.salaConv = (a.salaConv||0) + (Number(r.salaConv)||0);
+      a.vendPool = (a.vendPool||0) + (Number(r.vendPool)||0);
+      a.vendCot  = (a.vendCot||0)  + (Number(r.vendCot)||0);
+      a.vendConv = (a.vendConv||0) + (Number(r.vendConv)||0);
     });
   // Ordena Seg→Dom dentro de cada semana (crescente por data)
   const diasMes = Object.values(diaMapMes).sort((a, b) => a.dateISO.localeCompare(b.dateISO));
@@ -4771,30 +4802,34 @@ function _ddpRenderHist(hist) {
     if (chave === anoMesAtual) return; // mês corrente: tratado abaixo via diasMes
     // Acumula todos os registros do mês (diários ou consolidados)
     if (!byMes[chave]) {
-      byMes[chave] = { dateISO: yy+'-'+mm+'-01', ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+      byMes[chave] = { dateISO: yy+'-'+mm+'-01', ciPool:0, ciCot:0, ciConv:0, ciGrupos:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
     }
     const m = byMes[chave];
-    m.ciPool   += Number(r.ciPool)   || 0;
-    m.ciCot    += Number(r.ciCot)    || 0;
-    m.salaPool += Number(r.salaPool) || 0;
-    m.salaCot  += Number(r.salaCot)  || 0;
-    m.salaConv += Number(r.salaConv) || 0;
-    m.vendPool += Number(r.vendPool) || 0;
-    m.vendCot  += Number(r.vendCot)  || 0;
-    m.vendConv += Number(r.vendConv) || 0;
+    m.ciPool    += Number(r.ciPool)    || 0;
+    m.ciCot     += Number(r.ciCot)     || 0;
+    m.ciConv    += Number(r.ciConv)    || 0;
+    m.ciGrupos  += Number(r.ciGrupos)  || 0;
+    m.salaPool  += Number(r.salaPool)  || 0;
+    m.salaCot   += Number(r.salaCot)   || 0;
+    m.salaConv  += Number(r.salaConv)  || 0;
+    m.vendPool  += Number(r.vendPool)  || 0;
+    m.vendCot   += Number(r.vendCot)   || 0;
+    m.vendConv  += Number(r.vendConv)  || 0;
   });
   // Mês corrente: soma completa de diasMes
   if (diasMes.length) {
-    const mesAcc = { dateISO: anoMesAtual+'-01', ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+    const mesAcc = { dateISO: anoMesAtual+'-01', ciPool:0, ciCot:0, ciConv:0, ciGrupos:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
     diasMes.forEach(r => {
-      mesAcc.ciPool   += Number(r.ciPool)   || 0;
-      mesAcc.ciCot    += Number(r.ciCot)    || 0;
-      mesAcc.salaPool += Number(r.salaPool) || 0;
-      mesAcc.salaCot  += Number(r.salaCot)  || 0;
-      mesAcc.salaConv += Number(r.salaConv) || 0;
-      mesAcc.vendPool += Number(r.vendPool) || 0;
-      mesAcc.vendCot  += Number(r.vendCot)  || 0;
-      mesAcc.vendConv += Number(r.vendConv) || 0;
+      mesAcc.ciPool    += Number(r.ciPool)    || 0;
+      mesAcc.ciCot     += Number(r.ciCot)     || 0;
+      mesAcc.ciConv    += Number(r.ciConv)    || 0;
+      mesAcc.ciGrupos  += Number(r.ciGrupos)  || 0;
+      mesAcc.salaPool  += Number(r.salaPool)  || 0;
+      mesAcc.salaCot   += Number(r.salaCot)   || 0;
+      mesAcc.salaConv  += Number(r.salaConv)  || 0;
+      mesAcc.vendPool  += Number(r.vendPool)  || 0;
+      mesAcc.vendCot   += Number(r.vendCot)   || 0;
+      mesAcc.vendConv  += Number(r.vendConv)  || 0;
     });
     byMes[anoMesAtual] = mesAcc;
   }
@@ -4922,9 +4957,9 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
   const multi = hoteis.length > 1;
 
   // Colunas e larguras
-  // SP e CN: Hotel | CI Total | CI Pool | CI Cotistas | MC (sem Em sala / Pen. Pool)
-  const cols = ['Hotel','CI Total','CI Pool','CI Cotistas','MC'];
-  const colsGrid = multi ? '100px 1fr 1fr 1fr 1fr' : '90px 1fr 1fr 1fr 1fr';
+  // SP e CN: Hotel | CI Total | CI Pool | CI Cotistas | CI Conv. | MC
+  const cols = ['Hotel','CI Total','CI Pool','CI Cotistas','CI Conv.','MC'];
+  const colsGrid = multi ? '100px 1fr 1fr 1fr 1fr 1fr' : '90px 1fr 1fr 1fr 1fr 1fr';
 
   // Dados do dia anterior (dataAtiva) por hotel — NÃO acumulado
   let totais = { ciTotal:0, ciPool:0, ciCot:0, mc:0, salaTotal:0, salaPool:0, salaConv:0 };
@@ -4965,29 +5000,27 @@ function _ddpRenderCard(hoteis, op, anoMes, dataAtiva) {
   let rowsHtml = '';
 
   // --- Seção check-ins (hotéis normais) ---
-  let totDia = { ciTotal:0, ciPool:0, ciCot:0, mc:0 };
-  let totAc  = { ciTotal:0, ciPool:0, ciCot:0, mc:0 };
+  let totDia = { ciTotal:0, ciPool:0, ciCot:0, ciConv:0, mc:0 };
   hoteisNorm.forEach(h => {
     const diaEntry = ddpLoadHist(h).find(r => r.dateISO === dataAtiva) || {};
     const ciPool  = diaEntry.ciPool || 0;
     const ciCot   = diaEntry.ciCot  || 0;
-    const ciTotal = ciPool + ciCot;
+    const ciConv  = diaEntry.ciConv || 0;
+    const ciTotal = ciPool + ciCot + ciConv;
     const mcH     = Math.round(ciPool * DDP_CONFIG.metaPenetracaoPool);
-    totDia.ciTotal += ciTotal; totDia.ciPool += ciPool; totDia.ciCot += ciCot; totDia.mc += mcH;
+    totDia.ciTotal += ciTotal; totDia.ciPool += ciPool; totDia.ciCot += ciCot; totDia.ciConv += ciConv; totDia.mc += mcH;
     rowsHtml += `<div class="ddp-wpp-row" style="grid-template-columns:${colsGrid}">
       <span>${h}</span>
-      <span>${ciTotal}</span><span>${ciPool}</span><span>${ciCot}</span>
+      <span>${ciTotal}</span><span>${ciPool}</span><span>${ciCot}</span><span>${ciConv}</span>
       <span class="wpp-mc">${mcH}</span>
     </div>`;
-    const ac = acHotelCard(h);
-    totAc.ciTotal += ac.ciTotal; totAc.ciPool += ac.ciPool; totAc.ciCot += ac.ciCot; totAc.mc += ac.mc;
   });
 
-  // Linha de acumulado até ontem
+  // Linha Total do dia
   rowsHtml += `<div class="ddp-wpp-row wpp-ac" style="grid-template-columns:${colsGrid}">
-    <span>Acum. até ${ontemBR.slice(0,5)}</span>
-    <span>${totAc.ciTotal}</span><span>${totAc.ciPool}</span><span>${totAc.ciCot}</span>
-    <span class="wpp-mc">${totAc.mc}</span>
+    <span>Total do dia</span>
+    <span>${totDia.ciTotal}</span><span>${totDia.ciPool}</span><span>${totDia.ciCot}</span><span>${totDia.ciConv}</span>
+    <span class="wpp-mc">${totDia.mc}</span>
   </div>`;
 
   // --- Seção parque (separada, com colunas diferentes) ---
@@ -5089,7 +5122,8 @@ function _ddpVal(id) {
 function ddpRecalc() {
   const ciPool   = _ddpVal('ddp_ciPool');
   const ciCot    = _ddpVal('ddp_ciCot');
-  const ciTotal  = ciPool + ciCot;
+  const ciConv   = _ddpVal('ddp_ciConv');
+  const ciTotal  = ciPool + ciCot + ciConv;
   const mc       = Math.round(ciPool * DDP_CONFIG.metaPenetracaoPool);
 
   const salaPool = _ddpVal('ddp_salaPool');
@@ -5145,14 +5179,16 @@ function ddpSalvarDia() {
   } else {
     data = {
       hotel, dateISO,
-      ciPool:   _ddpVal('ddp_ciPool'),
-      ciCot:    _ddpVal('ddp_ciCot'),
-      salaPool: _ddpVal('ddp_salaPool'),
-      salaCot:  _ddpVal('ddp_salaCot'),
-      salaConv: _ddpVal('ddp_salaConv'),
-      vendPool: _ddpVal('ddp_vendPool'),
-      vendCot:  _ddpVal('ddp_vendCot'),
-      vendConv: _ddpVal('ddp_vendConv'),
+      ciPool:    _ddpVal('ddp_ciPool'),
+      ciCot:     _ddpVal('ddp_ciCot'),
+      ciConv:    _ddpVal('ddp_ciConv'),
+      ciGrupos:  _ddpVal('ddp_ciGrupos'),
+      salaPool:  _ddpVal('ddp_salaPool'),
+      salaCot:   _ddpVal('ddp_salaCot'),
+      salaConv:  _ddpVal('ddp_salaConv'),
+      vendPool:  _ddpVal('ddp_vendPool'),
+      vendCot:   _ddpVal('ddp_vendCot'),
+      vendConv:  _ddpVal('ddp_vendConv'),
     };
   }
   ddpSave(hotel, dateISO, data);   // localStorage (sempre, inclusive offline)
