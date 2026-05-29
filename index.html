@@ -1643,7 +1643,8 @@ function afterLogin() {
   else navEq.classList.add('hidden');
   if (isLider) navTR.classList.remove('hidden');
   else navTR.classList.add('hidden');
-  if (isLider) navDD.classList.remove('hidden');
+  const temDdp = isLider && (captador.cargo === 'ceo' || captador.operacao !== null);
+  if (temDdp) navDD.classList.remove('hidden');
   else navDD.classList.add('hidden');
   // Restaurar a aba onde o usuário estava antes do reload
   const savedTab = sessionStorage.getItem('yv_tab') || 'home';
