@@ -4268,7 +4268,7 @@ function renderDdp() {
   // Lê valores salvos ou usa 0
   const ciPool    = saved.ciPool    || 0;
   const ciCot     = saved.ciCot     || 0;
-  const ciConv    = isAuto ? leads.filter(l => l.sala === hotel && l.tipoSala === 'conv' && (l.date === dataAtiva.split('-').reverse().join('/') || l.dateISO === dataAtiva)).length : (saved.ciConv || 0);
+  const ciConv    = saved.ciConv || 0;
   const ciTotal   = ciPool + ciCot + ciConv;
   const mc        = Math.round(ciPool * DDP_CONFIG.metaPenetracaoPool);
 
@@ -4404,9 +4404,7 @@ function renderDdp() {
       </div>
       <div class="ddp-ir">
         <div class="ddp-ir-lbl"><strong>Check-ins Convidados</strong><span>Convidados (tipoSala conv)</span></div>
-        ${isAuto
-          ? `<div class="ddp-num-calc" id="ddp_ciConv">${ciConv}</div>`
-          : `<input class="ddp-num-in" id="ddp_ciConv" type="number" min="0" value="${ciConv}" oninput="ddpRecalc()"/>`}
+        <input class="ddp-num-in" id="ddp_ciConv" type="number" min="0" value="${ciConv}" oninput="ddpRecalc()"/>
       </div>
       <div class="ddp-ir" style="background:rgba(241,214,145,.04);border-radius:8px;padding:8px 8px;border-bottom:none;margin-top:4px">
         <div class="ddp-ir-lbl" style="display:flex;align-items:center;gap:8px">
