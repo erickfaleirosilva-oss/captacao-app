@@ -1765,7 +1765,7 @@ function _profRenderList(query) {
     ? _profListaAtual.length + ' resultado' + (_profListaAtual.length > 1 ? 's' : '')
     : TODAS_PROFISSOES.length + ' profissões disponíveis';
   list.innerHTML = _profListaAtual.map((p,i) =>
-    `<div class="prof-item" data-idx="${i}" onmousedown="_profPick(${JSON.stringify(p)})">${_profHL(p, query)}</div>`
+    `<div class="prof-item" data-idx="${i}" data-val="${p.replace(/"/g,'&quot;')}" onmousedown="_profPick(this.dataset.val)">${_profHL(p, query)}</div>`
   ).join('');
 }
 function _profOpenDD() {
