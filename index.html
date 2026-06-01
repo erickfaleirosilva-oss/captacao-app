@@ -680,6 +680,23 @@
     .ddp-hist-tbl td.ddp-c-green  { color:var(--green);  }
     .ddp-hist-tbl td.ddp-c-yellow { color:var(--yellow); }
     .ddp-hist-tbl td.ddp-c-red    { color:var(--red);    }
+    /* ── Toggle de período DDP ── */
+    .ddp-periodo-toggle { display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin:10px 0 6px; }
+    .ddp-toggle-track { width:36px;height:20px;border-radius:10px;background:var(--navy3);border:1.5px solid var(--border);position:relative;transition:background .2s;flex-shrink:0; }
+    .ddp-toggle-track.on { background:rgba(201,168,76,.3);border-color:var(--gold); }
+    .ddp-toggle-knob { position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:all .2s; }
+    .ddp-toggle-track.on .ddp-toggle-knob { left:18px;background:var(--gold); }
+    .ddp-periodo-label { font-size:12px;font-weight:600;color:var(--muted); }
+    .ddp-periodo-label.on { color:var(--gold2); }
+    .ddp-range-wrap { display:flex;flex-direction:column;gap:8px;overflow:hidden;max-height:0;transition:max-height .25s ease,opacity .2s;opacity:0; }
+    .ddp-range-wrap.visible { max-height:180px;opacity:1; }
+    .ddp-range-row { display:flex;align-items:center;gap:10px; }
+    .ddp-range-lbl { font-size:11px;font-weight:600;color:var(--muted);width:32px;flex-shrink:0; }
+    .ddp-date-input-sm { background:var(--navy2);border:1.5px solid rgba(201,168,76,.4);border-radius:10px;padding:7px 10px;font-size:12px;font-weight:700;color:var(--text);flex:1;font-family:inherit; }
+    .ddp-date-input-sm:focus { outline:none;border-color:var(--gold); }
+    .ddp-range-apply { background:linear-gradient(90deg,#C9A84C,#F1D691);color:var(--navy);border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.3px;margin-top:2px; }
+    .ddp-range-badge { display:none;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--gold2);font-weight:600;margin-bottom:8px; }
+    .ddp-range-badge.visible { display:inline-block; }
     /* ── Tabela Histórico DDP ── */
     .ddp-hist-tbl { width:100%; border-collapse:collapse; font-size:11px; }
     .ddp-hist-tbl th { padding:6px 6px; text-align:right; font-size:9px; font-weight:700; text-transform:uppercase; color:var(--muted); letter-spacing:.4px; white-space:nowrap; border-bottom:1px solid var(--border); }
@@ -4140,6 +4157,7 @@ let ddpState = {
   hotel:    'Alta Vista',
   dateISO:  null, // null = hoje
 };
+let _ddpFiltroRange = { ativo: false, de: null, ate: null };
 
 // Chave localStorage por hotel + data
 function ddpKey(hotel, dateISO) { return 'ddp_' + hotel.replace(/\s/g,'_') + '_' + dateISO; }
@@ -4495,6 +4513,27 @@ function renderDdp() {
       ${!isHoje ? `<div class="ddp-mc-pill" style="white-space:nowrap">⚡ Retroativo</div>` : ''}
     </div>
 
+    <!-- FILTRO DE PERÍODO -->
+    <div class="ddp-periodo-toggle" onclick="_ddpTogglePeriodo()">
+      <div class="ddp-toggle-track${_ddpFiltroRange.ativo?' on':''}" id="ddpRangeTrack">
+        <div class="ddp-toggle-knob"></div>
+      </div>
+      <span class="ddp-periodo-label${_ddpFiltroRange.ativo?' on':''}" id="ddpRangeLabel">Selecionar período</span>
+    </div>
+    <div class="ddp-range-wrap${_ddpFiltroRange.ativo?' visible':''}" id="ddpRangeWrap">
+      <div class="ddp-range-row">
+        <span class="ddp-range-lbl">De</span>
+        <input type="date" class="ddp-date-input-sm" id="ddpRangeFrom"
+          value="${_ddpFiltroRange.de || anoMes + '-01'}" max="${hoje}" />
+      </div>
+      <div class="ddp-range-row">
+        <span class="ddp-range-lbl">Até</span>
+        <input type="date" class="ddp-date-input-sm" id="ddpRangeTo"
+          value="${_ddpFiltroRange.ate || hoje}" max="${hoje}" />
+      </div>
+      <button class="ddp-range-apply" onclick="_ddpAplicarRange()">Aplicar filtro</button>
+    </div>
+
     ${ddpOpcoesLider().length > 1 ? `
     <div class="ddp-sel-lbl">Operação</div>
     <div class="ddp-op-chips">
@@ -4654,9 +4693,12 @@ function renderDdp() {
     </div>
 
     <!-- HISTÓRICO RECENTE -->
-    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 10px;display:flex;align-items:center;gap:6px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;display:flex;align-items:center;gap:6px">
       <div style="width:6px;height:6px;border-radius:50%;background:var(--muted)"></div>
       Histórico — ${hotel}
+    </div>
+    <div class="ddp-range-badge${_ddpFiltroRange.ativo&&_ddpFiltroRange.de&&_ddpFiltroRange.ate?' visible':''}" id="ddpRangeBadge">
+      📅 ${_ddpFiltroRange.de?_ddpFiltroRange.de.slice(8)+'/'+_ddpFiltroRange.de.slice(5,7):''} – ${_ddpFiltroRange.ate?_ddpFiltroRange.ate.slice(8)+'/'+_ddpFiltroRange.ate.slice(5,7):''}
     </div>
     <div class="ddp-card" style="padding:8px 12px" id="ddp_histCard"></div>
 
@@ -4670,7 +4712,10 @@ function renderDdp() {
 
   // Renderiza acumulado, histórico e card WhatsApp após montar o DOM
   _ddpRenderAc(hoteis, anoMes);
-  _ddpRenderHist(hist);
+  const histParaRender = (_ddpFiltroRange.ativo && _ddpFiltroRange.de && _ddpFiltroRange.ate)
+    ? hist.filter(r => r.dateISO >= _ddpFiltroRange.de && r.dateISO <= _ddpFiltroRange.ate)
+    : hist;
+  _ddpRenderHist(histParaRender);
   _ddpRenderCard(hoteis, op, anoMes, dataAtiva);
 }
 
@@ -5319,6 +5364,42 @@ function ddpSalvarDia() {
   setTimeout(() => { btn.textContent = '💾 Salvar registro do dia'; btn.style.background = ''; renderDdp(); }, 1200);
 }
 
+function _ddpTogglePeriodo() {
+  _ddpFiltroRange.ativo = !_ddpFiltroRange.ativo;
+  if (!_ddpFiltroRange.ativo) {
+    // Desativou — limpa filtro e re-renderiza histórico completo
+    _ddpFiltroRange.de = null;
+    _ddpFiltroRange.ate = null;
+    renderDdp();
+  } else {
+    // Ativou — só atualiza visual do toggle sem re-renderizar tudo
+    const track = document.getElementById('ddpRangeTrack');
+    const label = document.getElementById('ddpRangeLabel');
+    const wrap  = document.getElementById('ddpRangeWrap');
+    if (track) track.classList.add('on');
+    if (label) label.classList.add('on');
+    if (wrap)  wrap.classList.add('visible');
+  }
+}
+function _ddpAplicarRange() {
+  const de  = document.getElementById('ddpRangeFrom')?.value;
+  const ate = document.getElementById('ddpRangeTo')?.value;
+  if (!de || !ate) return;
+  _ddpFiltroRange.de  = de;
+  _ddpFiltroRange.ate = ate;
+  // Atualiza badge
+  const badge = document.getElementById('ddpRangeBadge');
+  if (badge) {
+    badge.textContent = '📅 ' + de.slice(8)+'/'+de.slice(5,7) + ' – ' + ate.slice(8)+'/'+ate.slice(5,7);
+    badge.classList.add('visible');
+  }
+  // Re-renderiza só o histórico com o novo filtro
+  const hotel = ddpState.hotel;
+  const dataAtiva = ddpState.dateISO || todayISO();
+  const hist = ddpLoadHist(hotel).filter(r => r.dateISO !== dataAtiva);
+  const histFiltrado = hist.filter(r => r.dateISO >= de && r.dateISO <= ate);
+  _ddpRenderHist(histFiltrado);
+}
 function ddpSetDate(iso) {
   ddpState.dateISO = iso || null;
   renderDdp();
