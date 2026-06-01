@@ -1985,6 +1985,19 @@ const QS = [
     text:'Qual a cidade vocês moram?',
   },
   {
+    id:'modalidade', type:'chips',
+    condicional: () => {
+      const s = (salaAtual && salaAtual.nome) ? salaAtual.nome.toUpperCase() : '';
+      return s.includes('SPTR') || s.includes('THERMAS') || s.includes('ALTA VISTA') || s.includes('MARINA') || s.includes('ATRIUM');
+    },
+    text:'Estão hospedados em qual modalidade?',
+    opts:[
+      { icon:'🏊', label:'Particular / Pool',           sub:'Hóspedes pagantes, não proprietários',            value:'pool'       },
+      { icon:'🤝', label:'Convidados de Proprietários', sub:'Vieram com ou indicados por um proprietário',      value:'convidados' },
+      { icon:'🏠', label:'Proprietários',               sub:'Já possuem cota ou fração no empreendimento',      value:'proprietarios' },
+    ]
+  },
+  {
     id:'idadeMarido', type:'chips',
     text:'Qual a idade do marido / primeiro titular?',
     opts:[
@@ -2876,6 +2889,7 @@ function _persistLead() {
     tipo:     ans.tipo   || '—',
     renda:    ans.renda  || '—',
     cidade:   ans.cidade || '—',
+    modalidade: ans.modalidade || null,
     mode:     mode==='low'?'<3k':'>3k',
     sala:     salaAtual ? salaAtual.nome : '—',
     captador: captador  ? captador.nome  : '—',
