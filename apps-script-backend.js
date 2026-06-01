@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════
 // Your Vacation — Qualificador de Captação
-// Google Apps Script Backend — v7
+// Google Apps Script Backend — v8
 // Cole este código em: Planilha > Extensões > Apps Script
 // Depois: Implantar > Gerenciar implantações > Editar > Nova versão > Implantar
 // ═══════════════════════════════════════════════════════
@@ -21,10 +21,10 @@ const COLUNAS = [
   'ID','Data','Hora','Captador','Sala','Nome','Telefone','Cidade','Resultado','Tipo','Renda','Modo','EmSala','TipoSala','Venda',
   // Campos detalhados das respostas
   'PontoCaptacao','IdadeTitular','ProfissaoTitular','IdadeConjuge','ProfissaoConjuge',
-  'Carro','Casa','Cartao','Viagens',
+  'Carro','Casa','Cartao','Viagens','Modalidade',
 ];
 const N_COLS  = COLUNAS.length;
-const COL_WIDTHS = [180,100,80,150,150,150,130,130,90,150,130,80,80,100,80,150,120,150,120,150,120,80,80,80];
+const COL_WIDTHS = [180,100,80,150,150,150,130,130,90,150,130,80,80,100,80,150,120,150,120,150,120,80,80,80,120];
 
 function aplicarCabecalho(sheet) {
   const header = sheet.getRange(1, 1, 1, N_COLS);
@@ -208,6 +208,8 @@ function doPost(e) {
         hotel, dateISO,
         ciPool:     Number(data.ciPool)     || 0,
         ciCot:      Number(data.ciCot)      || 0,
+        ciConv:     Number(data.ciConv)     || 0,
+        ciGrupos:   Number(data.ciGrupos)   || 0,
         salaPool:   Number(data.salaPool)   || 0,
         salaCot:    Number(data.salaCot)    || 0,
         salaConv:   Number(data.salaConv)   || 0,
@@ -330,6 +332,7 @@ function doPost(e) {
       ans.casa             || '',          // Casa
       ans.cartao           || '',          // Cartao
       ans.viagens          || '',          // Viagens
+      data.modalidade      || '',          // Modalidade (pool/convidados/proprietarios)
     ]);
 
     // Aplica cor na linha recém inserida e trava formato da coluna Data como texto
@@ -400,6 +403,8 @@ function doGet(e) {
         hotel, dateISO,
         ciPool:     Number(params.ciPool)     || 0,
         ciCot:      Number(params.ciCot)      || 0,
+        ciConv:     Number(params.ciConv)     || 0,
+        ciGrupos:   Number(params.ciGrupos)   || 0,
         salaPool:   Number(params.salaPool)   || 0,
         salaCot:    Number(params.salaCot)    || 0,
         salaConv:   Number(params.salaConv)   || 0,
