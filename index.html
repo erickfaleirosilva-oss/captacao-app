@@ -4710,7 +4710,7 @@ function renderDdp() {
     <!-- ACUMULADO MÊS -->
     <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px">
       <div style="width:6px;height:6px;border-radius:50%;background:var(--muted)"></div>
-      Acumulado ${_mesLabel(anoMes)} — ${op}
+      <span id="ddp_acLabel">Acumulado ${_mesLabel(anoMes)} — ${op}</span>
     </div>
     <div class="ddp-card" style="padding:10px 12px">
       <div style="overflow-x:auto">
@@ -5422,18 +5422,111 @@ function _ddpAplicarRange() {
   if (!de || !ate) return;
   _ddpFiltroRange.de  = de;
   _ddpFiltroRange.ate = ate;
+
+  // Feedback visual no botão
+  const btn = document.querySelector('.ddp-range-apply');
+  if (btn && _ddpFetchPendente === 0) {
+    btn.textContent = '✅ Filtro aplicado!';
+    btn.style.background = 'var(--green, #2e7d32)';
+    btn.style.color = '#fff';
+    setTimeout(() => {
+      btn.textContent = 'Aplicar filtro';
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 1500);
+  }
+
   // Atualiza badge
+  const deBR  = de.slice(8)+'/'+de.slice(5,7)+'/'+de.slice(0,4);
+  const ateBR = ate.slice(8)+'/'+ate.slice(5,7)+'/'+ate.slice(0,4);
   const badge = document.getElementById('ddpRangeBadge');
   if (badge) {
-    badge.textContent = '📅 ' + de.slice(8)+'/'+de.slice(5,7) + ' – ' + ate.slice(8)+'/'+ate.slice(5,7);
+    badge.textContent = '📅 ' + deBR + ' – ' + ateBR;
     badge.classList.add('visible');
   }
-  // Re-renderiza só o histórico com o novo filtro
+
+  // Atualiza título do acumulado
+  const acLabel = document.getElementById('ddp_acLabel');
+  if (acLabel) {
+    const op = ddpState.operacao;
+    acLabel.textContent = 'Período ' + deBR + ' – ' + ateBR + ' — ' + op;
+  }
+
+  // Re-renderiza acumulado filtrado por período
+  const hoteis = DDP_CONFIG.operacoes[ddpState.operacao] || [];
+  _ddpRenderAcRange(hoteis, de, ate);
+
+  // Re-renderiza histórico filtrado
   const hotel = ddpState.hotel;
   const dataAtiva = ddpState.dateISO || todayISO();
   const hist = ddpLoadHist(hotel).filter(r => r.dateISO !== dataAtiva);
-  const histFiltrado = hist.filter(r => r.dateISO >= de && r.dateISO <= ate);
-  _ddpRenderHist(histFiltrado);
+  _ddpRenderHist(hist.filter(r => r.dateISO >= de && r.dateISO <= ate));
+}
+
+function _ddpRenderAcRange(hoteis, de, ate) {
+  const tbody = document.getElementById('ddp_acBody');
+  if (!tbody) return;
+  let totais = { ciPool:0, ciCot:0, ciConv:0, ciGrupos:0, ciTotal:0, salaPool:0, salaCot:0, salaConv:0, salaTotal:0, mc:0, vendTotal:0 };
+  let rows = '';
+  hoteis.forEach(h => {
+    const entries = ddpLoadHist(h).filter(r => r.dateISO >= de && r.dateISO <= ate);
+    const a = { ciPool:0, ciCot:0, ciConv:0, ciGrupos:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+    entries.forEach(e => {
+      a.ciPool   += e.ciPool   || 0; a.ciCot    += e.ciCot    || 0;
+      a.ciConv   += e.ciConv   || 0; a.ciGrupos += e.ciGrupos || 0;
+      a.salaPool += e.salaPool || 0; a.salaCot  += e.salaCot  || 0;
+      a.salaConv += e.salaConv || 0; a.vendPool += e.vendPool || 0;
+      a.vendCot  += e.vendCot  || 0; a.vendConv += e.vendConv || 0;
+    });
+    const ciTotal   = a.ciPool + a.ciCot + a.ciConv;
+    const salaTotal = a.salaPool + a.salaCot + a.salaConv;
+    const vendTotal = a.vendPool + a.vendCot + a.vendConv;
+    const mc        = Math.round(a.ciPool * DDP_CONFIG.metaPenetracaoPool);
+    const pctGrupos = ddpPct(a.ciGrupos, a.ciPool);
+    const penetPool = ddpPct(a.salaPool + a.salaConv, a.ciPool);
+    const penetConv = ddpPct(a.salaConv, a.ciConv);
+    const penetAnltc= ddpPct(a.salaPool + a.salaConv, a.ciPool + a.ciConv);
+    const penetGeral= ddpPct(salaTotal, ciTotal);
+    totais.ciPool += a.ciPool; totais.ciCot += a.ciCot; totais.ciConv += a.ciConv;
+    totais.ciGrupos += a.ciGrupos; totais.ciTotal += ciTotal;
+    totais.salaPool += a.salaPool; totais.salaCot += a.salaCot; totais.salaConv += a.salaConv;
+    totais.salaTotal += salaTotal; totais.mc += mc; totais.vendTotal += vendTotal;
+    const ppC = ddpPctClass(penetPool/100, DDP_CONFIG.metaPenetracaoPool);
+    const pgC = ddpPctClass(penetGeral/100, DDP_CONFIG.metaPenetracaoGeral);
+    const paC = ddpPctClass(penetAnltc/100, DDP_CONFIG.metaPenetracaoPool);
+    rows += `<tr>
+      <td>${h}</td><td>${ciTotal}</td><td>${a.ciPool}</td><td>${a.ciCot}</td>
+      <td>${a.ciConv}</td><td class="${ppC}">${fmtPct(pctGrupos)}</td>
+      <td>${mc}</td>
+      <td>${a.salaPool}</td><td>${a.salaCot}</td><td>${a.salaConv}</td>
+      <td class="${ppC}">${fmtPct(penetPool)}</td>
+      <td class="${ppC}">${fmtPct(penetConv)}</td>
+      <td class="${paC}">${fmtPct(penetAnltc)}</td>
+      <td class="${pgC}">${fmtPct(penetGeral)}</td>
+    </tr>`;
+  });
+  if (hoteis.length > 1) {
+    const tPP = ddpPct(totais.salaPool, totais.ciPool);
+    const tPC = ddpPct(totais.salaConv, totais.ciConv);
+    const tPA = ddpPct(totais.salaPool + totais.salaConv, totais.ciPool + totais.ciConv);
+    const tPG = ddpPct(totais.salaTotal, totais.ciTotal);
+    const tGr = ddpPct(totais.ciGrupos, totais.ciPool);
+    const ppC = ddpPctClass(tPP/100, DDP_CONFIG.metaPenetracaoPool);
+    const paC = ddpPctClass(tPA/100, DDP_CONFIG.metaPenetracaoPool);
+    const pgC = ddpPctClass(tPG/100, DDP_CONFIG.metaPenetracaoGeral);
+    const opLabel = hoteis.length > 0 ? (DDP_CONFIG.salaParaOperacao[hoteis[0]] || 'Total') : 'Total';
+    rows += `<tr class="total-row">
+      <td>Total ${opLabel}</td><td>${totais.ciTotal}</td><td>${totais.ciPool}</td><td>${totais.ciCot}</td>
+      <td>${totais.ciConv}</td><td class="${ppC}">${fmtPct(tGr)}</td>
+      <td>${totais.mc}</td>
+      <td>${totais.salaPool}</td><td>${totais.salaCot}</td><td>${totais.salaConv}</td>
+      <td class="${ppC}">${fmtPct(tPP)}</td>
+      <td class="${ppC}">${fmtPct(tPC)}</td>
+      <td class="${paC}">${fmtPct(tPA)}</td>
+      <td class="${pgC}">${fmtPct(tPG)}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = rows;
 }
 function ddpSetDate(iso) {
   ddpState.dateISO = iso || null;
