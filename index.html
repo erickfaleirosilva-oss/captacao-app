@@ -5423,6 +5423,7 @@ function ddpSetOp(op) {
   const hoteis = DDP_CONFIG.operacoes[op] || [];
   ddpState.hotel = hoteis[0] || '';
   renderDdp();
+  hoteis.forEach(h => { if (!_ddpRemoteCache[h]) ddpSheetsLoad(h); });
 }
 function ddpSetHotel(h) {
   ddpState.hotel = h;
