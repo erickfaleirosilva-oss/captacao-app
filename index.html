@@ -4186,12 +4186,16 @@ function ddpSave(hotel, dateISO, data) {
 
 // Cache de dados remotos por hotel (carregados uma vez ao abrir o DDP)
 const _ddpRemoteCache = {};
+// Contador de fetches pendentes — botão "Aplicar filtro" mostra aviso enquanto > 0
+let _ddpFetchPendente = 0;
 
 // Carrega dados do Google Sheets para um hotel e armazena em _ddpRemoteCache
 // Re-renderiza o DDP quando os dados chegam
 function ddpSheetsLoad(hotel) {
   if (!DDP_CONFIG.sheetsUrl) return;
   const hotelEnc = encodeURIComponent(hotel);
+  _ddpFetchPendente++;
+  _ddpAtualizarBotaoFiltro();
   fetch(DDP_CONFIG.sheetsUrl + '?action=getDDP&hotel=' + hotelEnc)
     .then(r => r.json())
     .then(res => {
@@ -4230,7 +4234,24 @@ function ddpSheetsLoad(hotel) {
         }
       }
     })
-    .catch(() => {}); // Offline — usa só localStorage
+    .catch(() => {})
+    .finally(() => {
+      _ddpFetchPendente = Math.max(0, _ddpFetchPendente - 1);
+      _ddpAtualizarBotaoFiltro();
+    });
+}
+function _ddpAtualizarBotaoFiltro() {
+  const btn = document.querySelector('.ddp-range-apply');
+  if (!btn) return;
+  if (_ddpFetchPendente > 0) {
+    btn.textContent = '⏳ Carregando dados...';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+  } else {
+    btn.textContent = 'Aplicar filtro';
+    btn.disabled = false;
+    btn.style.opacity = '';
+  }
 }
 
 const DDP_OFFLINE_KEY = 'ddp_offline_queue';
