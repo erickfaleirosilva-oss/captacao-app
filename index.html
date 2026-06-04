@@ -1270,6 +1270,7 @@ const CONFIG = {
     { id: 'externo-cn', nome: 'Externo',     cidade: 'Caldas Novas', modos: [],                   sheetName: 'Externo CN',  operacao: 'Caldas Novas', ddpHotel: null         },
     { id: 'thermas-sp', nome: 'Thermas SP',  cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'Thermas SP',  operacao: 'São Pedro',    ddpHotel: null         },
     { id: 'sptr',       nome: 'SPTR',        cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'São Pedro',   operacao: 'São Pedro',    ddpHotel: 'SPTR'       },
+    { id: 'externo-sp', nome: 'Externo',     cidade: 'São Pedro',    modos: [],                   sheetName: 'Externo SP',  operacao: 'São Pedro',    ddpHotel: null         },
     { id: 'atibaia',    nome: 'Atibaia',     cidade: 'Atibaia',      modos: [],                   sheetName: 'Atibaia',     operacao: null,           ddpHotel: null         },
   ],
   // Salas que alimentam o DDP automaticamente (captadores marcam tipo+venda no histórico)
@@ -1279,7 +1280,7 @@ const CONFIG = {
   // Pontos de Caldas Novas (captadores escolhem ao iniciar)
   salasCaldas: ['Alta Vista', 'Atrium', 'Marina', 'Externo'],
   // Operações de São Pedro (captadores escolhem a sala ao iniciar)
-  salasSaoPedro: ['Thermas SP', 'SPTR'],
+  salasSaoPedro: ['Thermas SP', 'SPTR', 'Externo'],
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
   faixasRenda: [
     { value: 'abaixo6k',  label: 'Abaixo de R$ 6.000',    num: 0     },
@@ -2695,10 +2696,12 @@ function renderSalaCnScreen() {
 function renderSalaSpScreen() {
   const chips = document.getElementById('salaChips');
   const salas = CONFIG.salasSaoPedro; // ['Thermas SP', 'SPTR']
+  const _spIcons = { 'SPTR': '🏨', 'Thermas SP': '🏊', 'Externo': '🚶' };
+  const _spDescs  = { 'SPTR': 'Hotel São Pedro Thermas Resort', 'Thermas SP': 'Área de banhos — clientes pool', 'Externo': 'Captação de rua — fora dos hotéis' };
   chips.innerHTML = salas.map(nome => {
-    const cfg = CONFIG.salas.find(s => s.nome === nome);
-    const icon = nome === 'SPTR' ? '🏨' : '🏊';
-    const desc = nome === 'SPTR' ? 'Hotel São Pedro Thermas Resort' : 'Área de banhos — clientes pool';
+    const cfg = CONFIG.salas.find(s => s.operacao === 'São Pedro' && s.nome === nome);
+    const icon = _spIcons[nome] || '📍';
+    const desc = _spDescs[nome] || '';
     return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nome}')">
       <div class="sala-chip-icon">${icon}</div>
       <div class="sala-chip-label">${nome}</div>
