@@ -1503,7 +1503,7 @@ function getTodasSalas() {
 const OPERACOES = ['Caldas Novas', 'São Pedro', 'Atibaia'];
 const SALAS_POR_OPERACAO = {
   'Caldas Novas': ['Alta Vista', 'Marina', 'Atrium', 'Externo'],
-  'São Pedro':    ['Thermas SP', 'SPTR'],
+  'São Pedro':    ['Thermas SP', 'SPTR', 'Externo SP'],
   'Atibaia':      ['Atibaia'],
 };
 // Retorna salas filtradas pela operação selecionada (considera operação do login também)
@@ -1520,7 +1520,7 @@ function getSalasVisiveis(operacaoFiltro) {
   // CEO com filtro de operação ativo
   if (operacaoFiltro && operacaoFiltro !== 'todas') {
     const permitidas = SALAS_POR_OPERACAO[operacaoFiltro] || [];
-    return todas.filter(s => permitidas.includes(s.nome));
+    return todas.filter(s => permitidas.includes(s.nome) || permitidas.includes(s.sheetName));
   }
   return todas;
 }
@@ -2702,7 +2702,9 @@ function renderSalaSpScreen() {
     const cfg = CONFIG.salas.find(s => s.operacao === 'São Pedro' && s.nome === nome);
     const icon = _spIcons[nome] || '📍';
     const desc = _spDescs[nome] || '';
-    return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nome}')">
+    // Usa sheetName como valor gravado no lead para evitar colisão com Externo CN
+    const nomeGravado = (cfg && cfg.sheetName) ? cfg.sheetName : nome;
+    return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nomeGravado}')">
       <div class="sala-chip-icon">${icon}</div>
       <div class="sala-chip-label">${nome}</div>
       <div class="sala-chip-sub">${desc}</div>
