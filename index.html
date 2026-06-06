@@ -1515,7 +1515,7 @@ function getSalasVisiveis(operacaoFiltro) {
     const extras = getOperacoesExtras(captador).flatMap(op => SALAS_POR_OPERACAO[op] || []);
     const todasPermitidas = [...new Set([...permitidas, ...extras])];
     const salaAtualNome = getSalaAtualNome();
-    return todas.filter(s => todasPermitidas.includes(s.nome) || (salaAtualNome && s.nome === salaAtualNome));
+    return todas.filter(s => todasPermitidas.includes(s.nome) || todasPermitidas.includes(s.sheetName) || (salaAtualNome && s.nome === salaAtualNome));
   }
   // CEO com filtro de operação ativo
   if (operacaoFiltro && operacaoFiltro !== 'todas') {
@@ -3058,7 +3058,8 @@ function filtrarLeads(fonte, filtro) {
     filtered = filtered.filter(l => salasOp.includes(l.sala) || (salaAtualNome && l.sala === salaAtualNome));
   }
   if (filtro.sala && filtro.sala !== 'todas') {
-    filtered = filtered.filter(l => l.sala === filtro.sala);
+    const cfg = getTodasSalas().find(s => (s.sheetName || s.nome) === filtro.sala);
+    filtered = filtered.filter(l => l.sala === filtro.sala || (cfg && l.sala === cfg.nome));
   }
   return filtered;
 }
@@ -3163,7 +3164,9 @@ function renderHistFiltros() {
     html += '<select class="filtro-select" onchange="setHistFiltro(\'sala\',this.value)">';
     html += `<option value="todas"${histFiltro.sala==='todas'?' selected':''}>Ponto de captação</option>`;
     salasFiltradas.forEach(s => {
-      html += `<option value="${s.nome}"${histFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
+      const val = s.sheetName || s.nome;
+      const label = (s.sheetName && s.sheetName !== s.nome) ? s.sheetName : s.nome;
+      html += `<option value="${val}"${histFiltro.sala===val?' selected':''}>${label}</option>`;
     });
     html += '</select>';
   }
@@ -3575,7 +3578,9 @@ function renderCdpFiltros() {
     html += '<select class="filtro-select" onchange="setCdpFiltro(\'sala\',this.value)">';
     html += `<option value="todas"${cdpFiltro.sala==='todas'?' selected':''}>Ponto de captação</option>`;
     salasFiltradas.forEach(s => {
-      html += `<option value="${s.nome}"${cdpFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
+      const val = s.sheetName || s.nome;
+      const label = (s.sheetName && s.sheetName !== s.nome) ? s.sheetName : s.nome;
+      html += `<option value="${val}"${cdpFiltro.sala===val?' selected':''}>${label}</option>`;
     });
     html += '</select>';
   }
@@ -3893,7 +3898,9 @@ function renderTrFiltros() {
     html += '<select class="filtro-select" onchange="setTrFiltro(\'sala\',this.value)">';
     html += `<option value="todas"${trFiltro.sala==='todas'?' selected':''}>Ponto de captação</option>`;
     salasFiltradas.forEach(s => {
-      html += `<option value="${s.nome}"${trFiltro.sala===s.nome?' selected':''}>${s.nome}</option>`;
+      const val = s.sheetName || s.nome;
+      const label = (s.sheetName && s.sheetName !== s.nome) ? s.sheetName : s.nome;
+      html += `<option value="${val}"${trFiltro.sala===val?' selected':''}>${label}</option>`;
     });
     html += '</select>';
     html += '<select class="filtro-select" onchange="setTrFiltro(\'captador\',this.value)">';
