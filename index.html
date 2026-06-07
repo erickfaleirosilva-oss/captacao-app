@@ -968,6 +968,10 @@
       <input class="input-field" id="fieldNome" type="text" placeholder="Ex: João"
         autocomplete="off" autocorrect="off" spellcheck="false" oninput="onNomeInput()" />
     </div>
+    <div id="wrapIdade" class="hidden">
+      <input class="input-field" id="fieldIdade" type="number" min="1" max="120" placeholder="Ex: 42"
+        inputmode="numeric" pattern="[0-9]*" autocomplete="off" oninput="onIdadeInput()" />
+    </div>
     <div class="prof-container hidden" id="wrapCidade">
       <div class="prof-selected-chip" id="cidadeSelectedChip">
         <span>✓</span><span id="cidadeSelectedText"></span>
@@ -2000,13 +2004,8 @@ const QS = [
     ]
   },
   {
-    id:'idadeMarido', type:'chips',
+    id:'idadeMarido', type:'idade',
     text:'Qual a idade do marido / primeiro titular?',
-    opts:[
-      { icon:'⚠️', label:'Abaixo de 30 anos', sub:'', value:'menor30' },
-      { icon:'✅', label:'30 a 65 anos',       sub:'', value:'30a65'   },
-      { icon:'⚠️', label:'Acima de 65 anos',  sub:'', value:'acima65' },
-    ]
   },
   {
     id:'profissaoTitular', type:'profissao',
@@ -2014,13 +2013,8 @@ const QS = [
   },
   // Pergunta condicional — só exibida se há cônjuge (casado, UE ou noivos)
   {
-    id:'idadeConjuge', type:'chips', condicional: (a) => a.tipo === 'casados' || a.tipo === 'uniao' || a.tipo === 'noivos',
+    id:'idadeConjuge', type:'idade', condicional: (a) => a.tipo === 'casados' || a.tipo === 'uniao' || a.tipo === 'noivos',
     text:'Qual a idade do cônjuge / segundo titular?',
-    opts:[
-      { icon:'⚠️', label:'Abaixo de 30 anos', sub:'', value:'menor30' },
-      { icon:'✅', label:'30 a 65 anos',       sub:'', value:'30a65'   },
-      { icon:'⚠️', label:'Acima de 65 anos',  sub:'', value:'acima65' },
-    ]
   },
   {
     id:'profissaoConjuge', type:'profissao', condicional: (a) => a.tipo === 'casados' || a.tipo === 'uniao' || a.tipo === 'noivos',
@@ -2100,9 +2094,15 @@ function carroAno(v) {
   const m = { sem:0, ate2009:2009, '2010a2013':2013, '2014a2020':2018, '2021mais':2023, '2014mais':2018 };
   return m[v] ?? 0;
 }
-function idadeOk(v) { return v === '30a65'; }
+function idadeOk(v) {
+  const n = parseInt(v, 10);
+  return !isNaN(n) && n >= 30 && n <= 65;
+}
+function idadeOkCN(v) {
+  const n = parseInt(v, 10);
+  return !isNaN(n) && n >= 28 && n <= 65;
+}
 function idadeOkCasal(a) {
-  // Solteiro: só idadeMarido; casal: pelo menos um titular com 30–65
   if (a.tipo === 'solteiro') return idadeOk(a.idadeMarido);
   return idadeOk(a.idadeMarido) || idadeOk(a.idadeConjuge);
 }
@@ -2152,11 +2152,10 @@ function _nqNoivos()   { return { verdict:'NQ', rows:[{i:'⚠️', l:'Relacionam
 function calcAltaVista() {
   const a = ans;
   const { rNum, cAno, isSol, isNoivos, relOk, cartaoS, casaS } = _base(a);
-  // CN aceita 28–65: valor 'menor30' ainda inclui 28 e 29, então aprovamos menor30 OU 30a65
-  const idOkCN = (v) => v === '30a65' || v === 'menor30';
+  // CN aceita 28–65
   const idOk = a.tipo === 'solteiro'
-    ? idOkCN(a.idadeMarido)
-    : (idOkCN(a.idadeMarido) || idOkCN(a.idadeConjuge));
+    ? idadeOkCN(a.idadeMarido)
+    : (idadeOkCN(a.idadeMarido) || idadeOkCN(a.idadeConjuge));
 
   if (isNoivos) return _nqNoivos();
 
@@ -2752,10 +2751,17 @@ function renderStep() {
   const wTl = document.getElementById('wrapTel');
   const wC  = document.getElementById('wrapChips');
   const wP  = document.getElementById('wrapProfissao');
+  const wI  = document.getElementById('wrapIdade');
   const btn = document.getElementById('btnProx');
   document.getElementById('stepNote').classList.add('hidden');
-  if (q.type==='text') {
-    wN.classList.remove('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden'); wP.classList.add('hidden');
+  if (q.type==='idade') {
+    wI.classList.remove('hidden'); wN.classList.add('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden'); wP.classList.add('hidden');
+    const f = document.getElementById('fieldIdade');
+    f.value = ans[q.id] || '';
+    btn.disabled = !(ans[q.id] && String(ans[q.id]).trim());
+    setTimeout(() => f.focus(), 80);
+  } else if (q.type==='text') {
+    wN.classList.remove('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden'); wP.classList.add('hidden'); wI.classList.add('hidden');
     const f = document.getElementById('fieldNome');
     f.value = ans.nome || '';
     btn.disabled = !(ans.nome && ans.nome.trim());
@@ -2778,13 +2784,13 @@ function renderStep() {
     btn.disabled = !ans.cidade;
     setTimeout(() => document.getElementById('cidadeSearchInput').focus(), 80);
   } else if (q.type==='tel') {
-    wTl.classList.remove('hidden'); wN.classList.add('hidden'); wCd.classList.add('hidden'); wC.classList.add('hidden'); wP.classList.add('hidden');
+    wTl.classList.remove('hidden'); wN.classList.add('hidden'); wCd.classList.add('hidden'); wC.classList.add('hidden'); wP.classList.add('hidden'); wI.classList.add('hidden');
     const f = document.getElementById('fieldTelQuiz');
     f.value = ans.tel || '';
     btn.disabled = !(ans.tel && ans.tel.replace(/\D/g,'').length === 11);
     setTimeout(() => f.focus(), 80);
   } else if (q.type==='profissao') {
-    wP.classList.remove('hidden'); wN.classList.add('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden');
+    wP.classList.remove('hidden'); wN.classList.add('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden'); wI.classList.add('hidden');
     _profQidAtual = q.id;
     const jaSelected = ans[q.id];
     const selChip = document.getElementById('profSelectedChip');
@@ -2802,6 +2808,7 @@ function renderStep() {
     setTimeout(() => document.getElementById('profSearchInput').focus(), 80);
   } else {
     wN.classList.add('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.remove('hidden'); wP.classList.add('hidden');
+    wI.classList.add('hidden');
     wC.innerHTML = '';
     // Para CN (28–65), substituir label/icon da opção menor30 nas perguntas de idade
     const _cnSala = salaAtual && ['alta-vista','atrium','marina','externo-cn'].includes(salaAtual.id);
@@ -2826,6 +2833,14 @@ function renderStep() {
 function onNomeInput() {
   const v = document.getElementById('fieldNome').value.trim();
   ans.nome = v;
+  document.getElementById('btnProx').disabled = !v;
+}
+function onIdadeInput() {
+  const qs = getQSAtivas();
+  const q = qs[step];
+  const v = document.getElementById('fieldIdade').value.trim();
+  if (v) ans[q.id] = v;
+  else delete ans[q.id];
   document.getElementById('btnProx').disabled = !v;
 }
 function onTelInput() {
@@ -2961,7 +2976,6 @@ function showResult() {
   const TIPO_LABEL = { casados:'Casal casado', uniao:'União estável', noivos:'Noivos/Namorados', solteiro:'Solteiro/Divorciado' };
   const RENDA_LABEL = { abaixo6k:'Abaixo de R$ 6.000', '6k':'R$ 6.000 – R$ 7.999', '8k':'R$ 8.000 – R$ 9.999', '10k':'R$ 10.000 – R$ 11.999', '12k':'R$ 12.000 – R$ 14.999', '15k':'R$ 15.000 – R$ 19.999', '20k':'R$ 20.000 ou mais' };
   const CARRO_LABEL = { sem:'Sem carro', ate2009:'Até 2009', '2010a2013':'2010 a 2013', '2014a2020':'2014 a 2020', '2021mais':'2021 ou acima', '2014mais':'2014 ou mais recente' };
-  const IDADE_LABEL = { menor30:'Abaixo de 30 anos', '30a65':'30 a 65 anos', acima65:'Acima de 65 anos' };
   const TEMPO_LABEL = { menos1ano:'Menos de 1 ano', '1anoMais':'1 ano ou mais' };
   const telFmt = (t) => t ? t.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3') : '—';
 
@@ -2976,11 +2990,11 @@ function showResult() {
   if (ans.tipo === 'uniao' && ans.tempoRel) {
     respItems.push({ label: 'Tempo relação', val: TEMPO_LABEL[ans.tempoRel] || ans.tempoRel });
   }
-  respItems.push({ label: 'Idade (titular)',     val: IDADE_LABEL[ans.idadeMarido] || ans.idadeMarido || '—' });
+  respItems.push({ label: 'Idade (titular)',     val: ans.idadeMarido ? ans.idadeMarido + ' anos' : '—' });
   if (ans.profissaoTitular)
     respItems.push({ label: 'Profissão (titular)', val: ans.profissaoTitular });
   if (ans.tipo === 'casados' || ans.tipo === 'uniao' || ans.tipo === 'noivos') {
-    respItems.push({ label: 'Idade (cônjuge)',     val: IDADE_LABEL[ans.idadeConjuge] || ans.idadeConjuge || '—' });
+    respItems.push({ label: 'Idade (cônjuge)',     val: ans.idadeConjuge ? ans.idadeConjuge + ' anos' : '—' });
     if (ans.profissaoConjuge)
       respItems.push({ label: 'Profissão (cônjuge)', val: ans.profissaoConjuge });
   }
@@ -3222,19 +3236,18 @@ function renderHistList() {
     ${visíveis.map(h=>{
       const a = h._ans || {};
       const CARRO_LABEL   = { sem:'Sem carro', ate2009:'Carro até 2009', '2010a2013':'Carro 2010–2013', '2014a2020':'Carro 2014–2020', '2021mais':'Carro 2021+', '2014mais':'Carro 2014+' };
-      const IDADE_LABEL   = { menor30:'< 30 anos', '30a65':'30–65 anos', acima65:'> 65 anos' };
       const VIAGENS_LABEL = { '1x':'1x/ano', '2x':'2x/ano', '3x':'3x/ano', '4x':'4x+/ano' };
       const chips = [];
       if (h.cidade && h.cidade !== '—')
         chips.push({ t: h.cidade, c:'neu' });
       const _isCN = ['Alta Vista','Atrium','Marina','Externo'].includes(h.sala);
-      const _idadeOkChip = (v) => v === '30a65' || (_isCN && v === 'menor30');
+      const _idadeOkChip = (v) => { const n = parseInt(v,10); return !isNaN(n) && n >= (_isCN?28:30) && n <= 65; };
       if (a.idadeMarido)
-        chips.push({ t: 'Tit. ' + (IDADE_LABEL[a.idadeMarido]  || a.idadeMarido),  c: _idadeOkChip(a.idadeMarido)  ? 'ok' : 'no' });
+        chips.push({ t: 'Tit. ' + a.idadeMarido + ' anos', c: _idadeOkChip(a.idadeMarido) ? 'ok' : 'no' });
       if (a.profissaoTitular)
         chips.push({ t: a.profissaoTitular, c:'neu' });
       if (a.idadeConjuge && h.tipo !== 'solteiro')
-        chips.push({ t: 'Côn. ' + (IDADE_LABEL[a.idadeConjuge] || a.idadeConjuge), c: _idadeOkChip(a.idadeConjuge) ? 'ok' : 'no' });
+        chips.push({ t: 'Côn. ' + a.idadeConjuge + ' anos', c: _idadeOkChip(a.idadeConjuge) ? 'ok' : 'no' });
       if (a.profissaoConjuge && h.tipo !== 'solteiro')
         chips.push({ t: 'Côn. ' + a.profissaoConjuge, c:'neu' });
       if (a.carro)
