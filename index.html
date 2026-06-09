@@ -4424,7 +4424,7 @@ function ddpFillClass(val, meta) {
   return 'ddp-fill-red';
 }
 function ddpPct(n, d) { return d > 0 ? Math.round(n / d * 1000) / 10 : 0; }
-function fmtPct(v)    { return (Number.isInteger(v) ? v + ',0' : String(v).replace('.', ',')) + '%'; }
+function fmtPct(v)    { if (v === undefined || v === null || isNaN(v)) return '—'; return (Number.isInteger(v) ? v + ',0' : String(v).replace('.', ',')) + '%'; }
 
 // Retorna as operações que o líder logado pode ver
 function ddpOpcoesLider() {
@@ -5609,16 +5609,18 @@ function ddpSetHotel(h) {
 function acHotel(h) {
   const anoMes = todayISO().slice(0, 7);
   const entries = ddpLoadHist(h).filter(r => r.dateISO && r.dateISO.startsWith(anoMes));
-  const acc = { ciPool:0, ciCot:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
+  const acc = { ciPool:0, ciCot:0, ciConv:0, ciGrupos:0, salaPool:0, salaCot:0, salaConv:0, vendPool:0, vendCot:0, vendConv:0 };
   entries.forEach(e => {
-    acc.ciPool   += e.ciPool   || 0;
-    acc.ciCot    += e.ciCot    || 0;
-    acc.salaPool += e.salaPool || 0;
-    acc.salaCot  += e.salaCot  || 0;
-    acc.salaConv += e.salaConv || 0;
-    acc.vendPool += e.vendPool || 0;
-    acc.vendCot  += e.vendCot  || 0;
-    acc.vendConv += e.vendConv || 0;
+    acc.ciPool    += e.ciPool    || 0;
+    acc.ciCot     += e.ciCot     || 0;
+    acc.ciConv    += e.ciConv    || 0;
+    acc.ciGrupos  += e.ciGrupos  || 0;
+    acc.salaPool  += e.salaPool  || 0;
+    acc.salaCot   += e.salaCot   || 0;
+    acc.salaConv  += e.salaConv  || 0;
+    acc.vendPool  += e.vendPool  || 0;
+    acc.vendCot   += e.vendCot   || 0;
+    acc.vendConv  += e.vendConv  || 0;
   });
   // Para hotéis auto: para cada dia do mês com leads em memória,
   // subtrai o que foi somado via entries (pode estar zerado no Sheets)
@@ -5649,12 +5651,15 @@ function acHotel(h) {
       }
     });
   }
-  acc.ciTotal   = acc.ciPool + acc.ciCot;
-  acc.salaTotal = acc.salaPool + acc.salaCot + acc.salaConv;
-  acc.vendTotal = acc.vendPool + acc.vendCot + acc.vendConv;
-  acc.mc        = Math.round(acc.ciPool * DDP_CONFIG.metaPenetracaoPool);
+  acc.ciTotal    = acc.ciPool + acc.ciCot + acc.ciConv;
+  acc.salaTotal  = acc.salaPool + acc.salaCot + acc.salaConv;
+  acc.vendTotal  = acc.vendPool + acc.vendCot + acc.vendConv;
+  acc.mc         = Math.round(acc.ciPool * DDP_CONFIG.metaPenetracaoPool);
   acc.penetPool  = ddpPct(acc.salaPool, acc.ciPool);
+  acc.penetConv  = ddpPct(acc.salaConv, acc.ciConv);
+  acc.penetAnltc = ddpPct(acc.salaPool + acc.salaConv, acc.ciPool + acc.ciConv);
   acc.penetGeral = ddpPct(acc.salaTotal, acc.ciTotal);
+  acc.pctGrupos  = ddpPct(acc.ciGrupos, acc.ciPool);
   acc.efic       = ddpPct(acc.vendTotal, acc.salaTotal);
   return acc;
 }
