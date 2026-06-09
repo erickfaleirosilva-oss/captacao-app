@@ -1254,8 +1254,8 @@ const CONFIG = {
     // — Atibaia —
     // { nome: 'Evelyn Mirella Bueno Ramos', cargo: 'captador', sala: 'Atibaia', senhaHash: '88c2f89f9caee1bea44c0d506fdf121c99a91e7d454d92ce0e0d0f23eec75e0d' }, // desligada 07/05/2026
     // { nome: 'Pablo César Sánchez Montealegre',     cargo: 'captador', sala: 'Atibaia', senhaHash: 'c1761e6dff44a93b593ed7447d983c259a5aefdf3a11960b81c2196ca56772bc' }, // desligado 13/05/2026
-    { nome: 'Diego Santos de Lima',               cargo: 'captador', sala: 'Atibaia', senhaHash: 'df85278327aa37e896b48dbe64ac4c34986562bd1075951a6863de3a7a23031c' },
-    { nome: 'Guilherme Campos de Castilho',       cargo: 'captador', sala: 'Atibaia', senhaHash: '072e689d4a6c8baaf7508c909836d61125b6447906872d4cd92309a8a53f3e04' },
+    { nome: 'Diego Santos de Lima',               cargo: 'captador', operacao: 'Atibaia', senhaHash: 'df85278327aa37e896b48dbe64ac4c34986562bd1075951a6863de3a7a23031c' },
+    { nome: 'Guilherme Campos de Castilho',       cargo: 'captador', operacao: 'Atibaia', senhaHash: '072e689d4a6c8baaf7508c909836d61125b6447906872d4cd92309a8a53f3e04' },
     { nome: 'Ismael Rodrigo Araújo de Sousa',     cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '9826d409a7390795a2b6e7176fcb4b9b97d911126c2a0d9ae045a0f811af636d' },
     { nome: 'Cristina Gonçalves Lobo',            cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '54b6d84a5cfa83703cf3da4940e2617f8858553f33995165ea17746870226a76' },
     // — Lideranças —
@@ -1264,7 +1264,7 @@ const CONFIG = {
     { nome: 'Rarley Rodrigo',         cargo: 'lider',    operacao: 'Caldas Novas', senhaHash: 'ceaf77ccc2b5ac550fd1fd34458f7a7790b0f0c6635e157eac3ac8237b944bce' },
     { nome: 'Rogerio Medeiros',       cargo: 'lider',    operacao: 'São Pedro',    senhaHash: 'a5a9b74ffc8d1bdc63761cd5e397a8e36b3cd82d9b05236d283f4c350a49a9de' },
     { nome: 'Camila Cristina Pinto', cargo: 'lider',    operacao: 'São Pedro',    senhaHash: '6aa6104fef39e5b462793b6ba614f945d40bd4a761965dc53b4720d83e85d8d0' },
-    { nome: 'André Luis Neves Fontes',cargo: 'sublider', sala: 'Atibaia',          senhaHash: 'a84136124669f0f9cf606fa1049cb7fe6b6aca50b0f7570e836035e89caf3e54' },
+    { nome: 'André Luis Neves Fontes',cargo: 'sublider', operacao: 'Atibaia',       senhaHash: 'a84136124669f0f9cf606fa1049cb7fe6b6aca50b0f7570e836035e89caf3e54' },
     { nome: 'Erick Faleiro',          cargo: 'ceo',                               senhaHash: 'd6a6f6d36aa9001ed5521eec687c1fa4209e4c008e91f9cb8eb7512b32fc0ea7' },
   ],
   salas: [
@@ -1275,7 +1275,10 @@ const CONFIG = {
     { id: 'thermas-sp', nome: 'Thermas SP',  cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'Thermas SP',  operacao: 'São Pedro',    ddpHotel: null         },
     { id: 'sptr',       nome: 'SPTR',        cidade: 'São Pedro',    modos: ['baixo3k','alto3k'], sheetName: 'São Pedro',   operacao: 'São Pedro',    ddpHotel: 'SPTR'       },
     { id: 'externo-sp', nome: 'Externo',     cidade: 'São Pedro',    modos: [],                   sheetName: 'Externo SP',  operacao: 'São Pedro',    ddpHotel: null         },
-    { id: 'atibaia',    nome: 'Atibaia',     cidade: 'Atibaia',      modos: [],                   sheetName: 'Atibaia',     operacao: null,           ddpHotel: null         },
+    { id: 'porta-sala-atibaia', nome: 'Porta da sala', cidade: 'Atibaia', modos: [], sheetName: 'Porta da sala', operacao: 'Atibaia', ddpHotel: null },
+    { id: 'vest-casa',          nome: 'Vest Casa',     cidade: 'Atibaia', modos: [], sheetName: 'Vest Casa',     operacao: 'Atibaia', ddpHotel: null },
+    { id: 'entrada-outlet',     nome: 'Entrada Outlet',cidade: 'Atibaia', modos: [], sheetName: 'Entrada Outlet',operacao: 'Atibaia', ddpHotel: null },
+    { id: 'corredor-outlet',    nome: 'Corredor Outlet',cidade: 'Atibaia',modos: [], sheetName: 'Corredor Outlet',operacao: 'Atibaia',ddpHotel: null },
   ],
   // Salas que alimentam o DDP automaticamente (captadores marcam tipo+venda no histórico)
   salasDdpAuto: ['Alta Vista', 'Atrium', 'Marina', 'SPTR', 'Thermas SP'],
@@ -1285,6 +1288,8 @@ const CONFIG = {
   salasCaldas: ['Alta Vista', 'Atrium', 'Marina', 'Externo'],
   // Operações de São Pedro (captadores escolhem a sala ao iniciar)
   salasSaoPedro: ['Thermas SP', 'SPTR', 'Externo'],
+  // Pontos de Atibaia (captadores escolhem ao iniciar)
+  salasAtibaia: ['Porta da sala', 'Vest Casa', 'Entrada Outlet', 'Corredor Outlet'],
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
   faixasRenda: [
     { value: 'abaixo6k',  label: 'Abaixo de R$ 6.000',    num: 0     },
@@ -1369,7 +1374,7 @@ const SALAS_SP_ANTIGAS = new Set([
 ]);
 // Nomes antigos de outros hotéis (mapeamento direto, sem ambiguidade)
 const SALA_ALIAS_DIRETO = {
-  // Adicionar aqui se houver outros hotéis com nomes antigos
+  'Atibaia': 'Porta da sala',
 };
 function normalizarSala(sala, captadorNome) {
   if (!sala) return sala;
@@ -1424,7 +1429,7 @@ function getOperacoesExtras(membro) {
   if (!temp) return fixas;
   return [...new Set([...fixas, ...temp.operacoes])];
 }
-let leads    =(JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]')).map(l => ({ ...l, sala: normalizarSala(l.sala, l.captador) }));
+let leads    =(JSON.parse(sessionStorage.getItem('yv_leads') || localStorage.getItem('yv_leads') || '[]')).map(l => ({ ...l, sala: normalizarSala(l.sala, l.captador) })).map(l => l.sala === 'Atibaia' ? { ...l, sala: 'Porta da sala' } : l);
 let loginSelectedNome = null;
 let histFiltro = { periodo: 'hoje', captador: 'todos', operacao: 'todas', sala: 'todas', de: '', ate: '' };
 let cdpFiltro  = { periodo: 'hoje', operacao: 'todas', sala: 'todas', captador: 'todos', de: '', ate: '' };
@@ -1508,7 +1513,7 @@ const OPERACOES = ['Caldas Novas', 'São Pedro', 'Atibaia'];
 const SALAS_POR_OPERACAO = {
   'Caldas Novas': ['Alta Vista', 'Marina', 'Atrium', 'Externo'],
   'São Pedro':    ['Thermas SP', 'SPTR', 'Externo SP'],
-  'Atibaia':      ['Atibaia'],
+  'Atibaia':      ['Porta da sala', 'Vest Casa', 'Entrada Outlet', 'Corredor Outlet'],
 };
 // Retorna salas filtradas pela operação selecionada (considera operação do login também)
 function getSalasVisiveis(operacaoFiltro) {
@@ -2645,6 +2650,12 @@ function startQuiz() {
     hideAll(); show('screenSala');
     return;
   }
+  // Captadores de Atibaia → escolhem ponto de captação
+  if (captador && captador.operacao === 'Atibaia' && !captador.sala) {
+    renderSalaAtibaiaScreen();
+    hideAll(); show('screenSala');
+    return;
+  }
   // Se captador tem sala fixa cadastrada, pula a tela de seleção de sala
   if (captador && captador.sala) {
     const salaCfg = CONFIG.salas.find(s => s.nome === captador.sala || s.id === captador.sala);
@@ -2679,6 +2690,28 @@ function renderSalaCnScreen() {
     const cfg = CONFIG.salas.find(s => s.nome === nome && s.operacao === 'Caldas Novas');
     return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nome}')">
       <div class="sala-chip-icon">${icons[nome] || '🏢'}</div>
+      <div class="sala-chip-label">${nome}</div>
+      <div class="sala-chip-sub">${descs[nome] || ''}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('fieldOutraSala').value = '';
+  document.getElementById('btnIniciarQuiz').disabled = true;
+  const title = document.getElementById('salaTitulo');
+  if (title) title.textContent = '📍 Qual ponto você está hoje?';
+  const sub = document.getElementById('salaSub');
+  if (sub) sub.textContent = 'Selecione onde você está prospectando agora';
+}
+
+// Tela específica de seleção de ponto para captadores de Atibaia
+function renderSalaAtibaiaScreen() {
+  const chips = document.getElementById('salaChips');
+  const salas = CONFIG.salasAtibaia;
+  const icons = { 'Porta da sala': '🚪', 'Vest Casa': '👗', 'Entrada Outlet': '🛍️', 'Corredor Outlet': '🛒' };
+  const descs = { 'Porta da sala': 'Entrada principal da sala de vendas', 'Vest Casa': 'Área do Vest Casa', 'Entrada Outlet': 'Entrada do Outlet', 'Corredor Outlet': 'Corredor interno do Outlet' };
+  chips.innerHTML = salas.map(nome => {
+    const cfg = CONFIG.salas.find(s => s.nome === nome && s.operacao === 'Atibaia');
+    return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nome}')">
+      <div class="sala-chip-icon">${icons[nome] || '📍'}</div>
       <div class="sala-chip-label">${nome}</div>
       <div class="sala-chip-sub">${descs[nome] || ''}</div>
     </div>`;
