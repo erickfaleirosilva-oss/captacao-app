@@ -1464,10 +1464,13 @@ function usaSenhaPadrao(nome) {
 function temAcessoTotal(c) {
   return c && ['sublider','lider','ceo'].includes(c.cargo);
 }
-// Retorna as salas da operação do líder (para filtro quando não tem sala fixa)
+// Retorna todas as strings que identificam salas de uma operação (nome + sheetName)
 function getSalasDeOperacao(operacao) {
   if (!operacao) return [];
-  return CONFIG.salas.filter(s => s.operacao === operacao).map(s => s.nome);
+  const salasOp = CONFIG.salas.filter(s => s.operacao === operacao);
+  const ids = new Set();
+  salasOp.forEach(s => { if (s.nome) ids.add(s.nome); if (s.sheetName) ids.add(s.sheetName); });
+  return [...ids];
 }
 // CEO vê tudo; lider/sublider com sala fixa vê só sua sala;
 // lider/sublider com operacao (sem sala fixa) vê todas as salas da operação
