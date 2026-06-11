@@ -2124,7 +2124,11 @@ function calcResult() {
   if (salaId === 'sptr')       return calcSaoPedro();
   if (salaId === 'thermas-sp') return calcSaoPedro();
   if (salaId === 'sao-pedro')  return calcSaoPedro(); // legado
-  if (salaId === 'atibaia')    return calcAtibaia();
+  if (salaId === 'atibaia')            return calcAtibaia();
+  if (salaId === 'porta-sala-atibaia') return calcAtibaia();
+  if (salaId === 'vest-casa')          return calcAtibaia();
+  if (salaId === 'entrada-outlet')     return calcAtibaia();
+  if (salaId === 'corredor-outlet')    return calcAtibaia();
   // Fallback: salaAtual digitada no campo livre (id=null) — mapeia pelo nome
   if (!salaId && salaAtual && salaAtual.nome) {
     const _nome = salaAtual.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
