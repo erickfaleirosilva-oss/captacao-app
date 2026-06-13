@@ -6070,6 +6070,12 @@ window.abrirTrocarSenha = openPwChange;
 // ── PWA — Service Worker ──────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Recarrega automaticamente quando o SW detecta nova versão do app
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'APP_UPDATED') {
+      window.location.reload();
+    }
+  });
 }
 
 // ── PWA — Offline queue ───────────────────────────────────

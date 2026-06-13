@@ -1,5 +1,6 @@
 // Your Vacation — Service Worker (PWA offline)
-const CACHE_NAME = 'yv-captacao-v2';
+// Estratégia: network-first com fallback cache. Ao detectar update, notifica o app para recarregar.
+const CACHE_NAME = 'yv-captacao-v3';
 const ASSETS = [
   '/captacao-app/',
   '/captacao-app/index.html',
@@ -8,7 +9,7 @@ const ASSETS = [
   '/captacao-app/icon-512.png',
 ];
 
-// Instalação — faz cache dos arquivos principais
+// Instalação
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
@@ -16,33 +17,38 @@ self.addEventListener('install', e => {
   self.skipWaiting();
 });
 
-// Ativação — remove caches antigos
+// Ativação — remove caches antigos e avisa todos os clientes para recarregar
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    ).then(() => {
+      // Notifica todos os clientes abertos que há nova versão disponível
+      return self.clients.matchAll({ type: 'window' }).then(clients => {
+        clients.forEach(client => client.postMessage({ type: 'APP_UPDATED' }));
+      });
+    })
   );
   self.clients.claim();
 });
 
-// Fetch — serve do cache se offline, senão busca na rede e atualiza cache
+// Fetch — network-first: tenta a rede, cai no cache se offline
 self.addEventListener('fetch', e => {
-  // Não intercepta chamadas ao Google Apps Script (webhook)
+  // Não intercepta chamadas ao Google Apps Script
   if (e.request.url.includes('script.google.com')) return;
+  // Só intercepta assets do app
+  if (!e.request.url.includes('/captacao-app/') && !e.request.url.endsWith('/captacao-app')) return;
 
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const network = fetch(e.request).then(response => {
-        // Atualiza cache com versão nova se for um asset do app
-        if (response.ok && e.request.url.includes('/captacao-app/')) {
-          caches.open(CACHE_NAME).then(cache => cache.put(e.request, response.clone()));
-        }
-        return response;
-      }).catch(() => null);
-
-      // Retorna cache imediatamente se disponível, senão aguarda rede
-      return cached || network;
+    fetch(e.request).then(response => {
+      // Atualiza cache com versão nova
+      if (response.ok) {
+        caches.open(CACHE_NAME).then(cache => cache.put(e.request, response.clone()));
+      }
+      return response;
+    }).catch(() => {
+      // Sem rede — serve do cache
+      return caches.match(e.request);
     })
   );
 });
