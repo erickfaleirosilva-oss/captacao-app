@@ -1374,7 +1374,8 @@ const SALAS_SP_ANTIGAS = new Set([
 ]);
 // Nomes antigos de outros hotéis (mapeamento direto, sem ambiguidade)
 const SALA_ALIAS_DIRETO = {
-  'Atibaia': 'Porta da sala',
+  'Atibaia':    'Porta da sala',
+  'São Pedro':  'SPTR',  // nome de aba legado → sala correta
 };
 function normalizarSala(sala, captadorNome) {
   if (!sala) return sala;

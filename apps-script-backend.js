@@ -10,10 +10,17 @@ const SALA_SHEETS = {
   'Atrium':           'Alta Vista',
   'Marina':           'Alta Vista',
   'Externo':          'Alta Vista',
+  'Externo CN':       'Alta Vista',
   'Thermas SP':       'São Pedro',
   'SPTR':             'São Pedro',
+  'São Pedro':        'São Pedro',   // nome de aba legado
   'São Pedro Resort': 'São Pedro',   // legado
+  'Externo SP':       'São Pedro',
   'Atibaia':          'Atibaia',
+  'Porta da sala':    'Atibaia',
+  'Vest Casa':        'Atibaia',
+  'Entrada Outlet':   'Atibaia',
+  'Corredor Outlet':  'Atibaia',
 };
 const DEFAULT_SHEET = 'Alta Vista'; // fallback — evita criação de abas novas
 
@@ -250,6 +257,7 @@ function doPost(e) {
           set('EmSala',   data.emSala   ? 'SIM' : '');
           set('TipoSala', data.tipoSala || '');
           set('Venda',    data.venda    ? 'SIM' : '');
+          if (data.sala !== undefined) set('Sala', data.sala);
           return jsonResponse({ status: 'ok', id: data.id });
         }
       }
@@ -356,6 +364,27 @@ function doGet(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const params = e && e.parameter ? e.parameter : {};
     const salaFiltro = params.sala || null;
+
+    // ?_action=update_sala&id=...&sala=... — atualiza coluna Sala via GET
+    if (params._action === 'update_sala') {
+      const sheetsAlvo = Object.values(SALA_SHEETS).map(n => ss.getSheetByName(n)).filter(Boolean);
+      for (const sheet of sheetsAlvo) {
+        const row = findRowById(sheet, params.id);
+        if (row > 0) {
+          const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          const set = (col, val) => {
+            const i = cabecalho.indexOf(col);
+            if (i >= 0) sheet.getRange(row, i + 1).setValue(val);
+          };
+          if (params.sala !== undefined) set('Sala', params.sala);
+          if (params.emSala !== undefined) set('EmSala', params.emSala === 'true' ? 'SIM' : '');
+          if (params.tipoSala !== undefined) set('TipoSala', params.tipoSala);
+          if (params.venda !== undefined) set('Venda', params.venda === 'true' ? 'SIM' : '');
+          return jsonResponse({ status: 'ok', id: params.id });
+        }
+      }
+      return jsonResponse({ status: 'not_found', id: params.id });
+    }
 
     // ?_type=pi — retorna pesquisas incompletas do PropertiesService
     if (params._type === 'pi') {
