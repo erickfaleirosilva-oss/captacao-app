@@ -1554,25 +1554,6 @@ function todayISO() {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-// Retorna ISO de "ontem" (data local — igual todayISO)
-function ontemISO() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-// Para o chip "Hoje" do filtro de período: perfis com acesso total
-// (CEO/líder/sublíder) enxergam "hoje + ontem" para não perder leads da
-// virada do dia. Captadores comuns continuam vendo só o dia atual.
-function periodoHoje() {
-  if (typeof captador !== 'undefined' && captador && temAcessoTotal(captador)) {
-    return { de: ontemISO(), ate: todayISO() };
-  }
-  const h = todayISO();
-  return { de: h, ate: h };
-}
 
 // TEMA
 function toggleTheme() {
@@ -3109,10 +3090,7 @@ function filtrarLeads(fonte, filtro) {
   let filtered = fonte;
 
   if (filtro.periodo === 'hoje') {
-    // CEO/líder/sublíder: hoje + ontem (para não perder leads da virada do dia).
-    // Captador comum: só hoje.
-    const ph = periodoHoje();
-    filtered = filtered.filter(l => (l.dateISO||'') >= ph.de && (l.dateISO||'') <= ph.ate);
+    filtered = filtered.filter(l => l.dateISO === hoje);
   } else if (filtro.periodo === 'semana') {
     const dom = domingoSemana();
     // sábado = domingo + 6 dias
@@ -3204,8 +3182,7 @@ function renderHistFiltros() {
   const wrap = document.getElementById('histFiltrosWrap');
   const todos = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
   const periodos = [
-    // CEO/líder/sublíder: chip "Hoje" cobre hoje + ontem (não perde virada do dia)
-    { v:'hoje',   l: (captador && temAcessoTotal(captador)) ? 'Hoje + ontem' : 'Hoje' },
+    { v:'hoje',   l:'Hoje'        },
     { v:'semana', l:'Esta semana' },
     { v:'mes',    l:'Este mês'    },
     { v:'livre',  l:'Período'     },
@@ -3475,9 +3452,7 @@ function executarExport() {
   const agora = new Date();
   let fonte = fonteAll;
   if (periodo === 'hoje') {
-    // CEO/líder/sublíder: hoje + ontem (alinhado com o chip "Hoje + ontem")
-    const ph = periodoHoje();
-    fonte = fonte.filter(l => (l.dateISO||'') >= ph.de && (l.dateISO||'') <= ph.ate);
+    fonte = fonte.filter(l => l.dateISO === hoje);
   } else if (periodo === 'semana') {
     const semanaAtras = new Date(agora); semanaAtras.setDate(semanaAtras.getDate() - 7);
     const saISO = semanaAtras.toISOString().slice(0,10);
@@ -3636,8 +3611,7 @@ function renderCdpFiltros() {
   const wrap = document.getElementById('cdpFiltrosWrap');
   if (!wrap) return;
   const periodos = [
-    // CEO/líder/sublíder: chip "Hoje" cobre hoje + ontem (não perde virada do dia)
-    { v:'hoje',   l: (captador && temAcessoTotal(captador)) ? 'Hoje + ontem' : 'Hoje' },
+    { v:'hoje',   l:'Hoje'        },
     { v:'semana', l:'Esta semana' },
     { v:'mes',    l:'Este mês'    },
     { v:'livre',  l:'Período'     },
@@ -3711,7 +3685,7 @@ function cdpSubTexto(lista) {
   const salaLider = getSalaDoLider(captador);
   const salaExib  = cdpFiltro.sala !== 'todas' ? cdpFiltro.sala : (salaLider || null);
   const sufixo    = salaExib ? ' · ' + salaExib : '';
-  const periodoLabel = { hoje:(captador && temAcessoTotal(captador)) ? 'Hoje + ontem' : 'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período livre' };
+  const periodoLabel = { hoje:'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período livre' };
   return (periodoLabel[cdpFiltro.periodo]||'') + sufixo + ' · ' + lista.length + ' pesquisas';
 }
 function exportarCdpExcel() {
@@ -3738,7 +3712,7 @@ function exportarCdpExcel() {
     .sort((a,b) => b.total - a.total);
 
   // Período e filtros ativos
-  const periodoLabel = { hoje:(captador && temAcessoTotal(captador)) ? 'Hoje + ontem' : 'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período livre' };
+  const periodoLabel = { hoje:'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período livre' };
   const periodo = periodoLabel[cdpFiltro.periodo] || cdpFiltro.periodo;
   const salaLabel = cdpFiltro.sala !== 'todas' ? cdpFiltro.sala : 'Todas';
   const captadorLabel = cdpFiltro.captador !== 'todos' ? cdpFiltro.captador : 'Todos';
@@ -3834,11 +3808,7 @@ function renderCdp(leadsHoje) {
     const hoje = todayISO();
     const allPIs = filtrarPorAcessoPI(getPIs());
     const tPI = allPIs.filter(p => {
-      if (cdpFiltro.periodo === 'hoje') {
-        // CEO/líder/sublíder: hoje + ontem (alinhado com o chip "Hoje + ontem")
-        const ph = periodoHoje();
-        return (p.dateISO||'') >= ph.de && (p.dateISO||'') <= ph.ate;
-      }
+      if (cdpFiltro.periodo === 'hoje')   return p.dateISO === hoje;
       if (cdpFiltro.periodo === 'semana') return p.dateISO >= domingoSemana() && p.dateISO <= hoje;
       if (cdpFiltro.periodo === 'mes')    return p.dateISO && p.dateISO.slice(0,7) === hoje.slice(0,7);
       if (cdpFiltro.periodo === 'livre')  return (!cdpFiltro.de || p.dateISO >= cdpFiltro.de) && (!cdpFiltro.ate || p.dateISO <= cdpFiltro.ate);
@@ -3882,11 +3852,7 @@ function renderCdp(leadsHoje) {
   // Acumula PIs no mapa (mesmo filtro de período/sala)
   const hoje2 = todayISO();
   filtrarPorAcessoPI(getPIs()).filter(p => {
-    if (cdpFiltro.periodo === 'hoje') {
-      // CEO/líder/sublíder: hoje + ontem (alinhado com o chip "Hoje + ontem")
-      const ph2 = periodoHoje();
-      return (p.dateISO||'') >= ph2.de && (p.dateISO||'') <= ph2.ate;
-    }
+    if (cdpFiltro.periodo === 'hoje')   return p.dateISO === hoje2;
     if (cdpFiltro.periodo === 'semana') return p.dateISO >= domingoSemana() && p.dateISO <= hoje2;
     if (cdpFiltro.periodo === 'mes')    return p.dateISO && p.dateISO.slice(0,7) === hoje2.slice(0,7);
     if (cdpFiltro.periodo === 'livre')  return (!cdpFiltro.de || p.dateISO >= cdpFiltro.de) && (!cdpFiltro.ate || p.dateISO <= cdpFiltro.ate);
@@ -4023,7 +3989,7 @@ function trLeadsFiltrados() {
 
 function atualizarTimeRange() {
   const lista = trLeadsFiltrados();
-  const periodoLabel = { hoje:(captador && temAcessoTotal(captador)) ? 'Hoje + ontem' : 'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período' };
+  const periodoLabel = { hoje:'Hoje', semana:'Esta semana', mes:'Este mês', livre:'Período' };
   const salaLider = getSalaDoLider(captador);
   const salaExib  = trFiltro.sala !== 'todas' ? trFiltro.sala : (salaLider || null);
   const sufixo    = salaExib ? ' · ' + salaExib : '';
