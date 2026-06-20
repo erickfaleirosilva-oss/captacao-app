@@ -542,6 +542,201 @@ function migrarTodasAsAbas() {
   Logger.log('Migração concluída.');
 }
 
+// ── AUDITORIA DE ABAS — apenas loga o que tem em cada aba ──
+// Rodar manualmente antes de migrarAbasPorSala() para entender o cenário.
+function auditarAbas() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  Logger.log('========== AUDITORIA DE ABAS ==========');
+  Logger.log('Mapa oficial SALA_SHEETS:');
+  Object.keys(SALA_SHEETS).forEach(sala => {
+    Logger.log('  ' + sala + ' → ' + SALA_SHEETS[sala]);
+  });
+  Logger.log('');
+  Logger.log('Abas presentes na planilha:');
+  const sheets = ss.getSheets();
+  sheets.forEach(s => {
+    const last = s.getLastRow();
+    if (last < 2) {
+      Logger.log('  [' + s.getName() + '] vazia (ou só cabeçalho)');
+      return;
+    }
+    const cabecalho = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0];
+    const idxSala = cabecalho.indexOf('Sala');
+    if (idxSala < 0) {
+      Logger.log('  [' + s.getName() + '] sem coluna Sala — pulando');
+      return;
+    }
+    // Conta distribuição de salas
+    const nCols = s.getLastColumn();
+    const rows = s.getRange(2, 1, last - 1, nCols).getValues();
+    const contagem = {};
+    rows.forEach(r => {
+      const sala = String(r[idxSala] || '').trim() || '(vazio)';
+      contagem[sala] = (contagem[sala] || 0) + 1;
+    });
+    Logger.log('  [' + s.getName() + '] ' + rows.length + ' linhas');
+    Object.keys(contagem).sort().forEach(sala => {
+      const esperado = SALA_SHEETS[sala] || '???';
+      const flag = esperado === '???' ? ' ⚠️  NÃO MAPEADA' : (esperado !== s.getName() ? ' ⚠️  ABA ERRADA (esperado: ' + esperado + ')' : '');
+      Logger.log('      - ' + sala + ': ' + contagem[sala] + flag);
+    });
+  });
+  Logger.log('========== FIM AUDITORIA ==========');
+}
+
+// ── MIGRAÇÃO DE ABAS POR SALA — separa leads mal-posicionados ──
+// 1. Identifica a aba oficial de cada operação (a com mais linhas)
+// 2. Move linhas mal-posicionadas para a aba oficial correta baseado na coluna 'Sala'
+// 3. Renomeia abas duplicadas (ex: 2x "São Pedro") — a menor vira "Nome (legada — vazia)"
+// Rodar manualmente UMA VEZ após auditarAbas() confirmar o cenário.
+function migrarAbasPorSala() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+
+  // 1. Identifica a aba oficial de cada operação (a com mais linhas)
+  // Considera só abas cujo nome bate com algum dos valores únicos de SALA_SHEETS
+  const valoresUnicos = [...new Set(Object.values(SALA_SHEETS))]; // ['Alta Vista', 'São Pedro', 'Atibaia']
+  const contagemPorNome = {};
+  valoresUnicos.forEach(nome => { contagemPorNome[nome] = []; });
+  sheets.forEach(s => {
+    if (contagemPorNome.hasOwnProperty(s.getName())) {
+      contagemPorNome[s.getName()].push(s);
+    }
+  });
+
+  const abaOficial = {}; // operacao (nome único) → Sheet oficial
+  Object.keys(contagemPorNome).forEach(nome => {
+    const candidatos = contagemPorNome[nome];
+    if (candidatos.length === 0) {
+      Logger.log('⚠️  Aba oficial "' + nome + '" não existe — criando vazia');
+      abaOficial[nome] = getOrCreateSheetByName(nome);
+    } else if (candidatos.length === 1) {
+      abaOficial[nome] = candidatos[0];
+      Logger.log('✓ Aba oficial "' + nome + '": única existente');
+    } else {
+      // Mais de uma — escolhe a com mais linhas; renomeia as outras
+      candidatos.sort((a, b) => b.getLastRow() - a.getLastRow());
+      abaOficial[nome] = candidatos[0];
+      Logger.log('✓ Aba oficial "' + nome + '": escolhida com ' + candidatos[0].getLastRow() + ' linhas');
+      for (let i = 1; i < candidatos.length; i++) {
+        const duplicada = candidatos[i];
+        const novoNome = nome + ' (legada — vazia)';
+        try {
+          duplicada.setName(novoNome);
+          Logger.log('  ↻ Aba duplicada renomeada para "' + novoNome + '"');
+        } catch (e) {
+          Logger.log('  ⚠️  Não consegui renomear aba (já existe "' + novoNome + '"?): ' + e.message);
+        }
+      }
+    }
+  });
+
+  // 2. Para cada aba (oficial ou não), move linhas para a aba oficial correta
+  let totalMovidas = 0;
+  const logMovidas = [];
+  sheets.forEach(s => {
+    const nomeAba = s.getName();
+    if (nomeAba.endsWith('(legada — vazia)')) {
+      Logger.log('⏭  Pulando aba legada: ' + nomeAba);
+      return;
+    }
+    if (!valoresUnicos.includes(nomeAba)) {
+      Logger.log('⏭  Pulando aba fora do escopo: ' + nomeAba);
+      return;
+    }
+    const last = s.getLastRow();
+    if (last < 2) return;
+    const cabecalho = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0];
+    const idxSala = cabecalho.indexOf('Sala');
+    if (idxSala < 0) return;
+    const nCols = s.getLastColumn();
+    const dados = s.getRange(2, 1, last - 1, nCols).getValues();
+
+    // Coleta linhas que precisam sair desta aba
+    const linhasParaMover = []; // { rowIdx (1-based na planilha), sala, destinoAba, valores }
+    dados.forEach((r, i) => {
+      const sala = String(r[idxSala] || '').trim();
+      if (!sala) return;
+      const destino = SALA_SHEETS[sala];
+      if (!destino) {
+        Logger.log('  ⚠️  Linha ' + (i + 2) + ' tem sala "' + sala + '" não mapeada — IGNORANDO');
+        return;
+      }
+      if (destino !== nomeAba) {
+        linhasParaMover.push({ rowIdx: i + 2, sala, destinoAba: destino, valores: r });
+      }
+    });
+
+    if (linhasParaMover.length === 0) {
+      Logger.log('✓ Aba "' + nomeAba + '": todas as ' + dados.length + ' linhas estão no lugar certo');
+      return;
+    }
+
+    Logger.log('⤴  Aba "' + nomeAba + '": ' + linhasParaMover.length + ' linhas para mover');
+    linhasParaMover.forEach(m => {
+      logMovidas.push({ de: nomeAba, para: m.destinoAba, sala: m.sala, rowIdx: m.rowIdx });
+    });
+  });
+
+  // 3. Executa as movimentações de baixo para cima em cada aba de origem
+  // Agrupa por aba de origem
+  const porOrigem = {};
+  logMovidas.forEach(m => {
+    if (!porOrigem[m.de]) porOrigem[m.de] = [];
+    porOrigem[m.de].push(m);
+  });
+  Object.keys(porOrigem).forEach(nomeOrigem => {
+    const sheetOrigem = ss.getSheetByName(nomeOrigem);
+    if (!sheetOrigem) return;
+    const cabecalho = sheetOrigem.getRange(1, 1, 1, sheetOrigem.getLastColumn()).getValues()[0];
+    const idxSala = cabecalho.indexOf('Sala');
+    const nCols = sheetOrigem.getLastColumn();
+    // Agrupa por destino
+    const porDestino = {};
+    porOrigem[nomeOrigem].forEach(m => {
+      if (!porDestino[m.destinoAba]) porDestino[m.destinoAba] = [];
+      porDestino[m.destinoAba].push(m);
+    });
+    Object.keys(porDestino).forEach(nomeDestino => {
+      const sheetDestino = abaOficial[nomeDestino];
+      if (!sheetDestino) return;
+      // Coleta os valores de cada linha (de baixo para cima para não deslocar índice ao deletar)
+      const rowsParaInserir = [];
+      const rowIdxs = porDestino[nomeDestino].map(m => m.rowIdx).sort((a, b) => b - a);
+      rowIdxs.forEach(rowIdx => {
+        const valores = sheetOrigem.getRange(rowIdx, 1, 1, nCols).getValues()[0];
+        rowsParaInserir.unshift(valores);
+      });
+      // Insere no destino (abaixo do cabeçalho)
+      sheetDestino.getRange(sheetDestino.getLastRow() + 1, 1, rowsParaInserir.length, nCols).setValues(rowsParaInserir);
+      // Reaplica cor baseada em verdict
+      rowsParaInserir.forEach((r, i) => {
+        const row = sheetDestino.getLastRow() - rowsParaInserir.length + i + 1;
+        const verdict = r[cabecalho.indexOf('Resultado')];
+        if (typeof verdict === 'string') {
+          const range = sheetDestino.getRange(row, 1, 1, nCols);
+          if (verdict === 'Q')       range.setBackground('#d4edda');
+          else if (verdict === 'PARCIAL') range.setBackground('#fff3cd');
+          else if (verdict === 'NQ') range.setBackground('#f8d7da');
+        }
+      });
+      // Remove da origem (de baixo para cima)
+      rowIdxs.forEach(rowIdx => {
+        sheetOrigem.deleteRow(rowIdx);
+      });
+      totalMovidas += rowIdxs.length;
+      Logger.log('  ⤴  ' + rowIdxs.length + ' linhas: "' + nomeOrigem + '" → "' + nomeDestino + '"');
+    });
+  });
+
+  Logger.log('========== MIGRAÇÃO CONCLUÍDA ==========');
+  Logger.log('Total de linhas movidas: ' + totalMovidas);
+  Logger.log('Abas oficiais finais:');
+  Object.keys(abaOficial).forEach(nome => {
+    Logger.log('  [' + nome + '] ' + abaOficial[nome].getLastRow() + ' linhas');
+  });
+}
+
 // ── Remove linhas duplicadas por ID, mantendo apenas a ÚLTIMA ocorrência de cada ID ──
 // Rodar manualmente no Apps Script quando houver duplicatas
 function dedupTodasAsAbas() {
