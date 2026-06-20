@@ -3742,10 +3742,12 @@ function renderCdpFiltros() {
     const salasFiltradas = getSalasVisiveis(cdpFiltro.operacao);
     html += '<select class="filtro-select" onchange="setCdpFiltro(\'sala\',this.value)">';
     html += `<option value="todas"${cdpFiltro.sala==='todas'?' selected':''}>Ponto de captação</option>`;
+    // Sempre mostra as salas individuais (Thermas SP, SPTR, Externo SP) em vez do agrupamento
+    // Para São Pedro, a op\u00e7\u00e3o "SPTR" \u00e9 a oficial (atende pelo id)
     salasFiltradas.forEach(s => {
-      const val = s.sheetName || s.nome;
-      const label = (s.sheetName && s.sheetName !== s.nome) ? s.sheetName : s.nome;
-      html += `<option value="${val}"${cdpFiltro.sala===val?' selected':''}>${label}</option>`;
+      // value = id da sala (filtra por nome exato). Para SPTR, value = 'SPTR' e n\u00e3o o sheetName
+      const val = s.nome;
+      html += `<option value="${val}"${cdpFiltro.sala===val?' selected':''}>${s.nome}</option>`;
     });
     html += '</select>';
   }
@@ -3924,13 +3926,25 @@ function renderCdp(leadsHoje) {
     // PI — filtra pelo mesmo período/sala/captador
     const hoje = todayISO();
     const allPIs = filtrarPorAcessoPI(getPIs());
+    // Mapa de equivalências: 'SPTR' cobre também 'São Pedro Resort' (legado) e 'São Pedro'
+    // (porque o sheetName de SPTR no Sheets é 'São Pedro', mas no app agora usamos 'SPTR')
+    const _salaFiltro = cdpFiltro.sala;
+    const _salaMatch = (l) => {
+      if (_salaFiltro === 'todas') return true;
+      if (l.sala === _salaFiltro) return true;
+      // SPTR no app == 'São Pedro'/'São Pedro Resort' no Sheets
+      if (_salaFiltro === 'SPTR' && (l.sala === 'São Pedro' || l.sala === 'São Pedro Resort')) return true;
+      // Thermas SP == Thermas SP (mesmo nome)
+      // Externo SP == Externo SP
+      return false;
+    };
     const tPI = allPIs.filter(p => {
       if (cdpFiltro.periodo === 'hoje')   return p.dateISO === hoje;
       if (cdpFiltro.periodo === 'semana') return p.dateISO >= domingoSemana() && p.dateISO <= hoje;
       if (cdpFiltro.periodo === 'mes')    return p.dateISO && p.dateISO.slice(0,7) === hoje.slice(0,7);
       if (cdpFiltro.periodo === 'livre')  return (!cdpFiltro.de || p.dateISO >= cdpFiltro.de) && (!cdpFiltro.ate || p.dateISO <= cdpFiltro.ate);
       return true;
-    }).filter(p => cdpFiltro.sala === 'todas' || p.sala === cdpFiltro.sala)
+    }).filter(p => _salaMatch(p))
       .filter(p => cdpFiltro.captador === 'todos' || p.captador === cdpFiltro.captador).length;
     document.getElementById('cdpTotais').innerHTML = `
       <div class="cdp-totais">
@@ -3974,7 +3988,7 @@ function renderCdp(leadsHoje) {
     if (cdpFiltro.periodo === 'mes')    return p.dateISO && p.dateISO.slice(0,7) === hoje2.slice(0,7);
     if (cdpFiltro.periodo === 'livre')  return (!cdpFiltro.de || p.dateISO >= cdpFiltro.de) && (!cdpFiltro.ate || p.dateISO <= cdpFiltro.ate);
     return true;
-  }).filter(p => cdpFiltro.sala === 'todas' || p.sala === cdpFiltro.sala)
+  }).filter(p => _salaMatch(p))
     .filter(p => cdpFiltro.captador === 'todos' || p.captador === cdpFiltro.captador)
     .forEach(p => {
       const nome = p.captador || '—';
