@@ -3862,9 +3862,12 @@ function atualizarCdp() {
 function showCdp() {
   hideAll(); show('screenCdp');
   renderCdpFiltros();
-  atualizarCdp();
 
   if (API.ok()) {
+    // IMPORTANTE: NÃO chamar atualizarCdp() antes do mergeRemoto.
+    // A primeira renderização precisa usar os dados sincronizados do Sheets,
+    // senão o CEO/lider vê menos leads que o captador (cada um vê só o que
+    // tem em memória local no próprio dispositivo).
     document.getElementById('cdpSync').classList.remove('hidden');
     // Busca sempre o mês corrente completo — evita timeout e garante que todos os leads do mês cheguem
     // O filtro de exibição (hoje/semana/etc) é aplicado localmente pelo atualizarCdp
@@ -3876,14 +3879,21 @@ function showCdp() {
       API.getLeads(null, _cdpDateFrom, _cdpDateTo),
       fetch(CONFIG.webhookUrl + '?_type=pi').then(r=>r.json()).catch(()=>null)
     ]).then(([remoto, piRemoto]) => {
-      document.getElementById('cdpSync').classList.add('hidden');
       mergeRemoto(remoto, _cdpDateFrom);
       mergePIsRemoto(piRemoto);
+      document.getElementById('cdpSync').classList.add('hidden');
       renderCdpFiltros();
       atualizarCdp();
       // Flush só depois que o sync visual terminou — não compete com o getLeads
       setTimeout(offlineFlush, 500);
-    }).catch(() => { document.getElementById('cdpSync').classList.add('hidden'); });
+    }).catch(() => {
+      // Em caso de erro, renderiza com o que tem em memória
+      atualizarCdp();
+      document.getElementById('cdpSync').classList.add('hidden');
+    });
+  } else {
+    // Sem API (offline) — renderiza com dados locais
+    atualizarCdp();
   }
 }
 
