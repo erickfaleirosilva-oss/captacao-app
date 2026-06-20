@@ -29,9 +29,11 @@ const COLUNAS = [
   // Campos detalhados das respostas
   'PontoCaptacao','IdadeTitular','ProfissaoTitular','IdadeConjuge','ProfissaoConjuge',
   'Carro','Casa','Cartao','Viagens','Modalidade',
+  // Novos campos — input numérico do carro (v2.21)
+  'AnoCarro','MultiCarro',
 ];
 const N_COLS  = COLUNAS.length;
-const COL_WIDTHS = [180,100,80,150,150,150,130,130,90,150,130,80,80,100,80,150,120,150,120,150,120,80,80,80,120];
+const COL_WIDTHS = [180,100,80,150,150,150,130,130,90,150,130,80,80,100,80,150,120,150,120,150,120,80,80,80,120,100,110];
 
 function aplicarCabecalho(sheet) {
   const header = sheet.getRange(1, 1, 1, N_COLS);
@@ -336,11 +338,14 @@ function doPost(e) {
       ans.profissaoTitular || '',          // ProfissaoTitular
       ans.idadeConjuge     || '',          // IdadeConjuge
       ans.profissaoConjuge || '',          // ProfissaoConjuge
-      ans.carro            || '',          // Carro
+      ans.carro            || '',          // Carro (faixa — retrocompat com regras)
       ans.casa             || '',          // Casa
       ans.cartao           || '',          // Cartao
       ans.viagens          || '',          // Viagens
       data.modalidade      || '',          // Modalidade (pool/convidados/proprietarios)
+      // v2.21 — input numérico do carro
+      (typeof ans.anoCarro === 'number' ? ans.anoCarro : (ans.anoCarro || '')),  // AnoCarro
+      ans.multiCarro ? 'SIM' : '',                                              // MultiCarro
     ]);
 
     // Aplica cor na linha recém inserida e trava formato da coluna Data como texto
@@ -518,6 +523,9 @@ function doGet(e) {
             casa:             get('Casa')              || null,
             cartao:           get('Cartao')            || null,
             viagens:          get('Viagens')           || null,
+            // v2.21 — input numérico do carro (vazio para leads antigos)
+            anoCarro:         (function(){ var v = get('AnoCarro'); if (v === '' || v == null) return null; var n = parseInt(v, 10); return isNaN(n) ? null : n; })(),
+            multiCarro:       get('MultiCarro') === 'SIM',
           },
         });
       });
