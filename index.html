@@ -3912,7 +3912,10 @@ function mergePIsRemoto(remoto) {
 
 function renderCdp(leadsHoje) {
   const totalAcesso = temAcessoTotal(captador);
-  const leadsVisíveis = filtrarPorAcesso(leadsHoje);
+  // NÃO reaplicar filtrarPorAcesso aqui — leadsHoje já vem filtrado do
+  // cdpLeadsFiltrados (que é o que o atualizarCdp passa). Filtrar de novo
+  // criava inconsistência entre os totais e o ranking.
+  const leadsVisíveis = leadsHoje;
 
   if (totalAcesso) {
     const tQ      = leadsVisíveis.filter(l=>l.verdict==='Q').length;
