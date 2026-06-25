@@ -582,6 +582,187 @@ function auditarAbas() {
   Logger.log('========== FIM AUDITORIA ==========');
 }
 
+// ── AUDITORIA DDP — diagnostica a taxa de marcação de EmSala / TipoSala / Venda ──
+// Roda uma vez para entender quanto do DDP automático está faltando.
+// Considera apenas abas que alimentam DDP (Alta Vista, Atrium, Marina, SPTR, Thermas SP)
+function auditarDDP() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const SALAS_DDP = ['Alta Vista', 'Atrium', 'Marina', 'SPTR', 'Thermas SP'];
+  // Calcula janela: últimos 30 dias
+  const hoje = new Date();
+  const de30 = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const isoDe = de30.toISOString().slice(0, 10);
+  const isoAte = hoje.toISOString().slice(0, 10);
+
+  Logger.log('========== AUDITORIA DDP ==========');
+  Logger.log('Janela: ' + isoDe + ' a ' + isoAte + ' (últimos 30 dias)');
+  Logger.log('');
+
+  const totais = { total: 0, emSala: 0, semEmSala: 0, tipoPool: 0, tipoCot: 0, tipoConv: 0, semTipo: 0, venda: 0 };
+  const porSala = {};
+
+  SALAS_DDP.forEach(salaNome => {
+    // O SALA_SHEETS mapeia tudo — para SPTR/Thermas SP, fica na aba 'São Pedro'
+    const abaNome = salaNome === 'SPTR' || salaNome === 'Thermas SP' ? 'São Pedro' : 'Alta Vista';
+    const sheet = ss.getSheetByName(abaNome);
+    if (!sheet) { Logger.log('⚠️  Aba "' + abaNome + '" não encontrada'); return; }
+    const last = sheet.getLastRow();
+    if (last < 2) return;
+    const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const idxData = cabecalho.indexOf('Data');
+    const idxSala = cabecalho.indexOf('Sala');
+    const idxEmSala = cabecalho.indexOf('EmSala');
+    const idxTipoSala = cabecalho.indexOf('TipoSala');
+    const idxVenda = cabecalho.indexOf('Venda');
+    if (idxData < 0 || idxSala < 0) return;
+    const nCols = sheet.getLastColumn();
+    const rows = sheet.getRange(2, 1, last - 1, nCols).getValues();
+
+    const s = { total: 0, emSala: 0, semEmSala: 0, tipoPool: 0, tipoCot: 0, tipoConv: 0, semTipo: 0, venda: 0 };
+    rows.forEach(r => {
+      // Filtra por sala (considera nomes legados também)
+      const sala = String(r[idxSala] || '').trim();
+      const salaNormalizada = (sala === 'São Pedro Resort') ? 'SPTR' : sala;
+      if (salaNormalizada !== salaNome) return;
+      // Filtra por data
+      const dataStr = String(r[idxData] || '').trim();
+      const isoMatch = dataStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!isoMatch) return;
+      const dateISO = isoMatch[3] + '-' + isoMatch[2] + '-' + isoMatch[1];
+      if (dateISO < isoDe || dateISO > isoAte) return;
+      s.total++;
+      const emSala = String(r[idxEmSala] || '').trim().toUpperCase() === 'SIM';
+      if (emSala) s.emSala++; else s.semEmSala++;
+      const tipoSala = String(r[idxTipoSala] || '').trim().toLowerCase();
+      if (tipoSala === 'pool') s.tipoPool++;
+      else if (tipoSala === 'cotista') s.tipoCot++;
+      else if (tipoSala === 'conv' || tipoSala === 'convidado') s.tipoConv++;
+      else s.semTipo++;
+      const venda = String(r[idxVenda] || '').trim().toUpperCase() === 'SIM';
+      if (venda) s.venda++;
+    });
+    porSala[salaNome] = s;
+    totais.total      += s.total;
+    totais.emSala     += s.emSala;
+    totais.semEmSala  += s.semEmSala;
+    totais.tipoPool   += s.tipoPool;
+    totais.tipoCot    += s.tipoCot;
+    totais.tipoConv   += s.tipoConv;
+    totais.semTipo    += s.semTipo;
+    totais.venda      += s.venda;
+  });
+
+  Logger.log('--- Por sala (últimos 30 dias) ---');
+  Object.keys(porSala).forEach(nome => {
+    const s = porSala[nome];
+    const taxaEmSala  = s.total ? Math.round(s.emSala / s.total * 100) : 0;
+    const taxaTipo    = s.emSala ? Math.round((s.tipoPool + s.tipoCot + s.tipoConv) / s.emSala * 100) : 0;
+    Logger.log('  [' + nome + '] ' + s.total + ' leads no período');
+    Logger.log('      EmSala: ' + s.emSala + ' / ' + s.total + ' (' + taxaEmSala + '%)');
+    Logger.log('      Sem EmSala: ' + s.semEmSala + ' (leads que entraram mas não foram marcados como em sala)');
+    Logger.log('      TipoSala (só dos marcados em sala): Pool=' + s.tipoPool + ' Cot=' + s.tipoCot + ' Conv=' + s.tipoConv + ' Sem=' + s.semTipo + ' (' + taxaTipo + '% preenchido)');
+    Logger.log('      Vendas: ' + s.venda);
+  });
+  Logger.log('');
+  Logger.log('--- TOTAL GERAL ---');
+  const taxaEmSalaTotal = totais.total ? Math.round(totais.emSala / totais.total * 100) : 0;
+  const taxaTipoTotal   = totais.emSala ? Math.round((totais.tipoPool + totais.tipoCot + totais.tipoConv) / totais.emSala * 100) : 0;
+  Logger.log('  Leads no período: ' + totais.total);
+  Logger.log('  Com EmSala: ' + totais.emSala + ' (' + taxaEmSalaTotal + '%)');
+  Logger.log('  Sem EmSala (gargalo principal): ' + totais.semEmSala);
+  Logger.log('  Com TipoSala (dos marcados): ' + (totais.tipoPool + totais.tipoCot + totais.tipoConv) + ' / ' + totais.emSala + ' (' + taxaTipoTotal + '%)');
+  Logger.log('  Vendas marcadas: ' + totais.venda);
+  Logger.log('');
+  Logger.log('--- DIAGNÓSTICO ---');
+  if (totais.semEmSala / Math.max(totais.total, 1) > 0.5) {
+    Logger.log('  ❌ Mais de 50% dos leads sem EmSala — os captadores não estão marcando (ou o app não está salvando).');
+    Logger.log('  Próximo passo: investigar UX do botão "Entrou em sala" no app.');
+  } else if (totais.semEmSala / Math.max(totais.total, 1) > 0.2) {
+    Logger.log('  ⚠️  20-50% dos leads sem EmSala — problema de adesão parcial.');
+    Logger.log('  Próximo passo: backfill dos vazios + melhorias de UX.');
+  } else {
+    Logger.log('  ✓ Maioria dos leads marcados. Backfill cobre só os antigos.');
+  }
+  if (totais.emSala > 0 && (totais.tipoPool + totais.tipoCot + totais.tipoConv) / totais.emSala < 0.5) {
+    Logger.log('  ❌ Entre os marcados, menos de 50% têm TipoSala.');
+  }
+  Logger.log('========== FIM AUDITORIA DDP ==========');
+}
+
+// ── BACKFILL DDP — seta EmSala=SIM e TipoSala=pool nos leads sem flag ──
+// Rodar SOMENTE após auditarDDP() confirmar que vale a pena.
+// Afeta apenas os últimos 30 dias. Não toca em leads já marcados.
+function backfillEmSala() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const SALAS_DDP = ['Alta Vista', 'Atrium', 'Marina', 'SPTR', 'Thermas SP'];
+  const hoje = new Date();
+  const de30 = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const isoDe = de30.toISOString().slice(0, 10);
+  const isoAte = hoje.toISOString().slice(0, 10);
+
+  Logger.log('========== BACKFILL DDP ==========');
+  Logger.log('Janela: ' + isoDe + ' a ' + isoAte);
+  Logger.log('Vai setar EmSala=SIM e TipoSala=pool em leads sem flag.');
+  Logger.log('Leads já marcados (EmSala=SIM ou TipoSala preenchido) NÃO serão tocados.');
+  Logger.log('');
+
+  let totalAlterados = 0;
+  const porSala = {};
+
+  SALAS_DDP.forEach(salaNome => {
+    const abaNome = salaNome === 'SPTR' || salaNome === 'Thermas SP' ? 'São Pedro' : 'Alta Vista';
+    const sheet = ss.getSheetByName(abaNome);
+    if (!sheet) return;
+    const last = sheet.getLastRow();
+    if (last < 2) return;
+    const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const idxData = cabecalho.indexOf('Data');
+    const idxSala = cabecalho.indexOf('Sala');
+    const idxEmSala = cabecalho.indexOf('EmSala');
+    const idxTipoSala = cabecalho.indexOf('TipoSala');
+    if (idxData < 0 || idxSala < 0) return;
+    const nCols = sheet.getLastColumn();
+    const rows = sheet.getRange(2, 1, last - 1, nCols).getValues();
+    const alteracoes = [];
+    rows.forEach((r, i) => {
+      const sala = String(r[idxSala] || '').trim();
+      const salaNormalizada = (sala === 'São Pedro Resort') ? 'SPTR' : sala;
+      if (salaNormalizada !== salaNome) return;
+      const dataStr = String(r[idxData] || '').trim();
+      const isoMatch = dataStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!isoMatch) return;
+      const dateISO = isoMatch[3] + '-' + isoMatch[2] + '-' + isoMatch[1];
+      if (dateISO < isoDe || dateISO > isoAte) return;
+      const emSalaAtual = String(r[idxEmSala] || '').trim().toUpperCase();
+      const tipoSalaAtual = String(r[idxTipoSala] || '').trim();
+      // Só altera se AMBOS estiverem vazios (não toca em lead parcialmente marcado)
+      if (!emSalaAtual && !tipoSalaAtual) {
+        alteracoes.push({ rowIdx: i + 2, captador: r[3], sala, dateISO });
+      }
+    });
+    if (alteracoes.length === 0) {
+      Logger.log('  [' + salaNome + '] nenhum lead precisou de backfill');
+      return;
+    }
+    // Aplica as alterações: seta EmSala=SIM e TipoSala=pool nas células
+    alteracoes.forEach(a => {
+      if (idxEmSala >= 0) sheet.getRange(a.rowIdx, idxEmSala + 1).setValue('SIM');
+      if (idxTipoSala >= 0) sheet.getRange(a.rowIdx, idxTipoSala + 1).setValue('pool');
+    });
+    totalAlterados += alteracoes.length;
+    porSala[salaNome] = alteracoes.length;
+    Logger.log('  [' + salaNome + '] ' + alteracoes.length + ' leads alterados');
+  });
+
+  Logger.log('');
+  Logger.log('Total de leads alterados: ' + totalAlterados);
+  Logger.log('Distribuição:');
+  Object.keys(porSala).forEach(nome => {
+    Logger.log('  [' + nome + '] ' + porSala[nome] + ' leads');
+  });
+  Logger.log('========== FIM BACKFILL ==========');
+}
+
 // ── MIGRAÇÃO DE ABAS POR SALA — separa leads mal-posicionados ──
 // 1. Identifica a aba oficial de cada operação (a com MAIS LINHAS VÁLIDAS
 //    — desconsidera vazias e salas não-mapeadas)

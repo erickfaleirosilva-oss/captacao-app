@@ -1033,3 +1033,57 @@ function jsonResponse(obj) {
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+// ── AUDITORIA DE CIDADES THERMAS SP — % de São Paulo Capital + top 10 ──
+// Lê TODA a aba "São Pedro" (que contém leads de Thermas SP + SPTR + Externo SP),
+// filtra só Thermas SP (cobre nomes legados), e calcula:
+//   - Total de leads de Thermas SP no histórico
+//   - % que vem de "São Paulo" capital exato
+//   - Top 10 cidades (em contagem absoluta + % relativo)
+function auditarCidadesThermas() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('São Pedro');
+  if (!sheet) { Logger.log('❌ Aba "São Pedro" não encontrada'); return; }
+  const last = sheet.getLastRow();
+  if (last < 2) { Logger.log('❌ Aba "São Pedro" vazia'); return; }
+  const cabecalho = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const idxSala = cabecalho.indexOf('Sala');
+  const idxCidade = cabecalho.indexOf('Cidade');
+  if (idxSala < 0 || idxCidade < 0) {
+    Logger.log('❌ Coluna "Sala" ou "Cidade" não encontrada');
+    return;
+  }
+  const nCols = sheet.getLastColumn();
+  const rows = sheet.getRange(2, 1, last - 1, nCols).getValues();
+
+  // Nomes que devem cair em "Thermas SP" (cobre legado)
+  const SALAS_THERMAS = new Set(['Thermas SP', 'Thermas São Pedro', 'THERMAS SÃO PEDRO', 'THERMAS SÃO PEDRO - HOTEL', 'Thermas - UH AP']);
+
+  let total = 0;
+  let spCapital = 0;
+  const cidades = {}; // contagem de cidades
+
+  rows.forEach(r => {
+    const sala = String(r[idxSala] || '').trim();
+    if (!SALAS_THERMAS.has(sala)) return;
+    total++;
+    const cidade = String(r[idxCidade] || '').trim() || '(vazio)';
+    cidades[cidade] = (cidades[cidade] || 0) + 1;
+    if (cidade.toLowerCase() === 'são paulo') spCapital++;
+  });
+
+  Logger.log('========== AUDITORIA THERMAS SP × CIDADE ==========');
+  Logger.log('Total de leads do Thermas SP (todo o histórico): ' + total);
+  Logger.log('Leads de São Paulo capital: ' + spCapital);
+  const pct = total ? Math.round(spCapital / total * 1000) / 10 : 0;
+  Logger.log('% de São Paulo capital: ' + pct + '%');
+  Logger.log('');
+  Logger.log('Top 15 cidades (com % do total):');
+  const top = Object.entries(cidades).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  top.forEach(([cid, qtd]) => {
+    const pctCid = total ? Math.round(qtd / total * 1000) / 10 : 0;
+    const flag = cid.toLowerCase() === 'são paulo' ? ' ← SP CAPITAL' : '';
+    Logger.log('  ' + cid.padEnd(30) + ' ' + String(qtd).padStart(6) + '  (' + pctCid + '%)' + flag);
+  });
+  Logger.log('========== FIM AUDITORIA ==========');
+}
