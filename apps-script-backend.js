@@ -203,6 +203,111 @@ function saveDDPEntry(entry) {
   sheet.getRange(writtenRow, 2).setNumberFormat('@STRING@');
 }
 
+// ── CRUZAMENTO CHECK-INS × DDP ──
+// Aba 'Checkins' (preenchida manualmente): Data | Hotel | Pool | Conv
+//   Hotel deve ser 'Alta Vista', 'Atrium' ou 'Marina' (Caldas Novas)
+// Cruza com a aba 'DDP' (gerada automaticamente) por data + hotel
+// Grava o resultado em 'Cruzamento' (cria se não existir)
+const CRUZAMENTO_SHEET = 'Cruzamento';
+const CRUZAMENTO_COLS = ['dateISO','hotel','ciPool','ciCot','checkinsPool','checkinsConv','penetracao','atualizadoEm'];
+function getCruzamentoSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(CRUZAMENTO_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(CRUZAMENTO_SHEET);
+    const header = sheet.getRange(1, 1, 1, CRUZAMENTO_COLS.length);
+    header.setValues([CRUZAMENTO_COLS]);
+    header.setBackground('#1a2340').setFontColor('#c9a84c').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 110);
+    sheet.setColumnWidth(2, 140);
+    sheet.setColumnWidth(3, 80);
+    sheet.setColumnWidth(4, 80);
+    sheet.setColumnWidth(5, 110);
+    sheet.setColumnWidth(6, 110);
+    sheet.setColumnWidth(7, 110);
+    sheet.setColumnWidth(8, 160);
+  }
+  return sheet;
+}
+
+// Lê a aba 'Checkins' e retorna dict {(dateISO, hotel): {pool, conv}}
+function lerCheckins() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Checkins');
+  if (!sheet) return {};
+  const last = sheet.getLastRow();
+  if (last < 2) return {};
+  const values = sheet.getRange(2, 1, last - 1, 4).getValues();
+  const map = {};
+  values.forEach(r => {
+    const data = String(r[0] || '').trim();
+    const hotel = String(r[1] || '').trim();
+    const pool = Number(r[2]) || 0;
+    const conv = Number(r[3]) || 0;
+    if (data && hotel) {
+      const key = data + '|' + hotel;
+      map[key] = { pool, conv };
+    }
+  });
+  return map;
+}
+
+function atualizarCruzamentoCheckins() {
+  const checkins = lerCheckins();
+  if (Object.keys(checkins).length === 0) {
+    Logger.log('⚠️  Aba "Checkins" vazia ou não existe. Preencha ela primeiro (Data | Hotel | Pool | Conv).');
+    return;
+  }
+  const ddp = getDDPStore();
+  const sheet = getCruzamentoSheet();
+  // Apaga dados antigos
+  const last = sheet.getLastRow();
+  if (last > 1) sheet.getRange(2, 1, last - 1, CRUZAMENTO_COLS.length).clearContent();
+  // Monta saída
+  const out = [];
+  const agora = new Date();
+  Object.keys(checkins).forEach(key => {
+    const [data, hotel] = key.split('|');
+    const ddpEntry = ddp.find(d => d.dateISO === data && d.hotel === hotel);
+    const ciPool  = ddpEntry ? Number(ddpEntry.ciPool  || 0) : 0;
+    const ciCot   = ddpEntry ? Number(ddpEntry.ciCot   || 0) : 0;
+    const c       = checkins[key];
+    const totalCI = ciPool + ciCot;
+    const totalCk = c.pool + c.conv;
+    const penetracao = totalCI > 0 ? Math.round(totalCk / totalCI * 1000) / 10 : 0;
+    out.push([
+      data, hotel,
+      ciPool, ciCot,
+      c.pool, c.conv,
+      penetracao,
+      Utilities.formatDate(agora, 'America/Sao_Paulo', 'yyyy-MM-dd HH:mm:ss')
+    ]);
+  });
+  // Ordena por data desc
+  out.sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+  if (out.length > 0) {
+    sheet.getRange(2, 1, out.length, CRUZAMENTO_COLS.length).setValues(out);
+  }
+  Logger.log('Cruzamento atualizado: ' + out.length + ' linhas');
+}
+
+// Cria gatilho diário que roda às 22h (atualiza o cruzamento automaticamente)
+function criarGatilhoCruzamento() {
+  // Remove gatilhos antigos desta função
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'atualizarCruzamentoCheckins') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger('atualizarCruzamentoCheckins')
+    .timeBased()
+    .atHour(22)
+    .everyDays(1)
+    .create();
+  Logger.log('Gatilho diário criado: atualiza o cruzamento às 22h');
+}
+
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
