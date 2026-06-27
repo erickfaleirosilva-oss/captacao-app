@@ -310,6 +310,37 @@ function criarGatilhoCruzamento() {
   Logger.log('Gatilho diário criado: atualiza o cruzamento às 22h');
 }
 
+// ── ADICIONAR COLUNAS FALTANTES — sem sobrescrever dados ──
+// Adiciona na aba especificada (ou em todas as abas da planilha) as colunas
+// que estão no array COLUNAS mas faltam no cabeçalho da aba.
+// Uso: executar uma vez após reimplantar o backend, para garantir que
+// abas existentes tenham todas as 27 colunas antes do primeiro lead novo.
+function adicionarColunasFaltantes() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetsAlvo = ['Alta Vista', 'São Pedro', 'Atibaia', 'Thermas SP (Parque)'];
+  let totalAdicoes = 0;
+  sheetsAlvo.forEach(nomeAba => {
+    const sheet = ss.getSheetByName(nomeAba);
+    if (!sheet) return;
+    const headerAtual = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
+    const faltam = COLUNAS.filter(col => headerAtual.indexOf(col) < 0);
+    if (faltam.length === 0) {
+      Logger.log('[' + nomeAba + '] já tem todas as ' + COLUNAS.length + ' colunas');
+      return;
+    }
+    const startCol = sheet.getLastColumn() + 1;
+    const newHeaders = faltam.map((col, i) => [col]);
+    sheet.getRange(1, startCol, faltam.length, 1).setValues(newHeaders);
+    // Aplica cor de cabeçalho pra ficar consistente
+    const range = sheet.getRange(1, startCol, faltam.length, 1);
+    range.setBackground('#1a2340').setFontColor('#c9a84c').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    Logger.log('[' + nomeAba + '] adicionadas ' + faltam.length + ' colunas: ' + faltam.join(', '));
+    totalAdicoes += faltam.length;
+  });
+  Logger.log('===== TOTAL: ' + totalAdicoes + ' colunas adicionadas em todas as abas =====');
+}
+
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
