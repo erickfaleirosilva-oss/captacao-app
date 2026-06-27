@@ -2009,7 +2009,7 @@ const QS = [
   },
   {
     id:'tipo', type:'chips',
-    text:'Qual o perfil do cliente?',
+    text:'Qual o relacionamento do casal?',
     opts:[
       { icon:'💍', label:'Casal casado',          sub:'Registro civil ou cartório', value:'casados'   },
       { icon:'🤝', label:'União estável',          sub:'Morando juntos',             value:'uniao'     },
@@ -2101,6 +2101,15 @@ const QS = [
       { icon:'✅', label:'R$ 12.000 – R$ 14.999', sub:'', value:'12k'      },
       { icon:'✅', label:'R$ 15.000 – R$ 19.999', sub:'', value:'15k'      },
       { icon:'✅', label:'R$ 20.000 ou mais',     sub:'', value:'20k'      },
+    ]
+  },
+  {
+    id:'conheceuMultiprop', type:'chips',
+    text:'Vocês já conheceram alguma apresentação de multipropriedade?',
+    opts:[
+      { icon:'✅', label:'Sim',                          sub:'', value:'sim'        },
+      { icon:'❌', label:'Não',                          sub:'', value:'nao'        },
+      { icon:'🏠', label:'Sim, e já sou multiproprietário', sub:'', value:'multiprop' },
     ]
   },
   {
