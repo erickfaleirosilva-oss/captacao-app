@@ -2236,6 +2236,19 @@ function calcAltaVista() {
     {i:'⚠️', l:'Idade', v:'Exige 28–65 anos'},
   ]};
 
+  // R$15k+: dispensa veículo e cartão (regra universal)
+  if (rNum >= 15000) return {
+    verdict:'Q', perfil:'Casal — R$15k+ (dispensa veículo e cartão)',
+    rule:null,
+    rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'✅', l:'Idade',          v:'28–65 anos'},
+      {i:'➞',  l:'Veículo',        v:'Dispensado (R$15k+)'},
+      {i:'➞',  l:'Cartão',         v:'Dispensado (R$15k+)'},
+    ]
+  };
+
   // Perfil 1: R$8k+, carro 2010+, cartão (sem distinção de temporada)
   if (rNum >= 8000 && cAno >= 2010 && cartaoS) return {
     verdict:'Q', perfil:'Casal — Alta Vista (R$8k+)',
@@ -2362,6 +2375,19 @@ function calcSaoPedro() {
     ]};
   }
 
+  // R$15k+: dispensa veículo e cartão (regra universal)
+  if (rNum >= 15000 && idOk && relOk) return {
+    verdict:'Q', perfil:'Casal — São Pedro R$15k+ (dispensa veículo e cartão)',
+    rule:null,
+    rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'➞',  l:'Veículo',        v:'Dispensado (R$15k+)'},
+      {i:'➞',  l:'Cartão',         v:'Dispensado (R$15k+)'},
+    ]
+  };
+
   if (!hi) {
     // Baixo: R$10k+, carro 2010+, 30-65, rel, cartão
     const ok = rNum>=10000 && cAno>=2010 && idOk && relOk && cartaoS;
@@ -2477,6 +2503,19 @@ function calcAtibaia() {
   if (!idOk) return { verdict:'NQ', perfil:null, rule:null, rows:[
     {i:'⚠️', l:'Idade', v:'Exige 30–65 anos'},
   ]};
+
+  // R$15k+: dispensa veículo e cartão (regra universal)
+  if (rNum >= 15000) return {
+    verdict:'Q', perfil:'Casal — Atibaia R$15k+ (dispensa veículo e cartão)',
+    rule:null,
+    rows:[
+      {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+      {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+      {i:'✅', l:'Idade',          v:'30–65 anos'},
+      {i:'➞',  l:'Veículo',        v:'Dispensado (R$15k+)'},
+      {i:'➞',  l:'Cartão',         v:'Dispensado (R$15k+)'},
+    ]
+  };
 
   // Casal padrão: R$8k+, 2014+, cartão
   if (rNum>=8000 && cAno>=2014 && cartaoS) return {
