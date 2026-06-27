@@ -31,9 +31,11 @@ const COLUNAS = [
   'Carro','Casa','Cartao','Viagens','Modalidade',
   // v2.21 — input numérico do carro (ano de 4 dígitos)
   'AnoCarro',
+  // v2.23 — pergunta sobre apresentação de multipropriedade
+  'ConheceuMultiprop',
 ];
 const N_COLS  = COLUNAS.length;
-const COL_WIDTHS = [180,100,80,150,150,150,130,130,90,150,130,80,80,100,80,150,120,150,120,150,120,80,80,80,120,100];
+const COL_WIDTHS = [180,100,80,150,150,150,130,130,90,150,130,80,80,100,80,150,120,150,120,150,120,80,80,80,120,100,140];
 
 function aplicarCabecalho(sheet) {
   const header = sheet.getRange(1, 1, 1, N_COLS);
@@ -629,6 +631,8 @@ function doGet(e) {
             viagens:          get('Viagens')           || null,
             // v2.21 — input numérico do carro (vazio para leads antigos)
             anoCarro:         (function(){ var v = get('AnoCarro'); if (v === '' || v == null) return null; var n = parseInt(v, 10); return isNaN(n) ? null : n; })(),
+            // v2.23 — apresentação prévia de multipropriedade
+            conheceuMultiprop: get('ConheceuMultiprop') || null,
           },
         });
       });

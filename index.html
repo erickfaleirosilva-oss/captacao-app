@@ -3129,6 +3129,8 @@ function _persistLead() {
       profissaoConjuge:  ans.profissaoConjuge  || null,
       // v2.21 — input numérico do carro
       anoCarro:          (typeof ans.anoCarro === 'number') ? ans.anoCarro : null,
+      // v2.23 — apresentação prévia de multipropriedade
+      conheceuMultiprop:  ans.conheceuMultiprop || null,
     },
   };
   ans._autoSavedId = lead.id;
