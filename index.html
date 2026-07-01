@@ -4083,12 +4083,11 @@ function renderCdp(leadsHoje) {
     })
     .sort((a,b) => b.total - a.total);
 
-  // DEBUG 2: ver o map populado - injeta APÓS o rank.innerHTML (mostra o estado final)
+  // DEBUG 2: ver o map populado - injeta DEPOIS do rank.innerHTML (mostra o estado final)
   const _dbg2 = document.createElement('div');
   _dbg2.id = 'cdpDebug2';
   _dbg2.style.cssText = 'background:#ff9800;color:#000;padding:8px;font-size:10px;font-family:monospace;white-space:pre-wrap;margin:8px 0;border:2px solid #c00';
   _dbg2.textContent = 'DEBUG2: map tem ' + _mapKeys.length + ' chaves. sorted tem ' + sorted.length + ' cards. Top 10:\n' + _mapResumo.join('\n');
-  rank.appendChild(_dbg2);
 
   rank.innerHTML = sorted.map((c, idx) => {
     const ini     = c.nome.split(' ').map(p=>p[0]).slice(0,2).join('');
@@ -4123,6 +4122,9 @@ function renderCdp(leadsHoje) {
       </div>` : ''}
     </div>`;
   }).join('');
+
+  // DEBUG 2: injeta o diagnóstico DEPOIS do rank.innerHTML (senão o innerHTML apaga)
+  rank.appendChild(_dbg2);
 }
 
 // ─────────────────────────────────────────────
