@@ -3972,28 +3972,10 @@ function mergePIsRemoto(remoto) {
 }
 
 function renderCdp(leadsHoje) {
+  try {
   const totalAcesso = temAcessoTotal(captador);
-  // NÃO reaplicar filtrarPorAcesso aqui — leadsHoje já vem filtrado do
-  // cdpLeadsFiltrados (que é o que o atualizarCdp passa). Filtrar de novo
-  // criava inconsistência entre os totais e o ranking.
+  // leadsHoje já vem filtrado do cdpLeadsFiltrados (que o atualizarCdp passa).
   const leadsVisíveis = leadsHoje;
-  // DEBUG temporário: mostra info de diagnóstico no DOM
-  const _dbg = document.createElement('div');
-  _dbg.id = 'cdpDebug';
-  _dbg.style.cssText = 'background:#ffeb3b;color:#000;padding:8px;font-size:11px;font-family:monospace;white-space:pre-wrap';
-  _dbg.textContent = 'DEBUG renderCdp:\n'
-    + 'captador=' + (captador ? captador.nome+' ('+captador.cargo+')' : 'null') + '\n'
-    + 'totalAcesso=' + totalAcesso + '\n'
-    + 'leadsVisíveis.length=' + leadsVisíveis.length + '\n'
-    + 'leadsVisíveis[0]=' + (leadsVisíveis[0] ? JSON.stringify({id:leadsVisíveis[0].id, captador:leadsVisíveis[0].captador, sala:leadsVisíveis[0].sala, verdict:leadsVisíveis[0].verdict, dateISO:leadsVisíveis[0].dateISO}) : 'vazio') + '\n'
-    + 'leads.length=' + (typeof leads !== 'undefined' ? leads.length : 'N/A') + '\n'
-    + 'leads no sessionStorage=' + (sessionStorage.getItem('yv_leads') ? sessionStorage.getItem('yv_leads').length : 'N/A') + '\n'
-    + 'cdpFiltro=' + JSON.stringify(cdpFiltro);
-  // remove debug anterior se existir
-  const _old = document.getElementById('cdpDebug');
-  if (_old) _old.remove();
-  const _subEl = document.getElementById('cdpSub');
-  if (_subEl && _subEl.parentNode) _subEl.parentNode.insertBefore(_dbg, _subEl.nextSibling);
 
   if (totalAcesso) {
     const tQ      = leadsVisíveis.filter(l=>l.verdict==='Q').length;
@@ -4077,10 +4059,6 @@ function renderCdp(leadsHoje) {
       map[nome].pi++;
     });
 
-  // DEBUG 2: ver o map populado - injeta DEPOIS do sorted (para não ser sobrescrito)
-  const _mapKeys = Object.keys(map);
-  const _mapResumo = _mapKeys.slice(0, 10).map(k => `${k}:q${map[k].q}/nq${map[k].nq}/sQ${map[k].salaQ}/sNQ${map[k].salaNQ}/pi${map[k].pi||0}`).join(' | ');
-
   const ROLE_LABEL = { captador:'Captador(a)', sublider:'Sublíder', lider:'Líder', ceo:'CEO' };
   const posCls     = ['gold','silver','bronze'];
   const posLabel   = ['🥇','🥈','🥉'];
@@ -4091,12 +4069,6 @@ function renderCdp(leadsHoje) {
       return { nome, q:s.q, nq:s.nq, salaQ:s.salaQ, salaNQ:s.salaNQ, salaTot:s.salaQ+s.salaNQ, pi:s.pi||0, conv, total:s.q+s.nq, cargo: cfg?.cargo||'captador' };
     })
     .sort((a,b) => b.total - a.total);
-
-  // DEBUG 2: ver o map populado - injeta DEPOIS do rank.innerHTML (mostra o estado final)
-  const _dbg2 = document.createElement('div');
-  _dbg2.id = 'cdpDebug2';
-  _dbg2.style.cssText = 'background:#ff9800;color:#000;padding:8px;font-size:10px;font-family:monospace;white-space:pre-wrap;margin:8px 0;border:2px solid #c00';
-  _dbg2.textContent = 'DEBUG2: map tem ' + _mapKeys.length + ' chaves. sorted tem ' + sorted.length + ' cards. Top 10:\n' + _mapResumo.join('\n');
 
   rank.innerHTML = sorted.map((c, idx) => {
     const ini     = c.nome.split(' ').map(p=>p[0]).slice(0,2).join('');
@@ -4131,9 +4103,11 @@ function renderCdp(leadsHoje) {
       </div>` : ''}
     </div>`;
   }).join('');
-
-  // DEBUG 2: injeta o diagnóstico DEPOIS do rank.innerHTML (senão o innerHTML apaga)
-  rank.appendChild(_dbg2);
+  } catch (err) {
+    console.error('renderCdp error:', err);
+    const rank = document.getElementById('cdpRank');
+    if (rank) rank.innerHTML = '<div style="color:#f88;padding:8px">Erro ao renderizar CDP: ' + (err.message || err) + '</div>';
+  }
 }
 
 // ─────────────────────────────────────────────
