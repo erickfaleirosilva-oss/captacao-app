@@ -6276,7 +6276,11 @@ if ('serviceWorker' in navigator) {
   // Recarrega automaticamente quando o SW detecta nova versão do app
   navigator.serviceWorker.addEventListener('message', e => {
     if (e.data && e.data.type === 'APP_UPDATED') {
-      window.location.reload();
+      // Mostra um toast pedindo confirmação antes de recarregar
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a2340;color:#fff;padding:14px 20px;border-radius:12px;border:1px solid #c9a84c;z-index:99999;max-width:90%;text-align:center;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+      toast.innerHTML = '🔄 Nova versão disponível. <a href="javascript:location.reload()" style="color:#c9a84c;text-decoration:underline;font-weight:700;margin-left:8px">Recarregar agora</a>';
+      document.body.appendChild(toast);
     }
   });
 }
