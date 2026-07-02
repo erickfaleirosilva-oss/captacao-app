@@ -1631,7 +1631,7 @@ function renderLoginList(selected, filtro) {
     return `<div class="login-item${sel}" onclick="loginPickNome('${c.nome}')">
       <div class="login-avatar">${ini}</div>
       <div class="login-info">
-        <div class="login-name">${c.nome}</div>
+        <div class="login-name">${c.nome || "—"}</div>
         <div class="login-role">${ROLE_LABEL[c.cargo] || c.cargo}</div>
       </div>
     </div>`;
@@ -4070,8 +4070,11 @@ function renderCdp(leadsHoje) {
     })
     .sort((a,b) => b.total - a.total);
 
+  if (sorted.length === 0) {
+    rank.innerHTML = '<div class="cdp-empty">Nenhum captador com pesquisas no período selecionado.</div>';
+  } else {
   rank.innerHTML = sorted.map((c, idx) => {
-    const ini     = c.nome.split(' ').map(p=>p[0]).slice(0,2).join('');
+    const ini     = (c.nome || '?').split(' ').map(p=>p[0]).slice(0,2).join('');
     const pCls    = totalAcesso ? (posCls[idx]||'') : '';
     const pLabel  = totalAcesso ? (posLabel[idx]||(idx+1)) : '👤';
     const barQ    = c.total ? Math.round(c.q  / c.total * 100) : 0;
@@ -4083,7 +4086,7 @@ function renderCdp(leadsHoje) {
         <div class="cdp-pos ${pCls}">${pLabel}</div>
         <div class="cdp-av">${ini}</div>
         <div class="cdp-info">
-          <div class="cdp-name">${c.nome}</div>
+          <div class="cdp-name">${c.nome || "—"}</div>
           <div class="cdp-role">${ROLE_LABEL[c.cargo]||c.cargo} · ${c.total} pesquisas</div>
         </div>
       </div>
@@ -4103,6 +4106,7 @@ function renderCdp(leadsHoje) {
       </div>` : ''}
     </div>`;
   }).join('');
+  }
   } catch (err) {
     console.error('renderCdp error:', err);
     const rank = document.getElementById('cdpRank');
