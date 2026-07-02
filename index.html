@@ -1277,7 +1277,7 @@ const CONFIG = {
     { nome: 'Ariane dos Santos Araújo',       cargo: 'captador', operacao: 'Caldas Novas', senhaHash: 'e1d0c5438c3dc9b6744685d0b86c75bb2500bab4e4b13b736f135eb7a24e9c20' },
     { nome: 'Walisson Rodrigues da Silva',    cargo: 'captador', operacao: 'Caldas Novas', senhaHash: 'c13b2cc14c4f01e479b958ed1458bbbfa9caedf2c66f385776850f05f1fb53bd' },
     { nome: 'Tales Eduardo Souza',            cargo: 'captador', operacao: 'Caldas Novas', senhaHash: 'e3661c743a595503343c16a6eacb715c6c79a29eeff729191dfd2136c7f5b128' },
-    { nome: 'Lucas Carvalho Barreto dos Santos', cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '5afb72ef04ec7ef90e8f57b5b4e8faadb7da2599698bb98fdf556349d4868b34' },
+    { nome: 'Lucas Carvalho Barreto dos Santos', cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '9a0d925ec7a81e2190c716abb31dff8154f25cfd7038874f65b5a6af3b76fc13' },
     { nome: 'Marcelo Maciel Mota',              cargo: 'captador', operacao: 'Caldas Novas', senhaHash: 'e6c60f9a0a468cbce7cdf751d571312d93cffdae90ad83992d1ad7bc7b82a19a' },
     { nome: 'Fausto Pereira Ramalho',            cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '0a48a7bda9af717b7c1d0e56fc1a9bd2f99e0b3b52de970315e9ffe7e34ab6ca' },
     { nome: 'Tais Zulmira Hipólito',             cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '1dfd112745381d497cff6f29aaddd3b006d0090f4cb9096cd86f79dbdac2b154' },
@@ -1666,7 +1666,16 @@ async function doLogin() {
   if (!pw) { document.getElementById('pwError').textContent = 'Insira sua senha.'; return; }
   const hashCorreta = getSenhaHash(nome);
   const hashDigitada = await sha256(pw);
-  if (hashDigitada !== hashCorreta) { document.getElementById('pwError').textContent = 'Senha incorreta. Tente novamente.'; return; }
+  if (hashDigitada !== hashCorreta) {
+    // Ajuda o captador a entender: se já tem senha pessoal no localStorage,
+    // a do CONFIG não vale — precisa limpar cache ou usar aba anônima
+    const temPessoal = !!localStorage.getItem('yv_pw_' + nome);
+    const msg = temPessoal
+      ? 'Senha incorreta. Você já definiu uma senha pessoal antes — limpe o cache do navegador ou use aba anônima para redefinir.'
+      : 'Senha incorreta. Tente novamente.';
+    document.getElementById('pwError').textContent = msg;
+    return;
+  }
   const todosLogin = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
   captador = todosLogin.find(c => c.nome === nome);
   // Primeiro login com senha padrão → exige criação de senha pessoal
