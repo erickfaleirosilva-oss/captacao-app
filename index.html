@@ -2043,8 +2043,12 @@ const QS = [
   {
     id:'modalidade', type:'chips',
     condicional: () => {
+      // Só faz sentido perguntar modalidade nos hotéis que têm DDP
+      // (Atrium, Marina, Alta Vista, SPTR). NÃO perguntar em:
+      // - Thermas SP / Externo CN / Externo SP (cliente pode nem estar hospedado)
+      // - Pontos de Atibaia (Porta da sala, Vest Casa, Entrada/Corredor Outlet)
       const s = (salaAtual && salaAtual.nome) ? salaAtual.nome.toUpperCase() : '';
-      return s.includes('SPTR') || s.includes('THERMAS') || s.includes('ALTA VISTA') || s.includes('MARINA') || s.includes('ATRIUM');
+      return s === 'ATRIUM' || s === 'MARINA' || s === 'ALTA VISTA' || s === 'SPTR';
     },
     text:'Estão hospedados em qual modalidade?',
     opts:[
