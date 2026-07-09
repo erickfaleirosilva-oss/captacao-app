@@ -2107,6 +2107,21 @@ const QS = [
     ]
   },
   {
+    id:'apto', type:'text',
+    condicional: () => {
+      // Só faz sentido perguntar o apartamento nos hotéis de Caldas
+      // (Atrium, Alta Vista, Marina) onde o cliente vai para um quarto.
+      // NÃO perguntar em SPTR, Thermas SP, Externo, Atibaia (pontos onde
+      // o cliente não necessariamente entra num apartamento).
+      const s = (salaAtual && salaAtual.nome) ? salaAtual.nome.toUpperCase() : '';
+      return s === 'ATRIUM' || s === 'ALTA VISTA' || s === 'MARINA';
+    },
+    text:'Qual o número do apartamento?',
+    placeholder:'Ex: 1204',
+    inputmode:'numeric',
+    maxlength:6,
+  },
+  {
     id:'renda', type:'chips',
     text:'Qual a renda mensal do casal?',
     opts:[
@@ -2903,8 +2918,12 @@ function renderStep() {
   } else if (q.type==='text') {
     wN.classList.remove('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden'); wP.classList.add('hidden'); wI.classList.add('hidden'); wCarro.classList.add('hidden');
     const f = document.getElementById('fieldNome');
-    f.value = ans.nome || '';
-    btn.disabled = !(ans.nome && ans.nome.trim());
+    // Genérico: usa q.id (funciona pra 'nome' E 'apto')
+    f.value = ans[q.id] || '';
+    f.placeholder = q.placeholder || 'Ex: João';
+    f.inputMode  = q.inputmode || 'text';
+    f.maxLength   = q.maxlength || 999;
+    btn.disabled = !(ans[q.id] && String(ans[q.id]).trim());
     setTimeout(() => f.focus(), 80);
   } else if (q.type==='cidade') {
     wCd.classList.remove('hidden'); wN.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden'); wP.classList.add('hidden'); wCarro.classList.add('hidden');
@@ -2982,8 +3001,11 @@ function renderStep() {
 }
 
 function onNomeInput() {
+  const qs = getQSAtivas();
+  const q = qs[step];
   const v = document.getElementById('fieldNome').value.trim();
-  ans.nome = v;
+  // Genérico: salva no ans[q.id] (funciona pra 'nome' E 'apto')
+  ans[q.id] = v;
   document.getElementById('btnProx').disabled = !v;
 }
 function onIdadeInput() {
@@ -3084,7 +3106,7 @@ function pickChip(qid, value, el) {
 function nextStep() {
   const qs = getQSAtivas();
   const q = qs[step];
-  if (q.type==='text'   && !(ans.nome   && ans.nome.trim())) return;
+  if (q.type==='text'   && !(ans[q.id]   && String(ans[q.id]).trim())) return;
   if (q.type==='cidade' && !(ans.cidade && ans.cidade.trim())) return;
   if (q.type==='tel'    && !(ans.tel    && ans.tel.replace(/\D/g,'').length === 11)) return;
   if (q.type==='carro'   && !ans.carro) return;
