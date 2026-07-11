@@ -9,6 +9,7 @@ const SALA_SHEETS = {
   'Alta Vista':       'Alta Vista',
   'Atrium':           'Alta Vista',
   'Marina':           'Alta Vista',
+  'Toulon':           'Toulon',
   'Externo':          'Alta Vista',
   'Externo CN':       'Alta Vista',
   'Thermas SP':       'São Pedro',
