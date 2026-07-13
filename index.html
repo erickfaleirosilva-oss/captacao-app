@@ -1609,8 +1609,10 @@ function initTheme() {
 // LOGIN
 function initLogin() {
   initTheme();
-  // Checar sessionStorage primeiro (sobrevive ao reload em aba anônima)
-  // depois localStorage (persiste entre sessões em aba normal)
+  // sessionStorage = sessão atual (sobrevive ao reload) → entra direto
+  // localStorage = persistente entre fechamentos → entra direto
+  // (A senha é validada no momento do login; uma vez autenticado,
+  //  o nome fica salvo e o app entra direto nas próximas vezes.)
   const savedNome = sessionStorage.getItem('yv_captador') || localStorage.getItem('yv_captador');
   if (savedNome) {
     const todos = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
@@ -1684,13 +1686,15 @@ async function doLogin() {
   }
   const todosLogin = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
   captador = todosLogin.find(c => c.nome === nome);
+  // Salvar login já autenticado — mesmo que vá abrir tela de criar senha depois,
+  // o app já sabe quem é (auto-login nas próximas vezes).
+  sessionStorage.setItem('yv_captador', nome);
+  try { localStorage.setItem('yv_captador', nome); } catch(e) {}
   // Primeiro login com senha padrão → exige criação de senha pessoal
   if (usaSenhaPadrao(nome)) {
     abrirCriarSenha(nome);
     return;
   }
-  sessionStorage.setItem('yv_captador', nome);
-  try { localStorage.setItem('yv_captador', nome); } catch(e) {}
   document.getElementById('screenLogin').classList.add('hidden');
   afterLogin();
 }
