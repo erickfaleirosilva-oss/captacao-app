@@ -2047,6 +2047,23 @@ const QS = [
     text:'Qual a cidade vocês moram?',
   },
   {
+    id:'apto', type:'text',
+    condicional: () => {
+      // Só faz sentido perguntar o apartamento nos hotéis de Caldas
+      // (Atrium, Alta Vista, Marina) onde o cliente vai para um quarto.
+      // NÃO perguntar em SPTR, Thermas SP, Externo, Atibaia (pontos onde
+      // o cliente não necessariamente entra num apartamento).
+      // Aparece cedo no fluxo (logo após cidade) para o captador não esquecer
+      // de anotar — o cliente provavelmente já sabe o número do apto.
+      const s = (salaAtual && salaAtual.nome) ? salaAtual.nome.toUpperCase() : '';
+      return s === 'ATRIUM' || s === 'ALTA VISTA' || s === 'MARINA';
+    },
+    text:'Qual o número do apartamento?',
+    placeholder:'Ex: 1204',
+    inputmode:'numeric',
+    maxlength:6,
+  },
+  {
     id:'modalidade', type:'chips',
     condicional: () => {
       // Só faz sentido perguntar modalidade nos hotéis que têm DDP
@@ -2109,21 +2126,6 @@ const QS = [
       { icon:'✈️', label:'3x por ano',       sub:'', value:'3x' },
       { icon:'✈️', label:'Mais de 4x por ano', sub:'', value:'4x' },
     ]
-  },
-  {
-    id:'apto', type:'text',
-    condicional: () => {
-      // Só faz sentido perguntar o apartamento nos hotéis de Caldas
-      // (Atrium, Alta Vista, Marina) onde o cliente vai para um quarto.
-      // NÃO perguntar em SPTR, Thermas SP, Externo, Atibaia (pontos onde
-      // o cliente não necessariamente entra num apartamento).
-      const s = (salaAtual && salaAtual.nome) ? salaAtual.nome.toUpperCase() : '';
-      return s === 'ATRIUM' || s === 'ALTA VISTA' || s === 'MARINA';
-    },
-    text:'Qual o número do apartamento?',
-    placeholder:'Ex: 1204',
-    inputmode:'numeric',
-    maxlength:6,
   },
   {
     id:'renda', type:'chips',
@@ -3487,6 +3489,9 @@ function renderHistList() {
       const chips = [];
       if (h.cidade && h.cidade !== '—')
         chips.push({ t: h.cidade, c:'neu' });
+      // Número do apartamento (só para leads com o valor salvo)
+      if (a.apartamento)
+        chips.push({ t: '🏨 Apto ' + a.apartamento, c:'neu' });
       const _isCN = ['Alta Vista','Atrium','Marina','Externo'].includes(h.sala);
       const _idadeOkChip = (v) => { const n = parseInt(v,10); return !isNaN(n) && n >= (_isCN?28:30) && n <= 65; };
       if (a.idadeMarido)
