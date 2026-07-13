@@ -4015,6 +4015,15 @@ function renderCdp(leadsHoje) {
   const totalAcesso = temAcessoTotal(captador);
   // leadsHoje já vem filtrado do cdpLeadsFiltrados (que o atualizarCdp passa).
   const leadsVisíveis = leadsHoje;
+  // Helper de equivalência de sala — SPTR cobre 'São Pedro' e 'São Pedro Resort' legados
+  // (escopo da função inteira, usado tanto no bloco totalAcesso quanto no ranking dos PIs)
+  const _salaFiltro = cdpFiltro.sala;
+  const _salaMatch = (l) => {
+    if (_salaFiltro === 'todas') return true;
+    if (l.sala === _salaFiltro) return true;
+    if (_salaFiltro === 'SPTR' && (l.sala === 'São Pedro' || l.sala === 'São Pedro Resort')) return true;
+    return false;
+  };
 
   if (totalAcesso) {
     const tQ      = leadsVisíveis.filter(l=>l.verdict==='Q').length;
@@ -4028,18 +4037,6 @@ function renderCdp(leadsHoje) {
     // PI — filtra pelo mesmo período/sala/captador
     const hoje = todayISO();
     const allPIs = filtrarPorAcessoPI(getPIs());
-    // Mapa de equivalências: 'SPTR' cobre também 'São Pedro Resort' (legado) e 'São Pedro'
-    // (porque o sheetName de SPTR no Sheets é 'São Pedro', mas no app agora usamos 'SPTR')
-    const _salaFiltro = cdpFiltro.sala;
-    const _salaMatch = (l) => {
-      if (_salaFiltro === 'todas') return true;
-      if (l.sala === _salaFiltro) return true;
-      // SPTR no app == 'São Pedro'/'São Pedro Resort' no Sheets
-      if (_salaFiltro === 'SPTR' && (l.sala === 'São Pedro' || l.sala === 'São Pedro Resort')) return true;
-      // Thermas SP == Thermas SP (mesmo nome)
-      // Externo SP == Externo SP
-      return false;
-    };
     const tPI = allPIs.filter(p => {
       if (cdpFiltro.periodo === 'hoje')   return p.dateISO === hoje;
       if (cdpFiltro.periodo === 'semana') return p.dateISO >= domingoSemana() && p.dateISO <= hoje;
