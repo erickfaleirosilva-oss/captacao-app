@@ -9,6 +9,7 @@ const SALA_SHEETS = {
   'Alta Vista':       'Alta Vista',
   'Atrium':           'Alta Vista',
   'Marina':           'Alta Vista',
+  'Toulon':           'Toulon',
   'Externo':          'Alta Vista',
   'Externo CN':       'Alta Vista',
   'Thermas SP':       'São Pedro',
@@ -483,6 +484,8 @@ function doPost(e) {
       data.modalidade      || '',          // Modalidade (pool/convidados/proprietarios)
       // v2.21 — input numérico do carro
       (typeof ans.anoCarro === 'number' ? ans.anoCarro : (ans.anoCarro || '')),  // AnoCarro
+      // v2.23 — apresentação prévia de multipropriedade
+      ans.conheceuMultiprop || '',         // ConheceuMultiprop
     ]);
 
     // Aplica cor na linha recém inserida e trava formato da coluna Data como texto
