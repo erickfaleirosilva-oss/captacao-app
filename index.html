@@ -3029,19 +3029,30 @@ function onIdadeInput() {
   document.getElementById('btnProx').disabled = !v;
 }
 function onTelInput() {
-  const raw = document.getElementById('fieldTelQuiz').value.replace(/\D/g,'').slice(0,11);
+  const f = document.getElementById('fieldTelQuiz');
+  const raw = f.value.replace(/\D/g,'').slice(0,11);
   // formata: (11) 9 1234-5678
   let fmt = raw;
   if (raw.length > 10) fmt = '(' + raw.slice(0,2) + ') ' + raw.slice(2,3) + ' ' + raw.slice(3,7) + '-' + raw.slice(7,11);
   else if (raw.length > 6) fmt = '(' + raw.slice(0,2) + ') ' + raw.slice(2,6) + '-' + raw.slice(6);
   else if (raw.length > 2) fmt = '(' + raw.slice(0,2) + ') ' + raw.slice(2);
   else if (raw.length > 0) fmt = '(' + raw;
-  document.getElementById('fieldTelQuiz').value = fmt;
+  // Só re-escreve se a formatação realmente mudou (evita resetar o cursor)
+  if (f.value !== fmt) {
+    const cursorEnd = f.selectionStart;
+    const wasAtEnd = cursorEnd === f.value.length;
+    f.value = fmt;
+    // Restaura posição do cursor
+    if (wasAtEnd) {
+      f.setSelectionRange(fmt.length, fmt.length);
+    } else {
+      const newPos = Math.min(cursorEnd + (fmt.length - f.value.length), fmt.length);
+      f.setSelectionRange(newPos, newPos);
+    }
+  }
   ans.tel = raw; // armazena só dígitos
   const ok = raw.length === 11;
   document.getElementById('btnProx').disabled = !ok;
-  // feedback visual
-  const f = document.getElementById('fieldTelQuiz');
   f.style.borderColor = raw.length > 0 && !ok ? 'var(--red)' : '';
 }
 
@@ -3120,12 +3131,23 @@ function nextStep() {
   const q = qs[step];
   if (q.type==='text'   && !(ans[q.id]   && String(ans[q.id]).trim())) return;
   if (q.type==='cidade' && !(ans.cidade && ans.cidade.trim())) return;
-  if (q.type==='tel'    && !(ans.tel    && ans.tel.replace(/\D/g,'').length === 11)) return;
+  if (q.type==='tel'    && !(ans.tel    && ans.tel.replace(/\D/g,'').length === 11)) {
+    // Feedback visual se o captador tentar avançar com tel incompleto
+    const f = document.getElementById('fieldTelQuiz');
+    if (f) {
+      f.style.borderColor = 'var(--red)';
+      f.focus();
+    }
+    return;
+  }
   if (q.type==='carro'   && !ans.carro) return;
   if (q.type==='chips'    && !ans[q.id]) return;
   if (q.type==='profissao' && !ans[q.id]) return;
   // Se esta é a última pergunta, salva o lead ANTES de mostrar o resultado
   const isLast = step === qs.length - 1;
+  // Limpa o ID auto-salvo se o usuário voltou e está avançando de novo
+  // (permite re-salvar o lead se o captador editar o telefone e voltar a avançar)
+  if (isLast) delete ans._autoSavedId;
   step++;
   if (step >= qs.length) {
     if (isLast) _persistLead(); // salva imediatamente na confirmação da última resposta
