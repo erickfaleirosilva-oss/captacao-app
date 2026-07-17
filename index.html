@@ -3881,7 +3881,13 @@ function renderCdpFiltros() {
   }
   // Select de captador — lider/CEO
   if (captador && ['ceo','lider','sublider'].includes(captador.cargo)) {
-    const todos = todosOsMembros().filter(m => m.cargo === 'captador' || !m.cargo || !!getSuporteTemp(m.nome));
+    // Inclui todos que cadastram leads: captador, sublíder, líder
+    // (exclui só CEO e administrativos sem leads). Mantém ordem alfabética
+    // independente da ordem que foram cadastrados no CONFIG.
+    const todos = todosOsMembros()
+      .filter(m => ['captador','sublider','lider'].includes(m.cargo) || !m.cargo || !!getSuporteTemp(m.nome))
+      .map(m => ({ ...m, _sortKey: (m.nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() }))
+      .sort((a, b) => a._sortKey.localeCompare(b._sortKey, 'pt-BR'));
     html += '<select class="filtro-select" onchange="setCdpFiltro(\'captador\',this.value)">';
     html += `<option value="todos"${cdpFiltro.captador==='todos'?' selected':''}>Todos captadores</option>`;
     todos.forEach(m => {
