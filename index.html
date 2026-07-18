@@ -3362,14 +3362,16 @@ function showHist() {
   renderHistFiltros();
   renderHistList();
   if (API.ok()) {
-    // ⚠️ REGRA CRÍTICA — nunca passar só todayISO() aqui.
-    // mergeRemoto só ADICIONA leads; se o Sheets retornar só hoje, os de outros dias
-    // ficam desatualizados E são reenfileirados como "não sincronizados" — causando reenvio em massa.
-    // Sempre buscar o mês corrente completo para garantir que o histórico esteja completo.
-    const _mesAtual = todayISO().slice(0, 7) + '-01';
-    API.getLeads(null, _mesAtual, todayISO()).then(remoto => {
-      if (mergeRemoto(remoto, _mesAtual)) { renderHistFiltros(); renderHistList(); }
-      // Reenvio só depois que o getLeads terminou — não compete com a leitura
+    // REGRA: puxar últimos 3 meses (não só o mês atual).
+    // Se o captador abre o Histórico e o período está como "Este mês" mas ele quer ver o passado
+    // (ex: olhando junho em julho), o sync do mês atual não traz os leads antigos.
+    // Range maior cobre o caso de uso sem causar reenvio em massa (mergeRemoto só adiciona).
+    const hoje = todayISO();
+    const d = new Date(hoje + 'T00:00:00');
+    d.setMonth(d.getMonth() - 3);
+    const _de = d.toISOString().slice(0, 10);
+    API.getLeads(null, _de, hoje).then(remoto => {
+      if (mergeRemoto(remoto, _de)) { renderHistFiltros(); renderHistList(); }
       setTimeout(_reenviaPendentesHistorico, 500);
     }).catch(() => {});
   }
