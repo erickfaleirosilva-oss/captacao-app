@@ -2960,8 +2960,10 @@ function renderStep() {
     wTl.classList.remove('hidden'); wN.classList.add('hidden'); wCd.classList.add('hidden'); wC.classList.add('hidden'); wP.classList.add('hidden'); wI.classList.add('hidden'); wCarro.classList.add('hidden');
     const f = document.getElementById('fieldTelQuiz');
     f.value = ans.tel || '';
-    btn.disabled = !(ans.tel && ans.tel.replace(/\D/g,'').length === 11);
-    setTimeout(() => f.focus(), 80);
+    // Botão Próximo HABILITADO se já tem tel válido, ou se o campo tem 10+ dígitos (caso de borda)
+    const _currentDigits = f.value.replace(/\D/g,'').length;
+    btn.disabled = _currentDigits < 10;
+    setTimeout(() => { f.focus(); f.setSelectionRange(f.value.length, f.value.length); }, 80);
   } else if (q.type==='carro') {
     wCarro.classList.remove('hidden'); wN.classList.add('hidden'); wCd.classList.add('hidden'); wTl.classList.add('hidden'); wC.classList.add('hidden'); wP.classList.add('hidden'); wI.classList.add('hidden');
     // Restaura estado anterior se houver
@@ -3149,7 +3151,7 @@ function nextStep() {
   const q = qs[step];
   if (q.type==='text'   && !(ans[q.id]   && String(ans[q.id]).trim())) return;
   if (q.type==='cidade' && !(ans.cidade && ans.cidade.trim())) return;
-  if (q.type==='tel'    && !(ans.tel    && ans.tel.replace(/\D/g,'').length === 11)) {
+  if (q.type==='tel'    && !(ans.tel    && ans.tel.replace(/\D/g,'').length >= 10)) {
     // Feedback visual se o captador tentar avançar com tel incompleto
     const f = document.getElementById('fieldTelQuiz');
     if (f) {
