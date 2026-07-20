@@ -3147,6 +3147,7 @@ function pickChip(qid, value, el) {
 }
 
 function nextStep() {
+  try {
   const qs = getQSAtivas();
   const q = qs[step];
   if (q.type==='text'   && !(ans[q.id]   && String(ans[q.id]).trim())) return;
@@ -3174,6 +3175,10 @@ function nextStep() {
     showResult();
   } else {
     renderStep();
+  }
+  } catch(e) {
+    if (window.__qqDebug) console.error('nextStep error:', e);
+    alert('Erro: ' + e.message + '\nStep=' + step);
   }
 }
 function prevStep() {
