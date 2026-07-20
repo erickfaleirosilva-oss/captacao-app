@@ -3823,6 +3823,14 @@ function mergeRemoto(remoto, periodoFrom) {
     r.date = normalizarDate(r.date, r.id);
     r.time = normalizarTime(r.time, r.id);
     r.sala = normalizarSala(r.sala, r.captador); // translada nomes antigos → atuais por captador
+    // Normaliza dateISO: pode vir como Date object, ISO 8601 (com T/Z), ou string
+    if (r.dateISO instanceof Date) {
+      r.dateISO = r.dateISO.toISOString().slice(0, 10);
+    } else if (r.dateISO && typeof r.dateISO === 'string') {
+      // Se veio com T (ex: "2026-07-20T13:00:00.000Z"), pega só a parte YYYY-MM-DD
+      const tIdx = r.dateISO.indexOf('T');
+      if (tIdx > 0) r.dateISO = r.dateISO.slice(0, tIdx);
+    }
     if (!r.dateISO || r.dateISO === '') {
       const p = r.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
       r.dateISO = p ? p[3] + '-' + p[2] + '-' + p[1] : '';
