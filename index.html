@@ -920,7 +920,7 @@
   <div class="yv-tag">YOUR VACATION</div>
   <div class="sala-pill hidden" id="salaPill">🏢 —</div>
   <div class="captador-pill" id="captadorPill" onclick="trocarCaptador()">👤 —</div>
-  <div class="mode-badge low" id="modeBadge" onclick="goHome()">▾ &lt;3k</div>
+  <div class="mode-badge low" id="modeBadge" onclick="onModeBadgeClick()">▾ &lt;3k</div>
 </div>
 
 <!-- MAIN -->
@@ -2650,6 +2650,26 @@ function goTo(tab) {
   else if (tab==='equipe')    showEquipe();
 }
 function goHome() { goTo('home'); }
+function onModeBadgeClick() {
+  // Se está no meio do quiz, só abre o seletor de modo (não volta pra home).
+  // Evita perda acidental de pesquisa quando o captador encosta no badge
+  // (comum no iOS com teclado virtual ativo na pergunta do telefone).
+  if (_estavaNaQuiz() && step < (getQSAtivas().length - 1)) {
+    // Mostra o seletor de modo (mesma tela de seleção de modo)
+    _abrirSeletorModo();
+    return;
+  }
+  goHome();
+}
+function _abrirSeletorModo() {
+  // Reaproveita a tela de seleção de modo (screenModo) — exibe modal/seleção
+  // sem resetar o quiz. Como o badge fica na home, levamos o usuário pra home
+  // mas com o quiz pausado — não reseta step/ans.
+  if (typeof _modoPendente !== 'undefined') _modoPendente = null;
+  // Salva lead parcial se já tiver dados suficientes (auto-save)
+  _salvarLeadParcial();
+  goHome();
+}
 function selectMode(m) {
   mode = m;
   document.getElementById('cardLow').classList.toggle('selected', m==='low');
@@ -3166,6 +3186,9 @@ function nextStep() {
   if (q.type==='profissao' && !ans[q.id]) return;
   // Se esta é a última pergunta, salva o lead ANTES de mostrar o resultado
   const isLast = step === qs.length - 1;
+  // Auto-save parcial: salva o lead a cada pergunta avançada (se tiver dados suficientes).
+  // Garante que se o captador sair no meio, o lead não é perdido.
+  _salvarLeadParcial();
   // Limpa o ID auto-salvo se o usuário voltou e está avançando de novo
   // (permite re-salvar o lead se o captador editar o telefone e voltar a avançar)
   if (isLast) delete ans._autoSavedId;
@@ -3192,6 +3215,62 @@ function prevStep() {
 }
 
 // RESULTADO
+// Auto-save de lead parcial: chamado a cada nextStep() para garantir que
+// se o captador sair acidentalmente no meio do quiz (ex: tocar no mode-badge),
+// o lead já está salvo no Sheets com os dados preenchidos até o momento.
+function _salvarLeadParcial() {
+  // Só salva se tiver dados suficientes (nome + tel válidos pelo menos)
+  if (!ans || !ans.nome || !ans.tel) return;
+  if (ans._autoSavedId) return; // já foi salvo nesta rodada
+  if (typeof calcResult !== 'function') return;
+  try {
+    // Se tem telefone válido, calcula verdict (mesmo sem todas as perguntas)
+    const { verdict } = calcResult();
+    const iso = todayISO();
+    const lead = {
+      id:       Date.now(),
+      nome:     ans.nome   || '—',
+      tel:      ans.tel    || '—',
+      verdict:  verdict || 'PARCIAL',
+      tipo:     ans.tipo   || '—',
+      renda:    ans.renda  || '—',
+      cidade:   ans.cidade || '—',
+      modalidade: ans.modalidade || null,
+      mode:     mode==='low'?'<3k':'>3k',
+      sala:     salaAtual ? salaAtual.nome : '—',
+      captador: captador  ? captador.nome  : '—',
+      time:     new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      date:     new Date().toLocaleDateString('pt-BR'),
+      dateISO:  iso,
+      _partial: true, // flag indicando que foi salvo parcial
+      _ans: {
+        casa:              ans.casa              || null,
+        carro:             ans.carro             || null,
+        cartao:            ans.cartao            || null,
+        idadeMarido:       ans.idadeMarido       || null,
+        idadeConjuge:      ans.idadeConjuge      || null,
+        tempoRel:          ans.tempoRel          || null,
+        viagens:           ans.viagens           || null,
+        profissaoTitular:  ans.profissaoTitular  || null,
+        profissaoConjuge:  ans.profissaoConjuge  || null,
+        anoCarro:          (typeof ans.anoCarro === 'number') ? ans.anoCarro : null,
+        apartamento:        ans.apto              || null,
+        conheceuMultiprop:  ans.conheceuMultiprop || null,
+      },
+    };
+    ans._autoSavedId = lead.id;
+    leads.unshift(lead);
+    if (leads.length > 500) leads.pop();
+    sessionStorage.setItem('yv_leads', JSON.stringify(leads));
+    try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
+    if (navigator.onLine && API.ok()) {
+      API.post(lead).then(ok => {
+        const i = leads.findIndex(l => String(l.id) === String(lead.id));
+        if (i >= 0 && ok) { leads[i]._synced = true; _salvarLeads(); }
+      }).catch(() => {});
+    }
+  } catch(e) { /* silencioso */ }
+}
 function _persistLead() {
   // Salva o lead automaticamente ao chegar na tela de resultado
   // Evita duplicatas usando _autoSavedId armazenado em ans
