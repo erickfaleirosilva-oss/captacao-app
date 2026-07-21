@@ -2226,7 +2226,7 @@ function calcResult() {
     const _nome = salaAtual.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     if (_nome.includes('atibaia'))                          return calcAtibaia();
     if (_nome.includes('thermas') || _nome.includes('sptr') || _nome.includes('sao pedro') || _nome.includes('são pedro') || _nome.includes('externo sp')) return calcSaoPedro();
-    if (_nome.includes('alta vista') || _nome.includes('atrium') || _nome.includes('marina') || _nome.includes('externo')) return calcAltaVista();
+    if (_nome.includes('alta vista') || _nome.includes('atrium') || _nome.includes('marina') || _nome.includes('externo') || _nome.includes('toulon')) return calcAltaVista();
   }
   return { verdict:'NQ', rows:[{i:'⚠️', l:'Sala', v:'Sala não reconhecida'}], rule:null, perfil:null };
 }

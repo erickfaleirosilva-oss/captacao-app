@@ -9,7 +9,7 @@ const SALA_SHEETS = {
   'Alta Vista':       'Alta Vista',
   'Atrium':           'Alta Vista',
   'Marina':           'Alta Vista',
-  'Toulon':           'Toulon',
+  'Toulon':           'Toulon',       // aba dedicada (regras iguais ao Alta Vista no frontend)
   'Externo':          'Alta Vista',
   'Externo CN':       'Alta Vista',
   'Thermas SP':       'São Pedro',
