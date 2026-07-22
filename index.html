@@ -3189,9 +3189,6 @@ function nextStep() {
   // Auto-save parcial: salva o lead a cada pergunta avançada (se tiver dados suficientes).
   // Garante que se o captador sair no meio, o lead não é perdido.
   _salvarLeadParcial();
-  // Limpa o ID auto-salvo se o usuário voltou e está avançando de novo
-  // (permite re-salvar o lead se o captador editar o telefone e voltar a avançar)
-  if (isLast) delete ans._autoSavedId;
   step++;
   if (step >= qs.length) {
     if (isLast) _persistLead(); // salva imediatamente na confirmação da última resposta
@@ -3215,51 +3212,60 @@ function prevStep() {
 }
 
 // RESULTADO
-// Auto-save de lead parcial: chamado a cada nextStep() para garantir que
-// se o captador sair acidentalmente no meio do quiz (ex: tocar no mode-badge),
-// o lead já está salvo no Sheets com os dados preenchidos até o momento.
+// Helper: monta o objeto lead a partir de ans + ID
+function _buildLeadObject(leadId, verdict, iso, isPartial) {
+  return {
+    id:       leadId,
+    nome:     ans.nome   || '—',
+    tel:      ans.tel    || '—',
+    verdict:  verdict || 'PARCIAL',
+    tipo:     ans.tipo   || '—',
+    renda:    ans.renda  || '—',
+    cidade:   ans.cidade || '—',
+    modalidade: ans.modalidade || null,
+    mode:     mode==='low'?'<3k':'>3k',
+    sala:     salaAtual ? salaAtual.nome : '—',
+    captador: captador  ? captador.nome  : '—',
+    time:     new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    date:     new Date().toLocaleDateString('pt-BR'),
+    dateISO:  iso,
+    _partial: isPartial,
+    _ans: {
+      casa:              ans.casa              || null,
+      carro:             ans.carro             || null,
+      cartao:            ans.cartao            || null,
+      idadeMarido:       ans.idadeMarido       || null,
+      idadeConjuge:      ans.idadeConjuge      || null,
+      tempoRel:          ans.tempoRel          || null,
+      viagens:           ans.viagens           || null,
+      profissaoTitular:  ans.profissaoTitular  || null,
+      profissaoConjuge:  ans.profissaoConjuge  || null,
+      anoCarro:          (typeof ans.anoCarro === 'number') ? ans.anoCarro : null,
+      apartamento:        ans.apto              || null,
+      conheceuMultiprop:  ans.conheceuMultiprop || null,
+    },
+  };
+}
+
+// Auto-save de lead parcial: usa SEMPRE o mesmo _partialId durante o quiz.
+// Evita duplicação: o lead é atualizado no Sheets a cada pergunta (não criado de novo).
 function _salvarLeadParcial() {
-  // Só salva se tiver dados suficientes (nome + tel válidos pelo menos)
   if (!ans || !ans.nome || !ans.tel) return;
-  if (ans._autoSavedId) return; // já foi salvo nesta rodada
   if (typeof calcResult !== 'function') return;
   try {
-    // Se tem telefone válido, calcula verdict (mesmo sem todas as perguntas)
     const { verdict } = calcResult();
     const iso = todayISO();
-    const lead = {
-      id:       Date.now(),
-      nome:     ans.nome   || '—',
-      tel:      ans.tel    || '—',
-      verdict:  verdict || 'PARCIAL',
-      tipo:     ans.tipo   || '—',
-      renda:    ans.renda  || '—',
-      cidade:   ans.cidade || '—',
-      modalidade: ans.modalidade || null,
-      mode:     mode==='low'?'<3k':'>3k',
-      sala:     salaAtual ? salaAtual.nome : '—',
-      captador: captador  ? captador.nome  : '—',
-      time:     new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-      date:     new Date().toLocaleDateString('pt-BR'),
-      dateISO:  iso,
-      _partial: true, // flag indicando que foi salvo parcial
-      _ans: {
-        casa:              ans.casa              || null,
-        carro:             ans.carro             || null,
-        cartao:            ans.cartao            || null,
-        idadeMarido:       ans.idadeMarido       || null,
-        idadeConjuge:      ans.idadeConjuge      || null,
-        tempoRel:          ans.tempoRel          || null,
-        viagens:           ans.viagens           || null,
-        profissaoTitular:  ans.profissaoTitular  || null,
-        profissaoConjuge:  ans.profissaoConjuge  || null,
-        anoCarro:          (typeof ans.anoCarro === 'number') ? ans.anoCarro : null,
-        apartamento:        ans.apto              || null,
-        conheceuMultiprop:  ans.conheceuMultiprop || null,
-      },
-    };
-    ans._autoSavedId = lead.id;
-    leads.unshift(lead);
+    if (!ans._partialId) ans._partialId = Date.now();
+    const leadId = ans._partialId;
+    const lead = _buildLeadObject(leadId, verdict, iso, true);
+    ans._autoSavedId = leadId;
+    // Atualiza se já existe, senão insere (evita duplicar)
+    const idx = leads.findIndex(l => String(l.id) === String(leadId));
+    if (idx >= 0) {
+      leads[idx] = { ...leads[idx], ...lead };
+    } else {
+      leads.unshift(lead);
+    }
     if (leads.length > 500) leads.pop();
     sessionStorage.setItem('yv_leads', JSON.stringify(leads));
     try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
@@ -3272,45 +3278,30 @@ function _salvarLeadParcial() {
   } catch(e) { /* silencioso */ }
 }
 function _persistLead() {
-  // Salva o lead automaticamente ao chegar na tela de resultado
-  // Evita duplicatas usando _autoSavedId armazenado em ans
-  if (ans._autoSavedId) return; // já foi salvo nesta rodada
+  // Salva o lead final (chegada na tela de resultado).
+  // Se já existe _partialId, ATUALIZA o mesmo lead (sem duplicar).
+  if (ans._autoSavedId) {
+    const idExistente = ans._autoSavedId;
+    const { verdict } = calcResult();
+    const iso = todayISO();
+    const lead = _buildLeadObject(idExistente, verdict, iso, false);
+    const idx = leads.findIndex(l => String(l.id) === String(idExistente));
+    if (idx >= 0) {
+      leads[idx] = { ...leads[idx], ...lead, _partial: false };
+      sessionStorage.setItem('yv_leads', JSON.stringify(leads));
+      try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
+      if (navigator.onLine && API.ok()) {
+        API.post(leads[idx]).then(ok => {
+          if (ok) { leads[idx]._synced = true; _salvarLeads(); }
+        }).catch(() => {});
+      }
+    }
+    return;
+  }
+  // Sem auto-save anterior (fluxo legado) — cria lead novo
   const { verdict } = calcResult();
   const iso = todayISO();
-  const lead = {
-    id:       Date.now(),
-    nome:     ans.nome   || '—',
-    tel:      ans.tel    || '—',
-    verdict,
-    tipo:     ans.tipo   || '—',
-    renda:    ans.renda  || '—',
-    cidade:   ans.cidade || '—',
-    modalidade: ans.modalidade || null,
-    mode:     mode==='low'?'<3k':'>3k',
-    sala:     salaAtual ? salaAtual.nome : '—',
-    captador: captador  ? captador.nome  : '—',
-    time:     new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-    date:     new Date().toLocaleDateString('pt-BR'),
-    dateISO:  iso,
-    // respostas detalhadas para exibição no perfil
-    _ans: {
-      casa:              ans.casa              || null,
-      carro:             ans.carro             || null,
-      cartao:            ans.cartao            || null,
-      idadeMarido:       ans.idadeMarido       || null,
-      idadeConjuge:      ans.idadeConjuge      || null,
-      tempoRel:          ans.tempoRel          || null,
-      viagens:           ans.viagens           || null,
-      profissaoTitular:  ans.profissaoTitular  || null,
-      profissaoConjuge:  ans.profissaoConjuge  || null,
-      // v2.21 — input numérico do carro
-      anoCarro:          (typeof ans.anoCarro === 'number') ? ans.anoCarro : null,
-      // v2.22 — número do apartamento (Atrium, Alta Vista, Marina)
-      apartamento:        ans.apto              || null,
-      // v2.23 — apresentação prévia de multipropriedade
-      conheceuMultiprop:  ans.conheceuMultiprop || null,
-    },
-  };
+  const lead = _buildLeadObject(Date.now(), verdict, iso, false);
   ans._autoSavedId = lead.id;
   leads.unshift(lead);
   if (leads.length > 500) leads.pop();
