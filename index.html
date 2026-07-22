@@ -3461,20 +3461,28 @@ function filtrarLeads(fonte, filtro) {
 function showHist() {
   hideAll(); show('screenHist');
   renderHistFiltros();
-  renderHistList();
   if (API.ok()) {
-    // REGRA: puxar últimos 3 meses (não só o mês atual).
-    // Se o captador abre o Histórico e o período está como "Este mês" mas ele quer ver o passado
-    // (ex: olhando junho em julho), o sync do mês atual não traz os leads antigos.
-    // Range maior cobre o caso de uso sem causar reenvio em massa (mergeRemoto só adiciona).
+    // IMPORTANTE: NÃO chamar renderHistList() antes do mergeRemoto.
+    // A primeira renderização precisa usar os dados sincronizados do Sheets,
+    // senão líderes (como Rarley) veem 'Nenhuma qualificação' mesmo tendo leads
+    // cadastrados — porque o `leads` em memória do dispositivo está vazio.
+    // O mesmo fix já foi aplicado no showCdp.
     const hoje = todayISO();
     const d = new Date(hoje + 'T00:00:00');
     d.setMonth(d.getMonth() - 3);
     const _de = d.toISOString().slice(0, 10);
     API.getLeads(null, _de, hoje).then(remoto => {
-      if (mergeRemoto(remoto, _de)) { renderHistFiltros(); renderHistList(); }
+      mergeRemoto(remoto, _de);
+      renderHistFiltros();
+      renderHistList();
       setTimeout(_reenviaPendentesHistorico, 500);
-    }).catch(() => {});
+    }).catch(() => {
+      // Em caso de erro, renderiza com o que tem em memória
+      renderHistList();
+    });
+  } else {
+    // Sem API (offline) — renderiza com dados locais
+    renderHistList();
   }
 }
 

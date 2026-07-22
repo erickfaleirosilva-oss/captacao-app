@@ -1127,6 +1127,96 @@ function dedupTodasAsAbas() {
   Logger.log('=== Dedup concluído. Total removidas: ' + totalRemovidas + ' linhas. ===');
 }
 
+// ── Remove linhas duplicadas por TELEFONE + DATA + CAPTADOR, mantendo a MAIS COMPLETA ──
+// Resolve o problema do auto-save parcial antigo que gerava múltiplos leads
+// com IDs diferentes mas mesmo tel + data + captador.
+// Critério de "mais completa": a que tiver MAIS campos _ans preenchidos.
+// Rodar manualmente no Apps Script uma vez para limpar as duplicações antigas.
+function dedupPorTelEData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const nomeAbas = [...new Set(Object.values(SALA_SHEETS))]; // ['Alta Vista', 'São Pedro', 'Atibaia']
+  let totalRemovidas = 0;
+  let totalMantidas = 0;
+
+  nomeAbas.forEach(nome => {
+    const sheet = ss.getSheetByName(nome);
+    if (!sheet) { Logger.log(nome + ': aba não encontrada, pulando.'); return; }
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) { Logger.log(nome + ': vazia, pulando.'); return; }
+
+    const nCols = sheet.getLastColumn();
+    const cabecalho = sheet.getRange(1, 1, 1, nCols).getValues()[0];
+    const idxTel      = cabecalho.indexOf('Telefone');
+    const idxData     = cabecalho.indexOf('Data');
+    const idxCaptador = cabecalho.indexOf('Captador');
+    const idxResultado= cabecalho.indexOf('Resultado');
+    if (idxTel < 0 || idxData < 0) { Logger.log(nome + ': colunas Tel/Data não encontradas.'); return; }
+
+    // Lê todas as linhas
+    const allRows = sheet.getRange(2, 1, lastRow - 1, nCols).getValues();
+
+    // Agrupa por chave (tel + data + captador)
+    const grupos = {}; // chave → [{idx, score, row}]
+    allRows.forEach((r, i) => {
+      const tel = String(r[idxTel] || '').replace(/\D/g, '').slice(0, 11);
+      const data = String(r[idxData] || '').trim();
+      const captador = String(r[idxCaptador] || '').trim();
+      if (!tel || !data) return; // sem tel ou data — não deduplica
+      const key = tel + '|' + data + '|' + captador;
+      // Score = quantos campos do _ans estão preenchidos (Q tem campos extras)
+      // Para simplificar, conta quantas colunas não-vazias na linha
+      let score = 0;
+      for (let c = 0; c < nCols; c++) {
+        if (c === idxTel) continue; // tel já conta na chave
+        const v = r[c];
+        if (v !== '' && v !== null && v !== undefined) score++;
+      }
+      // Bonus para resultado definido (Q > PARCIAL > NQ)
+      if (idxResultado >= 0) {
+        const v = String(r[idxResultado] || '').toUpperCase();
+        if (v === 'Q') score += 10;
+        else if (v === 'PARCIAL') score += 5;
+      }
+      if (!grupos[key]) grupos[key] = [];
+      grupos[key].push({ idx: i, score, row: r });
+    });
+
+    // Para cada grupo, mantém só a linha de MAIOR score
+    const linhasParaRemover = []; // índices no array (base 0)
+    Object.keys(grupos).forEach(key => {
+      const grupo = grupos[key];
+      if (grupo.length <= 1) return; // sem duplicata
+      // Ordena por score desc — primeira é a vencedora
+      grupo.sort((a, b) => b.score - a.score);
+      // Marca as outras para remoção
+      for (let i = 1; i < grupo.length; i++) {
+        linhasParaRemover.push(grupo[i].idx);
+      }
+      const vencedor = grupo[0];
+      Logger.log('  ' + nome + ' | ' + key + ' → ' + grupo.length + ' cópias, mantendo idx=' + vencedor.idx + ' (score=' + vencedor.score + ')');
+    });
+
+    if (!linhasParaRemover.length) {
+      Logger.log(nome + ': sem duplicatas por tel+data+captador.');
+      return;
+    }
+
+    // Remove de baixo para cima para não deslocar índices
+    linhasParaRemover.sort((a, b) => b - a);
+    linhasParaRemover.forEach(i => {
+      sheet.deleteRow(i + 2);
+    });
+
+    totalRemovidas += linhasParaRemover.length;
+    totalMantidas += (allRows.length - linhasParaRemover.length);
+    Logger.log(nome + ': ' + linhasParaRemover.length + ' duplicatas removidas. Restam ' + (allRows.length - linhasParaRemover.length) + ' linhas.');
+  });
+
+  Logger.log('=== Dedup por tel+data+captador concluído ===');
+  Logger.log('Total removidas: ' + totalRemovidas);
+  Logger.log('Total mantidas: ' + totalMantidas);
+}
+
 // ── Migra dados do PropertiesService (ddp_store antigo) para a aba DDP ──
 // Rodar UMA VEZ manualmente no Apps Script após implantar nova versão
 function migrarDDPParaSheets() {
