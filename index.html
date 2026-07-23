@@ -1535,24 +1535,8 @@ function filtrarPorAcesso(lista) {
     }
     return lista;
   }
-  // Captador comum: vê leads da sala fixa (se tiver) OU só os próprios (se não tiver)
-  // A sala do lead é comparada com a sala fixa (variantes: "Atibaia"/"Alta Vista" etc.)
-  if (captador.sala) {
-    return lista.filter(l => normalizarSalaIgual(l.sala, captador.sala) || l.captador === captador.nome);
-  }
+  // Captador comum: só vê os PRÓPRIOS leads
   return lista.filter(l => l.captador === captador.nome);
-}
-
-// Compara 2 nomes de sala, normalizando variações (Alta Vista == Atibaia fallback, etc.)
-// Garante que a Letícia (sala=Atrium) veja leads mesmo se gravados como "Alta Vista" errado
-function normalizarSalaIgual(s1, s2) {
-  if (!s1 || !s2) return false;
-  const a = String(s1).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const b = String(s2).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  if (a === b) return true;
-  // Fallback para nomes legados: "São Pedro Resort" === "SPTR" etc.
-  // (essa normalização mais ampla fica no normalizarSala do app, mas aqui só igualamos exatos)
-  return false;
 }
 // Mesma lógica para PIs (usa campo captador e sala)
 function filtrarPorAcessoPI(lista) {
