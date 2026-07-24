@@ -3736,13 +3736,55 @@ function toggleVenda(leadId) {
 }
 
 // Sincroniza emSala + tipoSala + venda com o Sheets após qualquer alteração de sala
+// Usa buffer com debounce para juntar várias alterações em 1 chamada (evita quota exceeded)
+let _salaBuffer = {};
+let _salaFlushTimer = null;
 function _syncSalaState(idx) {
+  const l = leads[idx];
+  if (!l || !l.id) return;
+  // Adiciona ao buffer (sobrescreve se já estiver lá — sempre o estado mais recente)
+  _salaBuffer[String(l.id)] = {
+    emSala: !!l.emSala,
+    tipoSala: l.tipoSala || null,
+    venda: !!l.venda
+  };
+  // Agenda flush em 2s (debounce — se o captador fizer 15 toggles em sequência, vira 1 chamada)
+  if (_salaFlushTimer) clearTimeout(_salaFlushTimer);
+  _salaFlushTimer = setTimeout(_flushSalaBuffer, 2000);
+}
+function _flushSalaBuffer() {
+  _salaFlushTimer = null;
+  const ids = Object.keys(_salaBuffer);
+  if (!ids.length) return;
+  const updates = ids.map(id => Object.assign({ id }, _salaBuffer[id]));
+  _salaBuffer = {};
   if (!navigator.onLine || !API.ok()) {
-    offlineEnqueue({ _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala, tipoSala: leads[idx].tipoSala || null, venda: !!leads[idx].venda });
+    updates.forEach(u => offlineEnqueue(Object.assign({ _action: 'update_sala' }, u)));
     return;
   }
-  const payload = { _action: 'update_sala', id: leads[idx].id, emSala: leads[idx].emSala, tipoSala: leads[idx].tipoSala || null, venda: !!leads[idx].venda };
-  API.post(payload).then(ok => { if (!ok) offlineEnqueue(payload); }).catch(() => offlineEnqueue(payload));
+  // Se for 1 update, manda como update_sala (compat)
+  // Se forem 2+, manda como update_sala_batch (1 chamada pro Sheets)
+  let payload;
+  if (updates.length === 1) {
+    payload = Object.assign({ _action: 'update_sala' }, updates[0]);
+  } else {
+    payload = { _action: 'update_sala_batch', updates };
+  }
+  API.post(payload).then(ok => {
+    if (!ok) {
+      updates.forEach(u => offlineEnqueue(Object.assign({ _action: 'update_sala' }, u)));
+    }
+  }).catch(() => {
+    updates.forEach(u => offlineEnqueue(Object.assign({ _action: 'update_sala' }, u)));
+  });
+}
+// Flusha o buffer imediatamente (usado antes de salvar um lead novo)
+function _flushSalaBufferNow() {
+  if (_salaFlushTimer) {
+    clearTimeout(_salaFlushTimer);
+    _salaFlushTimer = null;
+  }
+  _flushSalaBuffer();
 }
 
 function _salvarLeads() {

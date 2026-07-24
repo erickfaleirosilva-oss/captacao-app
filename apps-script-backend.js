@@ -405,6 +405,40 @@ function doPost(e) {
       return jsonResponse({ status: 'not_found', id: data.id });
     }
 
+    // update_sala_batch: atualiza N leads em 1 chamada (evita quota exceeded)
+    if (data._action === 'update_sala_batch' && Array.isArray(data.updates)) {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheetsAlvo = Object.values(SALA_SHEETS).map(n => ss.getSheetByName(n)).filter(Boolean);
+      // Cache de cabeçalhos por sheet (evita releitura)
+      const cabecalhoCache = {};
+      sheetsAlvo.forEach(s => { cabecalhoCache[s.getName()] = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0]; });
+      const results = { ok: 0, not_found: [], errors: 0 };
+      data.updates.forEach(u => {
+        try {
+          let found = false;
+          for (const sheet of sheetsAlvo) {
+            const row = findRowById(sheet, u.id);
+            if (row > 0) {
+              const cabecalho = cabecalhoCache[sheet.getName()];
+              const set = (col, val) => {
+                const i = cabecalho.indexOf(col);
+                if (i >= 0) sheet.getRange(row, i + 1).setValue(val);
+              };
+              set('EmSala',   u.emSala   ? 'SIM' : '');
+              set('TipoSala', u.tipoSala || '');
+              set('Venda',    u.venda    ? 'SIM' : '');
+              if (u.sala !== undefined) set('Sala', u.sala);
+              results.ok++;
+              found = true;
+              break;
+            }
+          }
+          if (!found) results.not_found.push(String(u.id));
+        } catch (e) { results.errors++; }
+      });
+      return jsonResponse({ status: 'ok', processed: data.updates.length, updated: results.ok, not_found: results.not_found.length, errors: results.errors });
+    }
+
     // register_pi: salva em PropertiesService (sem criar aba na planilha)
     if (data._action === 'register_pi') {
       const pis = getPIs();
