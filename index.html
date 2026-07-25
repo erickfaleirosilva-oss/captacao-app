@@ -1370,7 +1370,9 @@ const CONFIG = {
 const API = {
   ok: () => !!CONFIG.webhookUrl,
   // Retorna true se confirmado pelo servidor, false se falhou
-  post: async (lead) => {
+  // Modo 'silent' suprime alerts (usado pelo buffer de update_sala)
+  post: async (lead, opts) => {
+    opts = opts || {};
     if (!API.ok()) return false;
     try {
       const r = await fetch(CONFIG.webhookUrl, {
@@ -1378,10 +1380,22 @@ const API = {
         headers: {'Content-Type':'text/plain'},
         body: JSON.stringify(lead)
       });
-      if (!r.ok) return false;
+      if (!r.ok) {
+        if (!opts.silent) {
+          // Mensagem amigável para quota exceeded
+          if (r.status === 429 || (r.status >= 500 && r.status < 600)) {
+            console.warn('API.post falhou (HTTP ' + r.status + '): ' + (r.statusText || '').slice(0,100));
+            // Não alert — só log. O lead já está salvo localmente.
+          }
+        }
+        return false;
+      }
       const json = await r.json().catch(() => null);
       return json && (json.status === 'ok' || json.status === 'duplicate');
-    } catch(e) { return false; }
+    } catch(e) {
+      if (!opts.silent) console.warn('API.post fetch error:', e.message);
+      return false;
+    }
   },
   getLeads: async (dateISO, dateFrom, dateTo) => {
     // ⚠️ REGRA CRÍTICA — NUNCA filtrar por data única (dateISO) no sync do CDP.
@@ -3188,9 +3202,12 @@ function nextStep() {
   if (q.type==='profissao' && !ans[q.id]) return;
   // Se esta é a última pergunta, salva o lead ANTES de mostrar o resultado
   const isLast = step === qs.length - 1;
-  // Auto-save parcial: salva o lead a cada pergunta avançada (se tiver dados suficientes).
-  // Garante que se o captador sair no meio, o lead não é perdido.
-  _salvarLeadParcial();
+  // Auto-save APENAS quando é a última pergunta (não a cada Próximo →).
+  // Salvar parcial a cada passo esgotava a quota do Apps Script (1 POST por pergunta
+  // = 15 calls por lead, em horário de pico estourava). Agora salva 1 vez só no final.
+  if (isLast) {
+    try { _salvarLeadParcial(); } catch(e) { console.warn('[QQ] save parcial falhou:', e.message); }
+  }
   step++;
   if (step >= qs.length) {
     if (isLast) _persistLead(); // salva imediatamente na confirmação da última resposta
@@ -3200,7 +3217,8 @@ function nextStep() {
   }
   } catch(e) {
     if (window.__qqDebug) console.error('nextStep error:', e);
-    alert('Erro: ' + e.message + '\nStep=' + step);
+    // Loga no console (sem alert) — deixa o fluxo seguir
+    console.error('[QQ] nextStep erro no step', step, ':', e.message, '\n', e.stack);
   }
 }
 function prevStep() {
