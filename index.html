@@ -3186,6 +3186,14 @@ function nextStep() {
   try {
   const qs = getQSAtivas();
   const q = qs[step];
+  // Defesa: se step saiu do range (ex: lead parcial antigo avançou demais), reseta
+  if (!q) {
+    console.warn('[QQ] step fora do range (step=' + step + ', qs.length=' + qs.length + '), resetando');
+    step = Math.max(0, Math.min(step, qs.length - 1));
+    const q2 = qs[step];
+    if (!q2) return;
+    return renderStep();
+  }
   if (q.type==='text'   && !(ans[q.id]   && String(ans[q.id]).trim())) return;
   if (q.type==='cidade' && !(ans.cidade && ans.cidade.trim())) return;
   if (q.type==='tel'    && !(ans.tel    && ans.tel.replace(/\D/g,'').length >= 10)) {
@@ -3324,9 +3332,8 @@ function _persistLead() {
   const lead = _buildLeadObject(Date.now(), verdict, iso, false);
   ans._autoSavedId = lead.id;
   leads.unshift(lead);
-  if (leads.length > 500) leads.pop();
-  sessionStorage.setItem('yv_leads', JSON.stringify(leads));
-  try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
+  if (leads.length > 200) leads.pop();
+  _salvarLeads();
   if (navigator.onLine && API.ok()) {
     API.post(lead).then(ok => {
       if (ok) {
@@ -3806,8 +3813,25 @@ function _flushSalaBufferNow() {
 }
 
 function _salvarLeads() {
-  try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-  try { sessionStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
+  try {
+    // Limita o array a 200 leads (era 500) — economiza quota do localStorage
+    if (leads.length > 200) leads.splice(200);
+    // Remove campos pesados que não precisam ir pro localStorage (economiza ~60% do tamanho)
+    const light = leads.map(l => ({
+      id: l.id, nome: l.nome, tel: l.tel, verdict: l.verdict,
+      tipo: l.tipo, renda: l.renda, cidade: l.cidade, sala: l.sala,
+      captador: l.captador, time: l.time, date: l.date, dateISO: l.dateISO,
+      _synced: l._synced
+    }));
+    const json = JSON.stringify(light);
+    try { localStorage.setItem('yv_leads', json); } catch(e) { _trimStorage(e); }
+    try { sessionStorage.setItem('yv_leads', json); } catch(e) { _trimStorage(e); }
+  } catch(e) { /* silencioso */ }
+}
+// Se localStorage lotou, apaga a chave 'yv_leads' (forçando reload do Sheets no próximo sync)
+function _trimStorage(e) {
+  console.warn('[QQ] localStorage cheio, limpando cache:', e.message);
+  try { localStorage.removeItem('yv_leads'); } catch(_) {}
 }
 
 function clearHist() {
