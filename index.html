@@ -3092,24 +3092,16 @@ function onTelInput() {
       f.setSelectionRange(newPos, newPos);
     }
   }
-  // Aceita 10 dígitos (fixo + DDD) ou 11 dígitos (celular com 9 + DDD).
-  // Se vier com 10 e o primeiro dígito depois do DDD for 9, prefixa o 9 automaticamente
-  // (cobre caso de o usuário colar número sem o 9 à frente).
-  let tel = raw;
-  if (tel.length === 10) {
-    // fixa o nono dígito se for celular sem o 9
-    tel = tel.slice(0, 2) + '9' + tel.slice(2);
-    // atualiza ans.tel e o display com a versão corrigida
-    ans.tel = tel;
-    const fmtCorrigido = '(' + tel.slice(0,2) + ') ' + tel.slice(2,3) + ' ' + tel.slice(3,7) + '-' + tel.slice(7,11);
-    if (f.value !== fmtCorrigido) {
-      f.value = fmtCorrigido;
-      f.setSelectionRange(fmtCorrigido.length, fmtCorrigido.length);
-    }
-  } else {
-    ans.tel = raw;
-  }
-  const ok = ans.tel.length === 11;
+  // REGRAS DE VALIDAÇÃO CORRIGIDAS (v2.22):
+  //  - 11 dígitos: celular completo (DDD + 9 + 8 dígitos) → SALVAR COMO ESTÁ
+  //  - 10 dígitos: NÃO forçar 9 automaticamente (criava números inexistentes!).
+  //    Se o cliente disse só 10 dígitos, salva 10 dígitos (DDD + número sem o 9).
+  //    O captador corrige com o cliente depois se precisar.
+  //  - 10 dígitos começando com 9 (após DDD): também é válido (número antigo, antes do 9 obrigatório)
+  //    mas é mantido como 10 dígitos, sem inserir o 9.
+  //  - Aceita 10 ou 11 dígitos como válidos.
+  ans.tel = raw;
+  const ok = ans.tel.length === 10 || ans.tel.length === 11;
   document.getElementById('btnProx').disabled = !ok;
   f.style.borderColor = ans.tel.length > 0 && !ok ? 'var(--red)' : '';
 }
