@@ -3169,6 +3169,11 @@ function onCarroAux(tipo) {
   document.getElementById('btnProx').disabled = !ans.carro && !ans.anoCarro;
 }
 function pickChip(qid, value, el) {
+  // FIX v2.23: bloqueia double-click que agenda 2 nextStep em paralelo.
+  // O segundo nextStep via o step já avançado e trava (ou pula o _persistLead).
+  if (pickChip._lock) return;
+  pickChip._lock = true;
+  setTimeout(() => { pickChip._lock = false; }, 280);
   ans[qid] = value;
   document.querySelectorAll('#wrapChips .chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
@@ -3199,7 +3204,17 @@ function nextStep() {
     }
     return;
   }
-  if (q.type==='carro'   && !ans.carro) return;
+  if (q.type==='carro'   && !ans.carro && ans._carroAux !== 'sem') {
+    // FIX v2.23: libera avançar se o captador clicou 'Não tem carro'
+    // (que seta ans._carroAux='sem' e ans.carro='sem'). Antes o if exigia ans.carro,
+    // e se o input ficou com valor e o usuário apagou, ans.carro=null travava.
+    const fCarro = document.getElementById('fieldCarroAno');
+    if (fCarro && fCarro.value.length) {
+      fCarro.style.borderColor = 'var(--red)';
+      fCarro.focus();
+    }
+    return;
+  }
   if (q.type==='chips'    && !ans[q.id]) return;
   if (q.type==='profissao' && !ans[q.id]) return;
   // Se esta é a última pergunta, salva o lead ANTES de mostrar o resultado
