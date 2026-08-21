@@ -3836,6 +3836,8 @@ function _salvarLeads() {
       id: l.id, nome: l.nome, tel: l.tel, verdict: l.verdict,
       tipo: l.tipo, renda: l.renda, cidade: l.cidade, sala: l.sala,
       captador: l.captador, time: l.time, date: l.date, dateISO: l.dateISO,
+      // FIX v2.24: salvar estado do farol — sem isso o toggleSala se perdia ao recarregar
+      emSala: l.emSala, tipoSala: l.tipoSala, venda: l.venda,
       _synced: l._synced
     }));
     const json = JSON.stringify(light);
