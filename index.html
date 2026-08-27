@@ -1350,7 +1350,7 @@ const CONFIG = {
   // Pontos de Atibaia (captadores escolhem ao iniciar)
   salasAtibaia: ['Porta da sala', 'Vest Casa', 'Entrada Outlet', 'Corredor Outlet'],
   // Pontos de Ribeirão Preto (captadores escolhem ao iniciar)
-  salasRibeirao: ['Ribeirão Shopping', 'Park', 'IG', 'Externo'],
+  salasRibeirao: ['Frente da showroom', 'Praça de alimentação', 'Estacionamento', 'Carrossel', 'Parquinho'],
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
   faixasRenda: [
     { value: 'abaixo6k',  label: 'Abaixo de R$ 6.000',    num: 0     },
@@ -1594,7 +1594,7 @@ const SALAS_POR_OPERACAO = {
   'Caldas Novas':     ['Alta Vista', 'Marina', 'Atrium', 'Toulon', 'Externo'],
   'São Pedro':        ['Thermas SP', 'SPTR', 'Externo SP'],
   'Atibaia':          ['Porta da sala', 'Vest Casa', 'Entrada Outlet', 'Corredor Outlet'],
-  'Ribeirão Preto':   ['Ribeirão Shopping', 'Park', 'IG', 'Externo'],
+  'Ribeirão Preto':   ['Frente da showroom', 'Praça de alimentação', 'Estacionamento', 'Carrossel', 'Parquinho'],
 };
 // Retorna salas filtradas pela operação selecionada (considera operação do login também)
 function getSalasVisiveis(operacaoFiltro) {
@@ -2924,13 +2924,14 @@ function renderSalaAtibaiaScreen() {
 // Tela específica de seleção de sala para captadores de São Pedro
 function renderSalaRibeiraoScreen() {
   const chips = document.getElementById('salaChips');
-  const salas = CONFIG.salasRibeirao; // ['Ribeirão Shopping', 'Park', 'IG', 'Externo']
-  const icons = { 'Ribeirão Shopping': '🛍️', 'Park': '🎢', 'IG': '🏬', 'Externo': '🚶' };
+  const salas = CONFIG.salasRibeirao; // ['Frente da showroom', 'Praça de alimentação', 'Estacionamento', 'Carrossel', 'Parquinho']
+  const icons = { 'Frente da showroom': '🏬', 'Praça de alimentação': '🍽️', 'Estacionamento': '🅿️', 'Carrossel': '🎠', 'Parquinho': '🎢' };
   const descs = {
-    'Ribeirão Shopping': 'Shopping — balcão de informações',
-    'Park': 'Parque (em frente ao shopping)',
-    'IG': 'Iguatemi (IG)',
-    'Externo': 'Captação de rua — fora dos shoppings'
+    'Frente da showroom': 'Captação na entrada do showroom',
+    'Praça de alimentação': 'Captação na praça de alimentação',
+    'Estacionamento':        'Captação no estacionamento',
+    'Carrossel':             'Captação no carrossel',
+    'Parquinho':             'Captação no parquinho'
   };
   chips.innerHTML = salas.map(nome => {
     const cfg = CONFIG.salas.find(s => s.nome === nome && s.operacao === 'Ribeirão Preto');
