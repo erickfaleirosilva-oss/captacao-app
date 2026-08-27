@@ -2264,11 +2264,11 @@ function calcResult() {
   if (salaId === 'vest-casa')          return calcAtibaia();
   if (salaId === 'entrada-outlet')     return calcAtibaia();
   if (salaId === 'corredor-outlet')    return calcAtibaia();
-  if (salaId === 'frente-showroom')    return calcAltaVista(); // Ribeirão Preto: usa qualificação CN
-  if (salaId === 'praca-alimentacao')  return calcAltaVista();
-  if (salaId === 'estacionamento')     return calcAltaVista();
-  if (salaId === 'carrossel')          return calcAltaVista();
-  if (salaId === 'parquinho')          return calcAltaVista();
+  if (salaId === 'frente-showroom')    return calcRibeiraoPreto();
+  if (salaId === 'praca-alimentacao')  return calcRibeiraoPreto();
+  if (salaId === 'estacionamento')     return calcRibeiraoPreto();
+  if (salaId === 'carrossel')          return calcRibeiraoPreto();
+  if (salaId === 'parquinho')          return calcRibeiraoPreto();
   // Fallback: salaAtual digitada no campo livre (id=null) — mapeia pelo nome
   if (!salaId && salaAtual && salaAtual.nome) {
     const _nome = salaAtual.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -2445,6 +2445,82 @@ function _checkProfSP(a, isSol) {
     }
   }
   return null;
+}
+
+// ── RIBEIRÃO PRETO ─────────────────────────────
+// Regra do Erick (27/08/2026): mínimo R$10k para casal. Perfil 5 (R$6–7k + casa própria) foi removido.
+function calcRibeiraoPreto() {
+  const a = ans;
+  const { rNum, cAno, isSol, isNoivos, relOk, idOk, cartaoS, casaS } = _base(a);
+  // CN aceita 28–65 (mesma regra de Alta Vista)
+  const idOkCN = a.tipo === 'solteiro'
+    ? idadeOkCN(a.idadeMarido)
+    : (idadeOkCN(a.idadeMarido) || idadeOkCN(a.idadeConjuge));
+
+  if (isNoivos) return _nqNoivos();
+
+  // Ribeirão Preto: mínimo R$10k para casal. Não existe perfil de entrada como em CN.
+  if (!isSol) {
+    // Casa R$15k+: dispensa veículo e cartão
+    if (rNum >= 15000) return {
+      verdict:'Q', perfil:'Casal — Ribeirão Preto (R$15k+)',
+      rule:null,
+      rows:[
+        {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+        {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+        {i:'✅', l:'Idade',          v:'28–65 anos'},
+        {i:'➞',  l:'Veículo',        v:'Dispensado (R$15k+)'},
+        {i:'➞',  l:'Cartão',         v:'Dispensado (R$15k+)'},
+      ]
+    };
+    // Casa R$10–14,9k: dispensa cartão, exige veículo
+    if (rNum >= 10000) {
+      if (cAno >= 2012 && idOkCN) return {
+        verdict:'Q', perfil:'Casal — Ribeirão Preto (R$10k+, veículo 2012+)',
+        rule:null,
+        rows:[
+          {i:'✅', l:'Renda',          v:rendaStr(a.renda)},
+          {i:'✅', l:'Relacionamento', v:_relLabel(a)},
+          {i:'✅', l:'Idade',          v:'28–65 anos'},
+          {i:'✅', l:'Veículo',        v:'2012+'},
+          {i:'➞',  l:'Cartão',         v:'Dispensado (R$10k+)'},
+        ]
+      };
+      return { verdict:'NQ', perfil:null, rule:null, rows:[
+        _row(rNum>=10000, 'Renda',          rNum>=10000  ? rendaStr(a.renda) : 'Mínimo R$10.000'),
+        _row(cAno>=2012,  'Veículo',        cAno>=2012   ? '2012+'           : 'Mínimo 2012'),
+        _row(idOkCN,      'Idade',          idOkCN       ? '28–65 anos'      : 'Exige 28–65 anos'),
+        _row(relOk,       'Relacionamento', relOk        ? _relLabel(a)      : 'Casado ou UE ≥1 ano'),
+      ]};
+    }
+    // Renda < R$10k → NQ (mínimo de entrada é R$10k)
+    return { verdict:'NQ', perfil:null, rule:null, rows:[
+      {i:'⚠️', l:'Renda', v:'Mínimo R$10.000 para Ribeirão Preto'},
+      _row(relOk, 'Relacionamento', relOk ? _relLabel(a) : 'Casado ou UE ≥1 ano'),
+      _row(idOkCN, 'Idade', idOkCN ? '28–65 anos' : 'Exige 28–65 anos'),
+      {i:'💡', l:'Operação', v:'Ribeirão Preto — mínimo R$10k'},
+    ]};
+  }
+
+  // Solteiro — usa regra de CN mesmo (R$6k+)
+  const ok = rNum >= 6000 && cAno >= 2012 && idOkCN && cartaoS;
+  if (ok) return {
+    verdict:'Q', perfil:'Solteiro/Divorciado — Ribeirão Preto',
+    rule:null,
+    rows:[
+      {i:'✅', l:'Perfil',       v:'Solteiro / Divorciado'},
+      {i:'✅', l:'Renda',        v:rendaStr(a.renda)},
+      {i:'✅', l:'Idade',        v:'28–65 anos'},
+      {i:'✅', l:'Veículo',      v:'2012+'},
+      {i:'✅', l:'Cartão',       v:'Sim'},
+    ]
+  };
+  return { verdict:'NQ', perfil:null, rule:null, rows:[
+    _row(rNum>=6000,  'Renda',   rNum>=6000  ? rendaStr(a.renda) : 'Mínimo R$6.000'),
+    _row(idOkCN,      'Idade',   idOkCN      ? '28–65 anos'      : 'Exige 28–65 anos'),
+    _row(cAno>=2012,  'Veículo', cAno>=2012  ? '2012+'           : 'Mínimo 2012'),
+    _row(cartaoS,     'Cartão',  cartaoS     ? 'Sim'             : 'Obrigatório'),
+  ]};
 }
 
 function calcSaoPedro() {
