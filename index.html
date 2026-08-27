@@ -1302,7 +1302,7 @@ const CONFIG = {
     { nome: 'Ismael Rodrigo Araújo de Sousa',     cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '9826d409a7390795a2b6e7176fcb4b9b97d911126c2a0d9ae045a0f811af636d' },
     { nome: 'Cristina Gonçalves Lobo',            cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '54b6d84a5cfa83703cf3da4940e2617f8858553f33995165ea17746870226a76' },
     { nome: 'Nayara Pereira Tavares',             cargo: 'lider',    operacao: 'Atibaia',       senhaHash: '887309fc5f170821709b78c049180c23d8b930d736003c2857083f3888798767' },
-    { nome: 'Paulo Ricardo Rodrigues da silva',   cargo: 'captador', operacao: 'Atibaia',       senhaHash: 'f89678cc6765848121941f97f563647a0fe77cc7947842dbddb67ba8bacf3c21' },
+    { nome: 'Paulo Ricardo Rodrigues da silva',   cargo: 'captador', operacao: 'Ribeirão Preto', senhaHash: 'f89678cc6765848121941f97f563647a0fe77cc7947842dbddb67ba8bacf3c21' }, // transferido de Atibaia → Ribeirão Preto em 27/08/2026
     // — Lideranças —
     { nome: 'Lucas Marotti',         cargo: 'sublider', operacao: 'São Pedro', senhaHash: 'd76cedbee29bc2393e5b6317f71525b51ffe8f656da3dfcbac94d237adc0030a' },
     { nome: 'Gustavo Viana',          cargo: 'lider',    operacao: 'Caldas Novas', senhaHash: '01323463033669fc017b484ed78a487695d402cfb6927273e43f11d4f4ac295f' },
@@ -1345,6 +1345,8 @@ const CONFIG = {
   salasSaoPedro: ['Thermas SP', 'SPTR', 'Externo'],
   // Pontos de Atibaia (captadores escolhem ao iniciar)
   salasAtibaia: ['Porta da sala', 'Vest Casa', 'Entrada Outlet', 'Corredor Outlet'],
+  // Pontos de Ribeirão Preto (captadores escolhem ao iniciar)
+  salasRibeirao: ['Ribeirão Shopping', 'Park', 'IG', 'Externo'],
   webhookUrl: 'https://script.google.com/macros/s/AKfycbwdGNL10ZtmZ3TgsZDJVyBlGF9NB7WR1PSzeWb1_ifgtB7bSkl5QjqUsLpAoDrJ3v_dKQ/exec',
   faixasRenda: [
     { value: 'abaixo6k',  label: 'Abaixo de R$ 6.000',    num: 0     },
@@ -1583,11 +1585,12 @@ function getTodasSalas() {
   const extras = JSON.parse(localStorage.getItem('yv_salas_extras') || '[]');
   return [...CONFIG.salas, ...extras];
 }
-const OPERACOES = ['Caldas Novas', 'São Pedro', 'Atibaia'];
+const OPERACOES = ['Caldas Novas', 'São Pedro', 'Atibaia', 'Ribeirão Preto'];
 const SALAS_POR_OPERACAO = {
-  'Caldas Novas': ['Alta Vista', 'Marina', 'Atrium', 'Toulon', 'Externo'],
-  'São Pedro':    ['Thermas SP', 'SPTR', 'Externo SP'],
-  'Atibaia':      ['Porta da sala', 'Vest Casa', 'Entrada Outlet', 'Corredor Outlet'],
+  'Caldas Novas':     ['Alta Vista', 'Marina', 'Atrium', 'Toulon', 'Externo'],
+  'São Pedro':        ['Thermas SP', 'SPTR', 'Externo SP'],
+  'Atibaia':          ['Porta da sala', 'Vest Casa', 'Entrada Outlet', 'Corredor Outlet'],
+  'Ribeirão Preto':   ['Ribeirão Shopping', 'Park', 'IG', 'Externo'],
 };
 // Retorna salas filtradas pela operação selecionada (considera operação do login também)
 function getSalasVisiveis(operacaoFiltro) {
@@ -2840,6 +2843,12 @@ function startQuiz() {
     hideAll(); show('screenSala');
     return;
   }
+  // Captadores de Ribeirão Preto → escolhem ponto de captação
+  if (captador && captador.operacao === 'Ribeirão Preto' && !captador.sala) {
+    renderSalaRibeiraoScreen();
+    hideAll(); show('screenSala');
+    return;
+  }
   // Se captador tem sala fixa cadastrada, pula a tela de seleção de sala
   if (captador && captador.sala) {
     const salaCfg = CONFIG.salas.find(s => s.nome === captador.sala || s.id === captador.sala);
@@ -2894,6 +2903,33 @@ function renderSalaAtibaiaScreen() {
   const descs = { 'Porta da sala': 'Entrada principal da sala de vendas', 'Vest Casa': 'Área do Vest Casa', 'Entrada Outlet': 'Entrada do Outlet', 'Corredor Outlet': 'Corredor interno do Outlet' };
   chips.innerHTML = salas.map(nome => {
     const cfg = CONFIG.salas.find(s => s.nome === nome && s.operacao === 'Atibaia');
+    return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nome}')">
+      <div class="sala-chip-icon">${icons[nome] || '📍'}</div>
+      <div class="sala-chip-label">${nome}</div>
+      <div class="sala-chip-sub">${descs[nome] || ''}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('fieldOutraSala').value = '';
+  document.getElementById('btnIniciarQuiz').disabled = true;
+  const title = document.getElementById('salaTitulo');
+  if (title) title.textContent = '📍 Qual ponto você está hoje?';
+  const sub = document.getElementById('salaSub');
+  if (sub) sub.textContent = 'Selecione onde você está prospectando agora';
+}
+
+// Tela específica de seleção de sala para captadores de São Pedro
+function renderSalaRibeiraoScreen() {
+  const chips = document.getElementById('salaChips');
+  const salas = CONFIG.salasRibeirao; // ['Ribeirão Shopping', 'Park', 'IG', 'Externo']
+  const icons = { 'Ribeirão Shopping': '🛍️', 'Park': '🎢', 'IG': '🏬', 'Externo': '🚶' };
+  const descs = {
+    'Ribeirão Shopping': 'Shopping — balcão de informações',
+    'Park': 'Parque (em frente ao shopping)',
+    'IG': 'Iguatemi (IG)',
+    'Externo': 'Captação de rua — fora dos shoppings'
+  };
+  chips.innerHTML = salas.map(nome => {
+    const cfg = CONFIG.salas.find(s => s.nome === nome && s.operacao === 'Ribeirão Preto');
     return `<div class="sala-chip" data-id="${cfg ? cfg.id : nome}" onclick="pickSala(this,'${cfg ? cfg.id : nome}','${nome}')">
       <div class="sala-chip-icon">${icons[nome] || '📍'}</div>
       <div class="sala-chip-label">${nome}</div>
