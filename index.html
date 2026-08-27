@@ -1338,6 +1338,11 @@ const CONFIG = {
     { id: 'vest-casa',          nome: 'Vest Casa',     cidade: 'Atibaia', modos: [], sheetName: 'Vest Casa',     operacao: 'Atibaia', ddpHotel: null },
     { id: 'entrada-outlet',     nome: 'Entrada Outlet',cidade: 'Atibaia', modos: [], sheetName: 'Entrada Outlet',operacao: 'Atibaia', ddpHotel: null },
     { id: 'corredor-outlet',    nome: 'Corredor Outlet',cidade: 'Atibaia',modos: [], sheetName: 'Corredor Outlet',operacao: 'Atibaia',ddpHotel: null },
+    { id: 'frente-showroom',    nome: 'Frente da showroom',     cidade: 'Ribeirão Preto', modos: [], sheetName: 'Frente da showroom',     operacao: 'Ribeirão Preto', ddpHotel: null },
+    { id: 'praca-alimentacao',  nome: 'Praça de alimentação',  cidade: 'Ribeirão Preto', modos: [], sheetName: 'Praça de alimentação',  operacao: 'Ribeirão Preto', ddpHotel: null },
+    { id: 'estacionamento',     nome: 'Estacionamento',         cidade: 'Ribeirão Preto', modos: [], sheetName: 'Estacionamento',         operacao: 'Ribeirão Preto', ddpHotel: null },
+    { id: 'carrossel',          nome: 'Carrossel',              cidade: 'Ribeirão Preto', modos: [], sheetName: 'Carrossel',              operacao: 'Ribeirão Preto', ddpHotel: null },
+    { id: 'parquinho',          nome: 'Parquinho',              cidade: 'Ribeirão Preto', modos: [], sheetName: 'Parquinho',              operacao: 'Ribeirão Preto', ddpHotel: null },
   ],
   // Salas que alimentam o DDP automaticamente (captadores marcam tipo+venda no histórico)
   salasDdpAuto: ['Alta Vista', 'Atrium', 'Marina', 'Toulon', 'SPTR', 'Thermas SP'],
@@ -2259,6 +2264,11 @@ function calcResult() {
   if (salaId === 'vest-casa')          return calcAtibaia();
   if (salaId === 'entrada-outlet')     return calcAtibaia();
   if (salaId === 'corredor-outlet')    return calcAtibaia();
+  if (salaId === 'frente-showroom')    return calcAltaVista(); // Ribeirão Preto: usa qualificação CN
+  if (salaId === 'praca-alimentacao')  return calcAltaVista();
+  if (salaId === 'estacionamento')     return calcAltaVista();
+  if (salaId === 'carrossel')          return calcAltaVista();
+  if (salaId === 'parquinho')          return calcAltaVista();
   // Fallback: salaAtual digitada no campo livre (id=null) — mapeia pelo nome
   if (!salaId && salaAtual && salaAtual.nome) {
     const _nome = salaAtual.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
