@@ -1306,7 +1306,7 @@ const CONFIG = {
     // { nome: 'Tais Zulmira Hipólito',             cargo: 'captador', operacao: 'Atibaia', senhaHash: '1dfd112745381d497cff6f29aaddd3b006d0090f4cb9096cd86f79dbdac2b154' }, // desativada em Caldas em 27/08 — reativada em Ribeirão Preto na linha abaixo
     { nome: 'Tais Zulmira Hipólito',               cargo: 'captador', operacao: 'Ribeirão Preto', senhaHash: '0a48aecd23379b7231661a42f7accd43431d0d47dbc3e19d1f77e363571457a2' },
     { nome: 'Nayara Pereira Tavares',              cargo: 'lider',    operacao: 'Ribeirão Preto', senhaHash: '0a48aecd23379b7231661a42f7accd43431d0d47dbc3e19d1f77e363571457a2' }, // transferida de Atibaia → Ribeirão Preto em 27/08/2026
-    { nome: 'Paulo Ricardo Rodrigues da silva',   cargo: 'captador', operacao: 'Ribeirão Preto', senhaHash: '659504a544e1ba48f92af0446dd0a0fa0c6c773d77e7c9a10ecee7e5182b37b9' }, // transferido de Atibaia → Ribeirão Preto em 27/08/2026; senha resetada para your456 em 27/08/2026
+    { nome: 'Paulo Ricardo Rodrigues da silva',   cargo: 'captador', operacao: 'Ribeirão Preto', senhaHash: '659504a544e1ba48f92af0446dd0a0fa0c6c773d77e7c9a10ecee7e5182b37b9', resetSenha: true }, // transferido de Atibaia → Ribeirão Preto em 27/08/2026; senha resetada para your456 em 27/08/2026
     // — Lideranças —
     { nome: 'Lucas Marotti',         cargo: 'sublider', operacao: 'São Pedro', senhaHash: 'd76cedbee29bc2393e5b6317f71525b51ffe8f656da3dfcbac94d237adc0030a' },
     { nome: 'Gustavo Viana',          cargo: 'lider',    operacao: 'Caldas Novas', senhaHash: '01323463033669fc017b484ed78a487695d402cfb6927273e43f11d4f4ac295f' },
@@ -1518,11 +1518,13 @@ async function sha256(str) {
 
 // Retorna o hash da senha armazenada para comparação.
 // Prioridade: localStorage (senha personalizada) > senhaHash do CONFIG/extras.
+// EXCEÇÃO: se resetSenha=true no cadastro, ignora localStorage (força uso da senha do CONFIG).
 function getSenhaHash(nome) {
-  const stored = localStorage.getItem('yv_pw_' + nome);
-  if (stored) return stored; // já é um hash
   const todos = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
   const c = todos.find(x => x.nome === nome);
+  // Se resetSenha=true OU não tem captador cadastrado, ignora localStorage e usa o CONFIG
+  const stored = (!c || c.resetSenha) ? null : localStorage.getItem('yv_pw_' + nome);
+  if (stored) return stored; // já é um hash
   return c ? (c.senhaHash || null) : null;
 }
 
