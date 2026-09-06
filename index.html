@@ -843,6 +843,7 @@
       <div class="pw-error" id="pwError"></div>
       <button class="btn-login" onclick="doLogin()">Entrar →</button>
       <button type="button" style="background:none;border:none;font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;margin-top:10px;padding:4px 0;width:100%;text-align:center" onclick="mostrarAjudaSenha()">Esqueci minha senha</button>
+      <button id="pwResetEmergencial" class="hidden" type="button" style="background:#1a4a2a;border:1px solid #2a6a44;color:#a8e0b8;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;margin-top:8px;padding:8px;width:100%" onclick="pwResetEmergencial()">🔄 Redefinir (usar senha do líder)</button>
     </div>
   </div>
 
@@ -1704,6 +1705,10 @@ function loginPickNome(nome) {
   const panel = document.getElementById('pwPanel');
   document.getElementById('pwName').textContent = nome;
   document.getElementById('pwInput').value = '';
+  // Esconder botão de reset emergencial ao abrir
+  const btnEr = document.getElementById('pwResetEmergencial');
+  if (btnEr) btnEr.classList.add('hidden');
+  document.getElementById('pwError').textContent = '';
   document.getElementById('pwError').textContent = '';
   panel.classList.remove('hidden');
   setTimeout(() => document.getElementById('pwInput').focus(), 80);
@@ -1711,6 +1716,17 @@ function loginPickNome(nome) {
 
 function pwClearError() { document.getElementById('pwError').textContent = ''; }
 function pwKeydown(e)   { if (e.key === 'Enter') doLogin(); }
+
+// Reset emergencial: apaga senha pessoal do localStorage para usar a senha padrão do líder
+// Usado quando resetSenha:true está no cadastro E já existe senha pessoal local
+function pwResetEmergencial() {
+  const nome = loginSelectedNome;
+  if (!nome) return;
+  localStorage.removeItem('yv_pw_' + nome);
+  document.getElementById('pwError').textContent = 'Senha pessoal apagada. Digite novamente a senha do líder (YV456).';
+  const btn = document.getElementById('pwResetEmergencial');
+  if (btn) btn.classList.add('hidden');
+}
 function togglePw() {
   const inp = document.getElementById('pwInput');
   inp.type = inp.type === 'password' ? 'text' : 'password';
@@ -1727,10 +1743,19 @@ async function doLogin() {
     // Ajuda o captador a entender: se já tem senha pessoal no localStorage,
     // a do CONFIG não vale — precisa limpar cache ou usar aba anônima
     const temPessoal = !!localStorage.getItem('yv_pw_' + nome);
+    // Se o cadastro tem resetSenha:true, o líder pode forçar reset de emergência
+    const cfgTodos = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
+    const cfg = cfgTodos.find(x => x.nome === nome);
+    const podeResetEmergencial = cfg && cfg.resetSenha;
     const msg = temPessoal
-      ? 'Senha incorreta. Você já definiu uma senha pessoal antes — limpe o cache do navegador ou use aba anônima para redefinir.'
+      ? (podeResetEmergencial
+        ? 'Senha incorreta. Você tem uma senha pessoal antiga salva. Clique em "Redefinir (usar senha do líder)" abaixo — isso limpa sua senha e usa a nova do líder.'
+        : 'Senha incorreta. Você já definiu uma senha pessoal antes — limpe o cache do navegador ou use aba anônima para redefinir.')
       : 'Senha incorreta. Tente novamente.';
     document.getElementById('pwError').textContent = msg;
+    // Mostrar / esconder botão de reset emergencial
+    const btn = document.getElementById('pwResetEmergencial');
+    if (btn) btn.classList.toggle('hidden', !(temPessoal && podeResetEmergencial));
     return;
   }
   const todosLogin = [...CONFIG.captadores, ...JSON.parse(localStorage.getItem('yv_equipe_extras')||'[]')];
