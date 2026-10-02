@@ -1313,6 +1313,7 @@ const CONFIG = {
     { nome: 'Douglas de Souza',                       cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '5e810a6390dc4345ccf13532e480c60258a66b4b2d760c3b0888d9e4edf13dde', resetSenha: true }, // cadastrado 08/09/2026 por Erick; senha inicial YV456
     { nome: 'Erika Camila Lopes Bezerra',             cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '5e810a6390dc4345ccf13532e480c60258a66b4b2d760c3b0888d9e4edf13dde', resetSenha: true }, // cadastrada 10/09/2026 por Erick; senha inicial YV456
     { nome: 'Ester Garcia Godoi Mamede',              cargo: 'captador', operacao: 'Caldas Novas', senhaHash: '5e810a6390dc4345ccf13532e480c60258a66b4b2d760c3b0888d9e4edf13dde', resetSenha: true }, // cadastrada 25/09/2026 por Erick; senha inicial YV456
+    { nome: 'Rariane Moreira Dos Santos',              cargo: 'supervisor_adm', operacao: 'Caldas Novas', senhaHash: '5e810a6390dc4345ccf13532e480c60258a66b4b2d760c3b0888d9e4edf13dde', resetSenha: true }, // cadastrada 02/10/2026 por Erick; senha inicial YV456 — supervisor_adm com acesso total
     { nome: 'Andréia Alves',                       cargo: 'captador', operacao: 'São Pedro',    senhaHash: '5e810a6390dc4345ccf13532e480c60258a66b4b2d760c3b0888d9e4edf13dde', resetSenha: true }, // cadastrada 05/09/2026 por Erick; senha inicial YV456
     { nome: 'Cláudio Antônio Ferreira Júnior',    cargo: 'captador', operacao: 'São Pedro',    senhaHash: '5e810a6390dc4345ccf13532e480c60258a66b4b2d760c3b0888d9e4edf13dde', resetSenha: true }, // cadastrado 11/09/2026 por Erick; senha inicial YV456
     { nome: 'Mateus Coutinho Ferreira',            cargo: 'captador', operacao: 'São Pedro',    senhaHash: '5e810a6390dc4345ccf13532e480c60258a66b4b2d760c3b0888d9e4edf13dde', resetSenha: true }, // cadastrado 11/09/2026 por Erick; senha inicial YV456
@@ -1558,7 +1559,7 @@ function usaSenhaPadrao(nome) {
   return !localStorage.getItem('yv_pw_' + nome);
 }
 function temAcessoTotal(c) {
-  return c && ['sublider','lider','ceo'].includes(c.cargo);
+  return c && ['sublider','lider','ceo','supervisor_adm'].includes(c.cargo);
 }
 // Retorna todas as strings que identificam salas de uma operação (nome + sheetName)
 function getSalasDeOperacao(operacao) {
@@ -1578,7 +1579,7 @@ function getSalaDoLider(c) {
 }
 function filtrarPorAcesso(lista) {
   if (!captador) return [];
-  if (captador.cargo === 'ceo') return lista;
+  if (captador.cargo === 'ceo' || captador.cargo === 'supervisor_adm') return lista;
   if (['lider','sublider'].includes(captador.cargo)) {
     if (captador.sala) return lista.filter(l => l.sala === captador.sala);
     if (captador.operacao) {
@@ -1594,7 +1595,7 @@ function filtrarPorAcesso(lista) {
 // Mesma lógica para PIs (usa campo captador e sala)
 function filtrarPorAcessoPI(lista) {
   if (!captador) return [];
-  if (captador.cargo === 'ceo') return lista;
+  if (captador.cargo === 'ceo' || captador.cargo === 'supervisor_adm') return lista;
   if (['lider','sublider'].includes(captador.cargo)) {
     if (captador.sala) return lista.filter(p => p.sala === captador.sala);
     if (captador.operacao) {
@@ -1817,7 +1818,7 @@ function afterLogin() {
   const navEq = document.getElementById('navEquipe');
   const navTR = document.getElementById('navTimeRange');
   const navDD = document.getElementById('navDdp');
-  const isLider = ['lider','sublider','ceo'].includes(captador.cargo);
+  const isLider = ['lider','sublider','ceo','supervisor_adm'].includes(captador.cargo);
   if (['lider','sublider','ceo'].includes(captador.cargo)) navEq.classList.remove('hidden');
   else navEq.classList.add('hidden');
   if (isLider) navTR.classList.remove('hidden');
@@ -4609,8 +4610,8 @@ function renderTrFiltros() {
   }
   if (captador && temAcessoTotal(captador)) {
     html += '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">';
-    // Select de Operação — apenas CEO
-    if (captador.cargo === 'ceo') {
+    // Select de Operação — CEO + supervisor_adm
+    if (captador.cargo === 'ceo' || captador.cargo === 'supervisor_adm') {
       html += '<select class="filtro-select" onchange="setTrFiltro(\'operacao\',this.value)">';
       html += `<option value="todas"${trFiltro.operacao==='todas'?' selected':''}>Operação</option>`;
       OPERACOES.forEach(op => {
