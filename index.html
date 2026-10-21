@@ -6814,6 +6814,61 @@ window.addEventListener('online', offlineFlush);
 // Reenvio periódico silencioso a cada 30s — garante que nenhum lead fique preso na fila
 setInterval(offlineFlush, 30000);
 
+// ═══ PONTE DE ENDEREÇO (v2.26) ═══
+// O app mudou de endereço. No endereço antigo, esta ponte:
+// 1) só age se o endereço novo já estiver no ar;
+// 2) termina de enviar as pesquisas/marcações pendentes deste celular;
+// 3) leva o usuário para o endereço novo.
+const QQ_ENDERECO_NOVO = 'https://yourvacation-oss.github.io/captacao-app/';
+const QQ_HOST_ANTIGO   = 'erickfaleirosilva-oss.github.io';
+function _qqPendentes() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]').filter(x => x && x.id).length; }
+  catch (e) { return 0; }
+}
+function _qqIniciarPonte() {
+  if (document.getElementById('qqPonte')) return;
+  const el = document.createElement('div');
+  el.id = 'qqPonte';
+  el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#13243A;color:#fff;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Poppins,system-ui,sans-serif;text-align:center';
+  el.innerHTML = '<div style="max-width:420px">'
+    + '<div style="font-size:42px;margin-bottom:8px">📍</div>'
+    + '<div style="font-size:22px;font-weight:800;color:#F1D691;margin-bottom:12px">O QualifiQ mudou de endereço</div>'
+    + '<div id="qqPonteMsg" style="font-size:15px;line-height:1.5;margin-bottom:18px">Verificando pesquisas pendentes…</div>'
+    + '<div style="font-size:13px;line-height:1.5;color:#c9d3df;margin-bottom:18px">No novo endereço, entre de novo com seu nome e senha. Depois, apague o atalho antigo da tela do celular e salve o novo.</div>'
+    + '<a id="qqPonteBtn" href="' + QQ_ENDERECO_NOVO + '" style="display:inline-block;background:#F1D691;color:#13243A;font-weight:800;padding:12px 22px;border-radius:10px;text-decoration:none">Ir para o novo endereço</a>'
+    + '</div>';
+  document.body.appendChild(el);
+  const msg = document.getElementById('qqPonteMsg');
+  const btn = document.getElementById('qqPonteBtn');
+  btn.addEventListener('click', ev => {
+    const n = _qqPendentes();
+    if (n > 0 && !confirm('Ainda há ' + n + ' envio(s) pendente(s) neste celular. Se sair agora, eles podem se perder. Sair mesmo assim?')) ev.preventDefault();
+  });
+  let tentativas = 0;
+  const ciclo = () => {
+    const n = _qqPendentes();
+    if (n === 0) {
+      msg.textContent = 'Tudo enviado ✅ Levando você para o novo endereço…';
+      setTimeout(() => { location.replace(QQ_ENDERECO_NOVO); }, 2500);
+      return;
+    }
+    msg.textContent = navigator.onLine
+      ? 'Enviando ' + n + ' pendência(s) deste celular para a planilha… não feche o app.'
+      : 'Há ' + n + ' pendência(s) neste celular. Conecte-se à internet para enviá-las antes de mudar.';
+    offlineFlush();
+    tentativas++;
+    setTimeout(ciclo, tentativas < 20 ? 3000 : 10000);
+  };
+  ciclo();
+}
+(function _qqPonteEndereco() {
+  if (location.hostname !== QQ_HOST_ANTIGO) return;
+  // Só ativa se o endereço novo já estiver no ar (teste por imagem, sem depender de CORS)
+  const img = new Image();
+  img.onload = _qqIniciarPonte;
+  img.src = QQ_ENDERECO_NOVO + 'icon-192.png?ponte=' + Date.now();
+})();
+
 // INIT
 initLogin();
 offlineFlush(); // tenta reenviar ao carregar se já online
