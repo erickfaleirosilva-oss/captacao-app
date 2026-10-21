@@ -1752,7 +1752,11 @@ async function doLogin() {
   if (!pw) { document.getElementById('pwError').textContent = 'Insira sua senha.'; return; }
   const hashCorreta = getSenhaHash(nome);
   const hashDigitada = await sha256(pw);
-  if (hashDigitada !== hashCorreta) {
+  // FIX v2.25: para quem tem resetSenha, a senha pessoal criada no 1º acesso era
+  // ignorada nos logins seguintes. Agora valem as duas: a do líder e a pessoal.
+  const hashPessoal = localStorage.getItem('yv_pw_' + nome);
+  const senhaOk = hashDigitada === hashCorreta || (!!hashPessoal && hashDigitada === hashPessoal);
+  if (!senhaOk) {
     // Ajuda o captador a entender: se já tem senha pessoal no localStorage,
     // a do CONFIG não vale — precisa limpar cache ou usar aba anônima
     const temPessoal = !!localStorage.getItem('yv_pw_' + nome);
@@ -3403,9 +3407,8 @@ function nextStep() {
   // Auto-save APENAS quando é a última pergunta (não a cada Próximo →).
   // Salvar parcial a cada passo esgotava a quota do Apps Script (1 POST por pergunta
   // = 15 calls por lead, em horário de pico estourava). Agora salva 1 vez só no final.
-  if (isLast) {
-    try { _salvarLeadParcial(); } catch(e) { console.warn('[QQ] save parcial falhou:', e.message); }
-  }
+  // FIX v2.25: removido o _salvarLeadParcial() aqui — ele somava um envio extra
+  // ao _persistLead e gerava linhas duplicadas na planilha.
   step++;
   if (step >= qs.length) {
     if (isLast) _persistLead(); // salva imediatamente na confirmação da última resposta
@@ -3484,9 +3487,7 @@ function _salvarLeadParcial() {
     } else {
       leads.unshift(lead);
     }
-    if (leads.length > 500) leads.pop();
-    sessionStorage.setItem('yv_leads', JSON.stringify(leads));
-    try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
+    _salvarLeads();
     if (navigator.onLine && API.ok()) {
       API.post(lead).then(ok => {
         const i = leads.findIndex(l => String(l.id) === String(lead.id));
@@ -3494,6 +3495,22 @@ function _salvarLeadParcial() {
       }).catch(() => {});
     }
   } catch(e) { /* silencioso */ }
+}
+// FIX v2.25: o fim do questionário disparava 3 envios simultâneos do mesmo lead
+// (parcial + _persistLead + showResult), e a planilha gravava 2 ou 3 cópias.
+// Agora cada versão do lead é enviada uma única vez.
+function _enviarLeadFinal(lead) {
+  const assinatura = JSON.stringify(lead);
+  if (ans._ultimoEnvio === assinatura) return; // mesmo conteúdo já enviado
+  ans._ultimoEnvio = assinatura;
+  const marcarOk = () => {
+    const i = leads.findIndex(l => String(l.id) === String(lead.id));
+    if (i >= 0) { leads[i]._synced = true; _salvarLeads(); }
+  };
+  if (navigator.onLine && API.ok()) {
+    API.post(lead).then(ok => { if (ok) marcarOk(); else offlineEnqueue(lead); })
+      .catch(() => offlineEnqueue(lead));
+  } else { offlineEnqueue(lead); }
 }
 function _persistLead() {
   // Salva o lead final (chegada na tela de resultado).
@@ -3504,16 +3521,11 @@ function _persistLead() {
     const iso = todayISO();
     const lead = _buildLeadObject(idExistente, verdict, iso, false);
     const idx = leads.findIndex(l => String(l.id) === String(idExistente));
-    if (idx >= 0) {
-      leads[idx] = { ...leads[idx], ...lead, _partial: false };
-      sessionStorage.setItem('yv_leads', JSON.stringify(leads));
-      try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-      if (navigator.onLine && API.ok()) {
-        API.post(leads[idx]).then(ok => {
-          if (ok) { leads[idx]._synced = true; _salvarLeads(); }
-        }).catch(() => {});
-      }
-    }
+    if (idx >= 0) leads[idx] = { ...leads[idx], ...lead, _partial: false };
+    else leads.unshift(lead);
+    _salvarLeads();
+    const atual = leads.find(l => String(l.id) === String(idExistente));
+    _enviarLeadFinal({ ...atual, _synced: undefined });
     return;
   }
   // Sem auto-save anterior (fluxo legado) — cria lead novo
@@ -3522,17 +3534,8 @@ function _persistLead() {
   const lead = _buildLeadObject(Date.now(), verdict, iso, false);
   ans._autoSavedId = lead.id;
   leads.unshift(lead);
-  if (leads.length > 200) leads.pop();
   _salvarLeads();
-  if (navigator.onLine && API.ok()) {
-    API.post(lead).then(ok => {
-      if (ok) {
-        // Marca como sincronizado no array local
-        const i = leads.findIndex(l => String(l.id) === String(lead.id));
-        if (i >= 0) { leads[i]._synced = true; _salvarLeads(); }
-      } else { offlineEnqueue(lead); }
-    }).catch(() => offlineEnqueue(lead));
-  } else { offlineEnqueue(lead); }
+  _enviarLeadFinal(lead);
 }
 
 function showResult() {
@@ -3816,9 +3819,15 @@ function setHistFiltro(chave, valor) {
 }
 
 // Verifica se um lead ainda está na fila offline (não confirmado pelo servidor)
+let _pendCacheRaw = null, _pendCacheSet = new Set();
 function _isPendente(id) {
-  const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
-  return q.some(x => String(x.id) === String(id) && !x._action);
+  // FIX v2.25: lê a fila uma vez por render (antes relia para cada cartão)
+  const raw = localStorage.getItem(OFFLINE_KEY) || '[]';
+  if (raw !== _pendCacheRaw) {
+    _pendCacheRaw = raw;
+    _pendCacheSet = new Set(JSON.parse(raw).filter(x => x && !x._action).map(x => String(x.id)));
+  }
+  return _pendCacheSet.has(String(id));
 }
 
 function renderHistList() {
@@ -3910,107 +3919,77 @@ function renderHistList() {
 }
 
 function toggleSala(leadId) {
-  const idx = leads.findIndex(l => String(l.id) === String(leadId));
-  if (idx === -1) return;
-  leads[idx].emSala = !leads[idx].emSala;
+  const lead = leads.find(l => String(l.id) === String(leadId));
+  if (!lead) return;
+  lead.emSala = !lead.emSala;
   // Ao desmarcar sala, limpa tipo e venda
-  if (!leads[idx].emSala) {
-    delete leads[idx].tipoSala;
-    delete leads[idx].venda;
+  if (!lead.emSala) {
+    delete lead.tipoSala;
+    delete lead.venda;
   }
   _salvarLeads();
-  // Reenvio do lead completo garante que o Sheets tenha a linha mesmo se o POST original falhou
-  if (navigator.onLine && API.ok()) {
-    const snap = { ...leads[idx] };
-    API.post(snap).then(ok => { if (!ok) offlineEnqueue(snap); }).catch(() => offlineEnqueue(snap));
-  } else {
-    offlineEnqueue({ ...leads[idx] });
-  }
-  _syncSalaState(idx);
+  // Se o lead ainda não foi confirmado pelo servidor, reenvia o lead completo
+  // (garante que a linha exista na planilha). Se já existe, basta o update_sala.
+  if (!lead._synced) offlineEnqueue({ ...lead, _synced: undefined });
+  _syncSalaState(lead);
   renderHistList();
   atualizarCdp();
 }
 
 function setTipoSala(leadId, tipo) {
-  const idx = leads.findIndex(l => String(l.id) === String(leadId));
-  if (idx === -1) return;
+  const lead = leads.find(l => String(l.id) === String(leadId));
+  if (!lead) return;
   // Toggle: se já está selecionado, desmarca
-  leads[idx].tipoSala = leads[idx].tipoSala === tipo ? null : tipo;
+  lead.tipoSala = lead.tipoSala === tipo ? null : tipo;
   _salvarLeads();
-  _syncSalaState(idx);
+  _syncSalaState(lead);
   renderHistList();
 }
 
 function toggleVenda(leadId) {
-  const idx = leads.findIndex(l => String(l.id) === String(leadId));
-  if (idx === -1) return;
-  leads[idx].venda = !leads[idx].venda;
+  const lead = leads.find(l => String(l.id) === String(leadId));
+  if (!lead) return;
+  lead.venda = !lead.venda;
   _salvarLeads();
-  _syncSalaState(idx);
+  _syncSalaState(lead);
   renderHistList();
 }
 
-// Sincroniza emSala + tipoSala + venda com o Sheets após qualquer alteração de sala
-// Usa buffer com debounce para juntar várias alterações em 1 chamada (evita quota exceeded)
-let _salaBuffer = {};
+// Sincroniza emSala + tipoSala + venda com o Sheets após qualquer alteração de sala.
+// FIX v2.25: a alteração vai IMEDIATAMENTE para a fila salva no aparelho (antes ficava
+// só na memória por 2s e se perdia se o captador fechasse o app). O envio continua
+// em lote (1 chamada para várias marcações) para não estourar a cota do Apps Script.
 let _salaFlushTimer = null;
-function _syncSalaState(idx) {
-  const l = leads[idx];
-  if (!l || !l.id) return;
-  // Adiciona ao buffer (sobrescreve se já estiver lá — sempre o estado mais recente)
-  _salaBuffer[String(l.id)] = {
-    emSala: !!l.emSala,
-    tipoSala: l.tipoSala || null,
-    venda: !!l.venda
-  };
-  // Agenda flush em 2s (debounce — se o captador fizer 15 toggles em sequência, vira 1 chamada)
+function _syncSalaState(lead) {
+  if (typeof lead === 'number') lead = leads[lead]; // compatibilidade
+  if (!lead || !lead.id) return;
+  offlineEnqueue({ _action: 'update_sala', id: lead.id,
+    emSala: !!lead.emSala, tipoSala: lead.tipoSala || null, venda: !!lead.venda });
   if (_salaFlushTimer) clearTimeout(_salaFlushTimer);
-  _salaFlushTimer = setTimeout(_flushSalaBuffer, 2000);
+  _salaFlushTimer = setTimeout(() => { _salaFlushTimer = null; offlineFlush(); }, 2000);
 }
-function _flushSalaBuffer() {
-  _salaFlushTimer = null;
-  const ids = Object.keys(_salaBuffer);
-  if (!ids.length) return;
-  const updates = ids.map(id => Object.assign({ id }, _salaBuffer[id]));
-  _salaBuffer = {};
-  if (!navigator.onLine || !API.ok()) {
-    updates.forEach(u => offlineEnqueue(Object.assign({ _action: 'update_sala' }, u)));
-    return;
-  }
-  // Se for 1 update, manda como update_sala (compat)
-  // Se forem 2+, manda como update_sala_batch (1 chamada pro Sheets)
-  let payload;
-  if (updates.length === 1) {
-    payload = Object.assign({ _action: 'update_sala' }, updates[0]);
-  } else {
-    payload = { _action: 'update_sala_batch', updates };
-  }
-  API.post(payload).then(ok => {
-    if (!ok) {
-      updates.forEach(u => offlineEnqueue(Object.assign({ _action: 'update_sala' }, u)));
-    }
-  }).catch(() => {
-    updates.forEach(u => offlineEnqueue(Object.assign({ _action: 'update_sala' }, u)));
-  });
-}
-// Flusha o buffer imediatamente (usado antes de salvar um lead novo)
 function _flushSalaBufferNow() {
-  if (_salaFlushTimer) {
-    clearTimeout(_salaFlushTimer);
-    _salaFlushTimer = null;
-  }
-  _flushSalaBuffer();
+  if (_salaFlushTimer) { clearTimeout(_salaFlushTimer); _salaFlushTimer = null; }
+  offlineFlush();
 }
 
+const LEADS_MAX_PERSIST = 300;
 function _salvarLeads() {
   try {
-    // Limita o array a 200 leads (era 500) — economiza quota do localStorage
-    if (leads.length > 200) leads.splice(200);
-    // Remove campos pesados que não precisam ir pro localStorage (economiza ~60% do tamanho)
-    const light = leads.map(l => ({
+    // FIX v2.25: NÃO corta mais o array em memória. Antes, leads.splice(200) apagava
+    // pesquisas da tela e fazia a marcação de sala ir vazia para a planilha.
+    // Agora só a CÓPIA salva no aparelho é limitada: guarda todos os pendentes
+    // (não confirmados pelo servidor) + os mais recentes, na ordem original.
+    const pend = leads.filter(l => l && !l._synced);
+    const recentes = leads.filter(l => l && l._synced)
+      .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0))
+      .slice(0, Math.max(0, LEADS_MAX_PERSIST - pend.length));
+    const manter = new Set(pend.concat(recentes));
+    const light = leads.filter(l => manter.has(l)).map(l => ({
       id: l.id, nome: l.nome, tel: l.tel, verdict: l.verdict,
       tipo: l.tipo, renda: l.renda, cidade: l.cidade, sala: l.sala,
       captador: l.captador, time: l.time, date: l.date, dateISO: l.dateISO,
+      mode: l.mode, modalidade: l.modalidade, _ans: l._ans,
       // FIX v2.24: salvar estado do farol — sem isso o toggleSala se perdia ao recarregar
       emSala: l.emSala, tipoSala: l.tipoSala, venda: l.venda,
       _synced: l._synced
@@ -4179,6 +4158,8 @@ function mergeRemoto(remoto, periodoFrom) {
   leads.forEach((l, i) => { idxMap[String(l.id)] = i; });
   // Monta set de ids que existem no Sheets para detectar leads faltantes
   const remotosIds = new Set(remoto.map(r => String(r.id)));
+  const salaPendentes = new Set(JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]')
+    .filter(x => x._action === 'update_sala').map(x => String(x.id)));
   let changed = false;
   remoto.forEach(r => {
     r.date = normalizarDate(r.date, r.id);
@@ -4209,6 +4190,8 @@ function mergeRemoto(remoto, periodoFrom) {
       if (!local._synced) { local._synced = true; changed = true; }
       if (!r._ans && local._ans) r._ans = local._ans;
       // sincroniza emSala, tipoSala e venda do remoto para o local (remoto é mais recente)
+      // FIX v2.25: se há marcação deste lead ainda na fila, o local é o mais recente
+      if (salaPendentes.has(key)) return;
       if (r.emSala && !local.emSala) { local.emSala = true; changed = true; }
       if (r.tipoSala && r.tipoSala !== local.tipoSala) { local.tipoSala = r.tipoSala; changed = true; }
       if (r.venda && !local.venda)   { local.venda = true; changed = true; }
@@ -4232,10 +4215,7 @@ function mergeRemoto(remoto, periodoFrom) {
       }
     }
   }
-  if (changed) {
-    try { localStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-    try { sessionStorage.setItem('yv_leads', JSON.stringify(leads)); } catch(e) {}
-  }
+  if (changed) _salvarLeads();
   return changed;
 }
 
@@ -6782,12 +6762,16 @@ function _registrarPI() {
 }
 function getPIs() { return JSON.parse(localStorage.getItem(PI_KEY) || '[]'); }
 
-function offlineEnqueue(lead) {
+function offlineEnqueue(lead, naoSobrescrever) {
+  // FIX v2.25: item sem id virava linha em branco na planilha
+  if (!lead || !lead.id) return;
   const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
   // Evita duplicatas na fila: mesmo id + mesma _action substitui a entrada anterior
   const key = (lead._action || 'lead') + '_' + (lead.id || '');
   const idx = q.findIndex(x => ((x._action || 'lead') + '_' + (x.id || '')) === key);
-  if (idx >= 0) q[idx] = lead; else q.push(lead);
+  // naoSobrescrever: usado ao devolver um item que falhou; se já existe versão mais
+  // nova na fila (feita durante o envio), mantém a mais nova
+  if (idx >= 0) { if (!naoSobrescrever) q[idx] = lead; } else q.push(lead);
   localStorage.setItem(OFFLINE_KEY, JSON.stringify(q));
 }
 
@@ -6797,19 +6781,29 @@ function offlineFlush() {
   if (_flushEmAndamento) return; // já está rodando, não empilha
   const q = JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]');
   if (!q.length) return;
-  const pendentes = [...q];
+  const pendentes = q.filter(x => x && x.id);
   localStorage.removeItem(OFFLINE_KEY);
   _flushEmAndamento = true;
   let salvouAlgo = false;
   (async () => {
-    for (const lead of pendentes) {
+    // Leads primeiro (a linha precisa existir antes da marcação de sala)
+    const novos = pendentes.filter(x => x._action !== 'update_sala');
+    const salas = pendentes.filter(x => x._action === 'update_sala');
+    for (const lead of novos) {
       const ok = await API.post(lead).catch(() => false);
       if (ok) {
         if (!lead._action) {
           const i = leads.findIndex(l => String(l.id) === String(lead.id));
           if (i >= 0) { leads[i]._synced = true; salvouAlgo = true; }
         }
-      } else { offlineEnqueue(lead); }
+      } else { offlineEnqueue(lead, true); }
+    }
+    // Marcações de sala: 1 chamada em lote
+    if (salas.length) {
+      const payload = salas.length === 1 ? salas[0]
+        : { _action: 'update_sala_batch', updates: salas.map(u => ({ id: u.id, emSala: u.emSala, tipoSala: u.tipoSala, venda: u.venda })) };
+      const ok = await API.post(payload).catch(() => false);
+      if (!ok) salas.forEach(u => offlineEnqueue(u, true));
     }
     _flushEmAndamento = false;
     if (salvouAlgo) { _salvarLeads(); renderHistList(); }
